@@ -3,11 +3,11 @@
     <div class="qm-login-header">
       <span class="qm-auth-symbol"><i class="bi bi-shield-check" aria-hidden="true"></i></span>
       <div>
-        <div class="qm-login-brand">Quote Management</div>
+        <div class="qm-login-brand">OMW Quote Management</div>
         <h1 id="signin-title">Sign in</h1>
       </div>
-      <span class="qm-login-header-mark" aria-hidden="true"><i class="bi bi-intersect"></i></span>
     </div>
+    <p class="qm-login-lead">Use your organization account to open the OMW quote workspace.</p>
     <div class="qm-login-body">
       <div class="alert alert-info" ng-if="sessionExpired" role="status">Your session has expired. Sign in to continue where you left off.</div>
       <div class="qm-return-note" ng-if="returningToQuote"><i class="bi bi-link-45deg" aria-hidden="true"></i> Your quote will open after sign-in.</div>
@@ -60,6 +60,6 @@
       </div>
       <a class="qm-help-link" ng-if="supportUrl" ng-href="{{supportUrl}}" target="_blank" rel="noopener noreferrer">Need help signing in? <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
     </div>
-    <div class="qm-login-footer"><i class="bi bi-lock" aria-hidden="true"></i> Secure session <span aria-hidden="true">&middot;</span> CB Integration</div>
+    <div class="qm-login-footer"><i class="bi bi-shield-lock-fill" aria-hidden="true"></i> Secured with single sign-on <span aria-hidden="true">&middot;</span> Orion Middleware</div>
   </section>
 </div>

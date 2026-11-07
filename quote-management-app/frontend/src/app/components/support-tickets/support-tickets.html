@@ -1,39 +1,38 @@
-<div class="container-fluid py-4 support-screen qm-page-shell">
-  <section class="qm-hero-card mb-4" aria-labelledby="ticket-heading">
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
-      <div class="d-flex align-items-center gap-3">
-        <div class="qm-icon-tile rounded-3 bg-white bg-opacity-10 px-3 py-2 fs-3" aria-hidden="true"><i class="bi bi-ticket-perforated"></i></div>
-        <div>
-          <div class="qm-kicker">Ticket lookup</div>
-          <h1 id="ticket-heading" class="qm-title mb-1">From ticket to quote</h1>
-          <p class="qm-subtitle mb-0">Find every quote linked to a SKY or support ticket.</p>
-        </div>
+<div class="container-fluid support-screen qm-page-shell">
+  <section class="qm-hero-card" aria-labelledby="ticket-heading">
+    <div class="qm-page-head">
+      <div>
+        <div class="qm-kicker"><i class="bi bi-ticket-perforated-fill" aria-hidden="true"></i>Sales support tickets</div>
+        <h1 id="ticket-heading" class="qm-title">From ticket to quote</h1>
+        <p class="qm-subtitle mb-0 mt-1">Find every quote linked to a SKY or support ticket number.</p>
       </div>
-      <a class="btn btn-outline-light" href="#!/quotes"><i class="bi bi-files me-1" aria-hidden="true"></i>Browse all quotes</a>
+      <div class="qm-head-actions">
+        <a class="btn btn-outline-secondary" href="#!/quotes"><i class="bi bi-grid-1x2 me-1" aria-hidden="true"></i>Browse all quotes</a>
+      </div>
     </div>
-    <div class="row g-3 mt-2" ng-if="searched" aria-label="Ticket quote summary">
-      <div class="col-6 col-lg-3">
+    <div class="row g-3" ng-if="searched" aria-label="Ticket quote summary">
+      <div class="col-6 col-xl-3">
         <div class="qm-kpi-card qm-kpi-card-info">
-          <div class="qm-kpi-label">Matching quotes · all pages</div>
-          <div class="qm-kpi-value">{{displayValue(totalElements)}}</div>
+          <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-collection"></i></span>
+          <div><div class="qm-kpi-label">Matching quotes · all pages</div><div class="qm-kpi-value">{{displayValue(totalElements)}}</div></div>
         </div>
       </div>
-      <div class="col-6 col-lg-3">
+      <div class="col-6 col-xl-3">
         <div class="qm-kpi-card qm-kpi-card-warning">
-          <div class="qm-kpi-label">In progress · this page</div>
-          <div class="qm-kpi-value">{{displayValue(kpis.inProgress)}}</div>
+          <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-hourglass-split"></i></span>
+          <div><div class="qm-kpi-label">In progress · this page</div><div class="qm-kpi-value">{{displayValue(kpis.inProgress)}}</div></div>
         </div>
       </div>
-      <div class="col-6 col-lg-3">
+      <div class="col-6 col-xl-3">
         <div class="qm-kpi-card qm-kpi-card-danger">
-          <div class="qm-kpi-label">Failed · this page</div>
-          <div class="qm-kpi-value">{{displayValue(kpis.failed)}}</div>
+          <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-exclamation-octagon"></i></span>
+          <div><div class="qm-kpi-label">Failed · this page</div><div class="qm-kpi-value">{{displayValue(kpis.failed)}}</div></div>
         </div>
       </div>
-      <div class="col-6 col-lg-3">
+      <div class="col-6 col-xl-3">
         <div class="qm-kpi-card qm-kpi-card-success">
-          <div class="qm-kpi-label">Completed · this page</div>
-          <div class="qm-kpi-value">{{displayValue(kpis.completed)}}</div>
+          <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-check2-circle"></i></span>
+          <div><div class="qm-kpi-label">Completed · this page</div><div class="qm-kpi-value">{{displayValue(kpis.completed)}}</div></div>
         </div>
       </div>
     </div>
@@ -41,8 +40,9 @@
 
   <form name="ticketSearch" class="card qm-filter-card mb-4" ng-submit="searchByTicket()" novalidate aria-label="Find quotes by ticket">
     <div class="card-body">
-      <div class="row g-3 align-items-end">
-        <div class="col-12 col-lg-7">
+      <h2 class="qm-card-title mb-3"><i class="bi bi-ticket-detailed" aria-hidden="true"></i>Search by ticket</h2>
+      <div class="row g-3 align-items-end qm-search-row">
+        <div class="col-12 col-lg-8">
           <label for="ticket-number" class="form-label">SKY or support ticket number</label>
           <div class="qm-input-wrap">
             <i class="bi bi-ticket-detailed" aria-hidden="true"></i>
@@ -51,7 +51,7 @@
                    ng-attr-aria-invalid="{{!!validationError}}">
           </div>
         </div>
-        <div class="col-12 col-lg-5 d-flex flex-wrap gap-2">
+        <div class="col-12 col-lg-4 d-flex flex-wrap gap-2">
           <button type="submit" class="btn btn-primary"><i class="bi bi-search me-1" aria-hidden="true"></i>Find quotes</button>
           <button type="button" class="btn btn-outline-secondary" ng-click="clearSearch()">Clear search</button>
           <button type="button" class="btn btn-outline-primary" ng-if="searched" ng-click="refresh()"

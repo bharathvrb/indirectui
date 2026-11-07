@@ -10,15 +10,15 @@ angular.module('quoteManagement', ['ngRoute', 'ngSanitize', 'ngAnimate'])
             .when('/', { redirectTo: '/login' })
             .when('/quotes', {
                 templateUrl: 'app/components/quote-list/quote-list.html',
-                controller: 'QuoteListCtrl', reloadOnSearch: false, title: 'Quote requests'
+                controller: 'QuoteListCtrl', reloadOnSearch: false, title: 'Quotes'
             })
             .when('/quotes/:id', {
                 templateUrl: 'app/components/quote-detail/quote-detail.html',
-                controller: 'QuoteDetailCtrl', reloadOnSearch: false, title: 'Quote workspace'
+                controller: 'QuoteDetailCtrl', reloadOnSearch: false, title: 'Quote details'
             })
             .when('/support-tickets', {
                 templateUrl: 'app/components/support-tickets/support-tickets.html',
-                controller: 'SupportTicketsCtrl', reloadOnSearch: false, title: 'Ticket search'
+                controller: 'SupportTicketsCtrl', reloadOnSearch: false, title: 'Sales Support Tickets'
             })
             .otherwise({ redirectTo: '/login' });
         $httpProvider.interceptors.push('AuthInterceptor');

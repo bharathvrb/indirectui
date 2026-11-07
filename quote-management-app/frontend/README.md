@@ -151,6 +151,7 @@ Font paths remain relative to the icons stylesheet. Applicable Angular/Bootstrap
 | `APP_CONFIG.apiBaseUrl` | `/api` in same-origin proxy mode, without the appended `/quotedata/v1` suffix. |
 | `APP_CONFIG.apiAuthMode` | `service-proxy` for the supplied server; browser-direct deployment needs an explicit alternative mode. |
 | `APP_CONFIG.contractDownloadUrl` | Optional, explicitly confirmed download endpoint. Leave blank when unavailable; contract IDs still display. |
+| `APP_CONFIG.autoRefreshSeconds` | Quote list auto-refresh interval in seconds (default 60, minimum 15). Auto-refresh is off until the user enables the toggle. |
 | `APP_CONFIG.supportUrl` | Optional approved support link; leave blank when no support destination is configured. |
 | `APP_CONFIG.features.retryEnabled` | Keep `false`. Retry is unavailable in this release; changing this value does not establish backend support. |
 
@@ -199,3 +200,7 @@ This is the intended workspace behavior, not a claim of successful live SSO or r
 | Common UX | Login-first common SSO, internal return navigation, responsive navigation, keyboard focus, light/dark/system themes, persistence and reduced motion. |
 
 Before release, run build/tests and check desktop/mobile layouts, both themes, keyboard-only navigation, deep-link return, session expiry, Back/Forward, empty/error states, and vendor/font requests. Browser/functional validation is a separate release gate, not established by a successful build or unit test. Local browser checks may use synthetic CDP-intercepted authentication/API responses; these are test-only and must never become a production fixture path or authentication bypass. Real SSO, consent, CORS, token audience and remote contract behavior require the configured registration and API owner; synthetic checks do not verify them.
+
+## Visual design
+
+The workspace uses a blue, white and black design system defined entirely by CSS tokens in `src/assets/css/app.css` (`:root` for light, `[data-theme="dark"]` for dark): a black navigation rail, white content surfaces and blue primary actions. The quote detail page opens with a dark command header (state, IDs, key dates, counts), followed by the failure summary, an ordered processing pipeline with progress, copyable system IDs and tabbed sections. Customer, address and monitoring data are shown as field grids; product items as an expandable tree. Layouts adapt down to phone width, and the theme picker offers light, dark or system.

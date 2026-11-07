@@ -5,6 +5,8 @@ window.APP_CONFIG = Object.assign({
     quoteDataLookupOnly: true,
     contractDownloadUrl: '',
     supportUrl: '',
+    // Quote list auto-refresh interval (seconds, minimum 15). The toggle is off by default.
+    autoRefreshSeconds: 60,
     features: { retryEnabled: false }
 }, window.APP_CONFIG || {});
 
