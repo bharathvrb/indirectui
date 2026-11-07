@@ -204,3 +204,7 @@ Before release, run build/tests and check desktop/mobile layouts, both themes, k
 ## Visual design
 
 The workspace uses a blue, white and black design system defined entirely by CSS tokens in `src/assets/css/app.css` (`:root` for light, `[data-theme="dark"]` for dark): a black navigation rail, white content surfaces and blue primary actions. The quote detail page opens with a dark command header (state, IDs, key dates, counts), followed by the failure summary, an ordered processing pipeline with progress, copyable system IDs and tabbed sections. Customer, address and monitoring data are shown as field grids; product items as an expandable tree. Layouts adapt down to phone width, and the theme picker offers light, dark or system.
+
+## Local properties file
+
+For local runs, `npm start` reads `server.properties` (next to `server.js`) and loads its `KEY=VALUE` lines as server environment settings: the QuoteData service account, token/base URLs and the optional local login. Copy `server.properties.example` to `server.properties` and fill in values. Real environment variables take precedence, and `QM_PROPERTIES_FILE` can point to a different file. `server.properties` is git-ignored because it contains secrets; never commit it.

@@ -1,5 +1,6 @@
 'use strict';
 
+const fs = require('fs');
 const path = require('path');
 const httpServer = require('http-server');
 const createLocalAuth = require('./local-auth');
@@ -34,7 +35,35 @@ function createServer(options = {}) {
     });
 }
 
+// Loads KEY=VALUE lines from a local properties file into process.env.
+// Real environment variables win; the file is git-ignored because it holds secrets.
+function loadProperties(file) {
+    let text;
+    try {
+        text = fs.readFileSync(file, 'utf8');
+    } catch (error) {
+        if (error.code === 'ENOENT') return [];
+        throw error;
+    }
+    const loaded = [];
+    text.split(/\r?\n/).forEach(function(line) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) return;
+        const index = trimmed.indexOf('=');
+        if (index < 1) return;
+        const key = trimmed.slice(0, index).trim();
+        const value = trimmed.slice(index + 1).trim();
+        if (!/^[A-Z][A-Z0-9_]*$/.test(key) || value === '' || process.env[key] !== undefined) return;
+        process.env[key] = value;
+        loaded.push(key);
+    });
+    return loaded;
+}
+
 if (require.main === module) {
+    const propertiesFile = process.env.QM_PROPERTIES_FILE || path.join(__dirname, 'server.properties');
+    const loaded = loadProperties(propertiesFile);
+    if (loaded.length) console.log('Loaded ' + loaded.length + ' setting(s) from ' + path.basename(propertiesFile) + ': ' + loaded.join(', '));
     const server = createServer();
     server.server.on('error', function(error) {
         console.error('Could not start the frontend server: ' + error.message);

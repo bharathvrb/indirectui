@@ -1,0 +1,13 @@
+# Local server settings for the QuoteData workspace (loaded by `npm start`).
+# Copy to server.properties and fill in values; server.properties is git-ignored. Real environment variables override these values.
+
+# QuoteData service account (OAuth client_credentials), from the requirement document.
+QUOTEDATA_CLIENT_ID=<service client id>
+QUOTEDATA_CLIENT_SECRET=<service client secret>
+QUOTEDATA_SCOPE=<service scope>
+QUOTEDATA_TOKEN_URL=https://sat-ci.codebig2.net/v2/ws/token.oauth2
+QUOTEDATA_BASE_URL=https://quotedata-flx.as-g8.cf.comcast.net/quotedata/v1
+
+# Local development login (disabled when NODE_ENV=production). Change these as needed.
+LOCAL_LOGIN_USERNAME=<local value>
+LOCAL_LOGIN_PASSWORD=<local value>
