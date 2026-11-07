@@ -23,7 +23,7 @@ describe('Local development sign-in', function() {
         };
         window.__msalInstance = sso;
         window.__localAuthError = null;
-        window.AUTH_CONFIG = { clientId: 'fixture-client', tenantId: 'fixture-tenant', loginScopes: ['openid', 'profile'], apiScopes: [] };
+        window.AUTH_CONFIG = { clientId: 'fixture-client', tenantId: 'fixture-tenant', loginScopes: ['openid', 'profile'] };
         angular.mock.module('quoteManagement', function($controllerProvider) {
             ['QuoteListCtrl', 'QuoteDetailCtrl', 'SupportTicketsCtrl'].forEach(function(name) {
                 $controllerProvider.register(name, function() {});
@@ -98,16 +98,6 @@ describe('Local development sign-in', function() {
         backend.flush();
         expect(auth.isAuthenticated()).toBe(false);
         expect(rejected.data.message).toContain('valid local session');
-    });
-
-    it('does not issue API tokens for a local session', function() {
-        initialize(session());
-        var rejected;
-        auth.acquireToken().catch(function(error) { rejected = error; });
-        root.$digest();
-        expect(rejected.code).toBe('LOCAL_LOGIN_API_UNAVAILABLE');
-        expect(auth.isAuthenticated()).toBe(true);
-        expect(sso.acquireTokenSilent).not.toHaveBeenCalled();
     });
 
     it('uses the HTTP-only session cookie for proxy requests without fabricating a bearer token', function() {

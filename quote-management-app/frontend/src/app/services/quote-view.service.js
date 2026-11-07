@@ -164,23 +164,20 @@ angular.module('quoteManagement')
             if (destroyed || request !== generation) return;
             scope.loading = false;
             scope.trackingId = trackingId(response);
-            var proxyError = response && response.data &&
-              ['SERVICE_AUTH_NOT_CONFIGURED', 'SERVICE_TOKEN_FAILED', 'UPSTREAM_UNAUTHORIZED',
-                'UPSTREAM_FORBIDDEN', 'SSO_AUTH_NOT_CONFIGURED', 'UPSTREAM_TIMEOUT', 'UPSTREAM_UNAVAILABLE']
-                .indexOf(response.data.code) !== -1 && typeof response.data.message === 'string';
+            // The server proxy always returns a safe { code, message, trackingId } body for its own errors.
+            var serverMessage = response && response.data && typeof response.data.code === 'string' &&
+              typeof response.data.message === 'string' ? response.data.message : null;
             scope.error = malformed
               ? 'QuoteData returned an unrecognized response. Please retry or contact support.'
-              : proxyError ? response.data.message
-              : response && (response.code === 'API_SCOPES_NOT_CONFIGURED' || response.code === 'LOCAL_LOGIN_API_UNAVAILABLE')
-                ? response.message
-              : response && response.status === 403
-                ? 'Access denied. Your session does not have access to QuoteData.'
               : response && response.status === 401
-                ? 'QuoteData rejected the request (401). A valid API access token is required.'
+                ? 'Your session has expired. Sign in again to continue.'
               : response && response.status === 404 && (params.quoteRequestId || params.externalId || params.proposalId)
                 ? (params.quoteRequestId ? 'Quote not found for this request ID.' : 'Quote not found for this identifier.')
               : response && response.status === 0
-                ? 'Cannot reach QuoteData. Check network connectivity, CORS permissions for this app origin, and HTTP/HTTPS settings.'
+                ? 'Cannot reach the Quote Management server. Check that it is running and your network connection, then retry.'
+              : serverMessage ? serverMessage
+              : response && response.status === 403
+                ? 'Access denied. Your session does not have access to QuoteData.'
                 : 'Unable to load quotes. Please retry.';
           }
           var operation = params.quoteRequestId

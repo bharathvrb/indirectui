@@ -280,13 +280,13 @@ describe('Unified quote search workspace', function() {
     expect(requests.length).toBe(2);
   });
 
-  it('explains CORS/network failures and retains the request tracking ID', function() {
+  it('explains network failures and retains the request tracking ID', function() {
     start();
     requests[0].deferred.reject({
       status: 0, headers: function() { return null; }, config: { headers: { trackingId: 'TRACE-CLIENT' } }
     });
     root.$digest();
-    expect(scope.error).toContain('CORS permissions');
+    expect(scope.error).toContain('Cannot reach the Quote Management server');
     expect(scope.trackingId).toBe('TRACE-CLIENT');
   });
 
@@ -294,7 +294,7 @@ describe('Unified quote search workspace', function() {
     start();
     requests[0].deferred.reject({ status: 401 });
     root.$digest();
-    expect(scope.error).toContain('valid API access token');
+    expect(scope.error).toContain('Sign in again');
     expect(scope.dataReady).toBe(false);
   });
 

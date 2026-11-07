@@ -25,8 +25,7 @@ function angular() {
 
 function bootstrap() {
     return gulp.src([
-        'node_modules/bootstrap/dist/css/bootstrap.min.css{,.map}',
-        'node_modules/bootstrap/dist/js/bootstrap.bundle.min.js{,.map}'
+        'node_modules/bootstrap/dist/css/bootstrap.min.css{,.map}'
     ], { base: 'node_modules/bootstrap/dist' })
         .pipe(gulp.dest('dist/vendor/bootstrap'));
 }

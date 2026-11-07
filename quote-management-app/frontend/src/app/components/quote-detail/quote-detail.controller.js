@@ -1417,12 +1417,8 @@ angular.module('quoteManagement')
             $scope.error = 'Quote not found';
           } else if (err.status === 410) {
             $scope.error = 'Quote archived';
-          } else if (err.code === 'API_SCOPES_NOT_CONFIGURED' || err.code === 'LOCAL_LOGIN_API_UNAVAILABLE') {
-            $scope.error = err.message;
-          } else if (err.data &&
-              ['SERVICE_AUTH_NOT_CONFIGURED', 'SERVICE_TOKEN_FAILED', 'UPSTREAM_UNAUTHORIZED',
-                'SSO_AUTH_NOT_CONFIGURED', 'UPSTREAM_TIMEOUT', 'UPSTREAM_UNAVAILABLE'].indexOf(err.data.code) !== -1) {
-            $scope.error = err.data.message;
+          } else if (err.data && typeof err.data.code === 'string' && typeof err.data.message === 'string') {
+            $scope.error = 'Unable to load quote details. ' + err.data.message;
           } else {
             $scope.error = 'Unable to load quote details.';
           }

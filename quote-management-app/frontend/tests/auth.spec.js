@@ -17,10 +17,10 @@ describe('Common SSO workspace', function() {
         fakeWindow = window;
         window.__msalInstance = instance;
         window.__ssoBypass = true;
-        window.APP_CONFIG = angular.extend({}, window.APP_CONFIG, { apiAuthMode: 'service-proxy' });
-        window.AUTH_CONFIG = { clientId: 'test-client', tenantId: 'test-tenant', apiScopes: ['api://quotes/read'], redirectUri: 'https://ui.test/' };
+        window.APP_CONFIG = angular.extend({}, window.APP_CONFIG);
+        window.AUTH_CONFIG = { clientId: 'test-client', tenantId: 'test-tenant', redirectUri: 'https://ui.test/' };
         angular.mock.module('quoteManagement', function($provide, $controllerProvider) {
-            $provide.constant('API_BASE_URL', 'https://quotes.test');
+            $provide.constant('API_BASE_URL', '/api');
             ['QuoteListCtrl', 'QuoteDetailCtrl', 'SupportTicketsCtrl'].forEach(function(name) {
                 $controllerProvider.register(name, function() {});
             });
@@ -64,19 +64,17 @@ describe('Common SSO workspace', function() {
         });
     });
 
-    it('allows sign-in independently of API scopes but still requires a client and tenant', function() {
-        expect(auth.isSsoConfigured()).toBe(true);
-        fakeWindow.AUTH_CONFIG.apiScopes = [];
+    it('requires a client and tenant for sign-in', function() {
         expect(auth.isSsoConfigured()).toBe(true);
         fakeWindow.AUTH_CONFIG.clientId = '';
         expect(auth.isSsoConfigured()).toBe(false);
     });
 
-    it('requests only the configured API resource with OIDC scopes on login', function() {
+    it('requests only OIDC scopes on login by default', function() {
         instance.loginRedirect.and.returnValue(q.when());
         auth.login();
         expect(instance.loginRedirect).toHaveBeenCalledWith({
-            scopes: ['openid', 'profile', 'api://quotes/read'],
+            scopes: ['openid', 'profile'],
             redirectStartPage: fakeWindow.location.href
         });
     });
@@ -84,7 +82,6 @@ describe('Common SSO workspace', function() {
     it('uses the ONP sign-in scopes and account selector without inventing API permissions', function() {
         fakeWindow.AUTH_CONFIG.loginScopes = ['openid', 'profile', 'email', 'User.Read'];
         fakeWindow.AUTH_CONFIG.loginPrompt = 'select_account';
-        fakeWindow.AUTH_CONFIG.apiScopes = [];
         instance.loginRedirect.and.returnValue(q.when());
         auth.login();
         expect(instance.loginRedirect).toHaveBeenCalledWith({
@@ -94,35 +91,9 @@ describe('Common SSO workspace', function() {
         });
     });
 
-    it('never sends a Graph token to QuoteData when its API scope is not configured', function() {
-        account = { username: 'test-user' };
-        fakeWindow.AUTH_CONFIG.loginScopes = ['openid', 'profile', 'email', 'User.Read'];
-        fakeWindow.AUTH_CONFIG.apiScopes = [];
-        var rejection;
-        interceptor.request({ url: 'https://quotes.test/quotedata/v1/quote' }).catch(function(error) { rejection = error; });
-        root.$digest();
-        expect(rejection.code).toBe('API_SCOPES_NOT_CONFIGURED');
-        expect(rejection.message).toContain('AUTH_CONFIG.apiScopes');
-        expect(instance.acquireTokenSilent).not.toHaveBeenCalled();
-        expect(auth.isAuthenticated()).toBe(true);
-    });
-
-    it('keeps API token requests separate from the ONP login scopes', function() {
-        account = { username: 'test-user' };
-        fakeWindow.AUTH_CONFIG.loginScopes = ['openid', 'profile', 'email', 'User.Read'];
-        instance.acquireTokenSilent.and.returnValue(q.when({ accessToken: 'test-token' }));
-        auth.acquireToken();
-        root.$digest();
-        expect(instance.acquireTokenSilent).toHaveBeenCalledWith({
-            scopes: ['api://quotes/read'],
-            account: account
-        });
-    });
-
     it('sends an SSO identity token only to the same-origin proxy, never the Graph access token', function() {
         account = { username: 'test-user' };
         fakeWindow.AUTH_CONFIG.loginScopes = ['openid', 'profile', 'email', 'User.Read'];
-        fakeWindow.AUTH_CONFIG.apiScopes = [];
         instance.acquireTokenSilent.and.returnValue(q.when({ idToken: 'signed-test-identity', accessToken: 'graph-test-token' }));
         var config;
         interceptor.request({ url: '/api/quotedata/v1/quote' }).then(function(value) { config = value; });
@@ -172,19 +143,19 @@ describe('Common SSO workspace', function() {
 
     it('does not attach a bearer token to templates or lookalike origins', function() {
         var template = { url: 'app/components/login/login.html' };
-        var foreign = { url: 'https://quotes.test.evil/quotedata/v1/quote' };
+        var foreign = { url: 'https://quotes.test.evil/api/quotedata/v1/quote' };
         expect(interceptor.request(template)).toBe(template);
         expect(interceptor.request(foreign)).toBe(foreign);
         expect(instance.acquireTokenSilent).not.toHaveBeenCalled();
     });
 
-    it('attaches a token only after successful acquisition', function() {
+    it('attaches the identity token only after successful acquisition', function() {
         account = { username: 'test-user' };
-        instance.acquireTokenSilent.and.returnValue(q.when({ accessToken: 'test-token' }));
+        instance.acquireTokenSilent.and.returnValue(q.when({ idToken: 'test-identity' }));
         var config;
-        interceptor.request({ url: 'https://quotes.test/quotedata/v1/quote' }).then(function(result) { config = result; });
+        interceptor.request({ url: '/api/quotedata/v1/quote' }).then(function(result) { config = result; });
         root.$digest();
-        expect(config.headers.Authorization).toBe('Bearer test-token');
+        expect(config.headers.Authorization).toBe('Bearer test-identity');
     });
 
     it('rejects API requests instead of sending them after a token failure', function() {
@@ -192,7 +163,7 @@ describe('Common SSO workspace', function() {
         var failure = new Error('Token unavailable');
         instance.acquireTokenSilent.and.returnValue(q.reject(failure));
         var resolved = false, rejected;
-        interceptor.request({ url: 'https://quotes.test/quotedata/v1/quote' })
+        interceptor.request({ url: '/api/quotedata/v1/quote' })
             .then(function() { resolved = true; }, function(error) { rejected = error; });
         root.$digest();
         expect(resolved).toBe(false);
@@ -211,7 +182,7 @@ describe('Common SSO workspace', function() {
 
     it('rejects an unauthenticated API request without calling token acquisition', function() {
         var rejected;
-        interceptor.request({ url: 'https://quotes.test/quotedata/v1/quote' }).catch(function(error) { rejected = error; });
+        interceptor.request({ url: '/api/quotedata/v1/quote' }).catch(function(error) { rejected = error; });
         root.$digest();
         expect(rejected.status).toBe(401);
         expect(instance.acquireTokenSilent).not.toHaveBeenCalled();

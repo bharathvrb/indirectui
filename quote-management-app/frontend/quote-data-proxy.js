@@ -21,11 +21,13 @@ function failure(status, code, message) {
     return Object.assign(new Error(message), { status, code });
 }
 
-function configuredUrl(value, allowLoopbackHttp) {
+// Service URLs must be HTTPS. Plain HTTP is accepted only for loopback test servers or, for the
+// QuoteData base URL, when QUOTEDATA_ALLOW_HTTP=true is set explicitly (internal hosts without TLS).
+function configuredUrl(value, allowLoopbackHttp, allowHttp) {
     const url = new URL(value);
     const testLoopback = allowLoopbackHttp && url.protocol === 'http:' &&
         ['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname);
-    if ((url.protocol !== 'https:' && !testLoopback) ||
+    if ((url.protocol !== 'https:' && !testLoopback && !(allowHttp && url.protocol === 'http:')) ||
         url.username || url.password || url.search || url.hash ||
         value.includes('?') || value.includes('#')) {
         throw new Error('Invalid service URL');
@@ -48,7 +50,8 @@ function serviceConfiguration(options) {
             tokenUrl: configuredUrl(environment.QUOTEDATA_TOKEN_URL === undefined ?
                 TOKEN_URL : environment.QUOTEDATA_TOKEN_URL, options.allowLoopbackHttp === true),
             baseUrl: configuredUrl(environment.QUOTEDATA_BASE_URL === undefined ?
-                BASE_URL : environment.QUOTEDATA_BASE_URL, options.allowLoopbackHttp === true)
+                BASE_URL : environment.QUOTEDATA_BASE_URL, options.allowLoopbackHttp === true,
+            environment.QUOTEDATA_ALLOW_HTTP === 'true')
         };
     } catch (error) {
         return null;
@@ -147,7 +150,14 @@ function upstreamRequest(url, { method = 'GET', headers, body, limit, timeoutMs,
     });
 }
 
+// Caches the service token in memory until shortly before expiry and shares one
+// in-flight token request between concurrent callers.
 function createTokenProvider(config, options) {
+    const now = options.now || Date.now;
+    const SKEW_MS = 10000;
+    let cached = null;
+    let pending = null;
+
     async function issue() {
         try {
             const form = new URLSearchParams({
@@ -163,24 +173,40 @@ function createTokenProvider(config, options) {
                 body: form, limit: MAX_TOKEN_BYTES, timeoutMs: options.tokenTimeoutMs || 10000
             });
             const body = response.body;
+            const lifetime = body && /^\d+(?:\.\d+)?$/.test(String(body.expires_in)) ? Number(body.expires_in) : 0;
             if (response.status !== 200 || !body ||
                 typeof body.access_token !== 'string' || body.access_token.length > 16384 ||
                 !/^[A-Za-z0-9._~+/-]+=*$/.test(body.access_token) ||
                 typeof body.token_type !== 'string' || body.token_type.toLowerCase() !== 'bearer' ||
-                !/^\d+(?:\.\d+)?$/.test(String(body.expires_in))) {
+                !(lifetime > 0)) {
                 throw new Error('Invalid token response');
             }
-            return { value: body.access_token };
+            return { value: body.access_token, expiresAt: now() + lifetime * 1000 - SKEW_MS };
         } catch (error) {
             throw failure(502, 'SERVICE_TOKEN_FAILED',
                 'The server could not obtain QuoteData service authorization. Contact the service administrator.');
         }
     }
+
     return {
-        async get() {
-            return issue();
+        get() {
+            if (cached && now() < cached.expiresAt) {
+                return Promise.resolve(cached);
+            }
+            if (!pending) {
+                pending = issue().then(token => {
+                    cached = token;
+                    return token;
+                }).finally(() => {
+                    pending = null;
+                });
+            }
+            return pending;
         },
-        invalidate() {
+        invalidate(token) {
+            if (cached && (!token || cached.value === token.value)) {
+                cached = null;
+            }
         }
     };
 }

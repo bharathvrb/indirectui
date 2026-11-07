@@ -41,7 +41,6 @@ module.exports = function(config) {
             'tests/**/*.spec.js'
         ],
         exclude: [
-            'src/app/components/support-tickets/ticket-detail.controller.js',
             'src/**/bootstrap.js'
         ],
         browsers: ['ChromeHeadless'],

@@ -688,3 +688,13 @@ test('client disconnect cancels backend reads rather than replaying a completion
     assert.equal(backend.backendCalls.length, 1);
     assert.equal(backend.tokenCalls.length, 1);
 });
+
+test('plain HTTP QuoteData base URLs require the explicit QUOTEDATA_ALLOW_HTTP opt-in', async t => {
+    const backend = await upstream(t);
+    const httpBase = 'http://quotedata.invalid/quotedata/v1';
+    let app = await start(t, backend, { environment: { QUOTEDATA_BASE_URL: httpBase }, proxy: { allowLoopbackHttp: false } });
+    check(await request(app, quoteRoute, { headers: { cookie: await login(app) } }), 503, 'SERVICE_AUTH_NOT_CONFIGURED');
+    app = await start(t, backend, { environment: { QUOTEDATA_TOKEN_URL: 'http://token.invalid/token', QUOTEDATA_ALLOW_HTTP: 'true' }, proxy: { allowLoopbackHttp: false } });
+    check(await request(app, quoteRoute, { headers: { cookie: await login(app) } }), 503, 'SERVICE_AUTH_NOT_CONFIGURED');
+    assert.equal(backend.tokenCalls.length, 0);
+});
