@@ -1,0 +1,266 @@
+{
+  "@type": "Quote",
+  "externalId": "PARTNER-QUOTE-P003",
+  "description": "SD-WAN Multi-Site Rollout",
+  "category": "Indirect",
+  "relatedParty": [
+    {
+      "@type": "RelatedParty",
+      "@referredType": "Organization",
+      "id": "customer-org",
+      "name": "Vertex Industries",
+      "role": "Customer",
+      "characteristic": [
+        { "name": "tradingName",       "value": "Vertex" },
+        { "name": "isLegalEntity",     "value": true },
+        { "name": "organizationType",  "value": "B2B" },
+        { "name": "channelType",       "value": "Indirect" },
+        { "name": "customerType", "value": "Midmarket" },
+        { "name": "customerSubType", "value": "Majors" },
+        { "name": "industry",          "value": "MANUFACTURING" },
+        { "name": "subIndustry",       "value": "Industrial Equipment" },
+        { "name": "sic4",              "value": "3559" },
+        { "name": "externalIdentifier","valueType": "object", "value": { "type": "customerId", "id": "CUST-0088" } }
+      ]
+    },
+    {
+      "@type": "RelatedParty",
+      "@referredType": "Individual",
+      "id": "cust-contact-primary",
+      "name": "Marcus Chen",
+      "role": "Contact",
+      "characteristic": [
+        { "name": "title",                "value": "Director of IT" },
+        { "name": "preferredContactMethod","value": "Email" },
+        { "name": "contactRoleName",      "value": "Primary" },
+        { "name": "contactRoleCode",      "value": "P" },
+        { "name": "isSigner",             "value": true },
+        { "name": "signerAuthority",      "value": "Authorized Signatory" }
+      ]
+    },
+    {
+      "@type": "RelatedParty",
+      "@referredType": "Individual",
+      "id": "cust-contact-secondary",
+      "name": "Linda Torres",
+      "role": "Contact",
+      "characteristic": [
+        { "name": "title",                "value": "Network Administrator" },
+        { "name": "preferredContactMethod","value": "Phone" },
+        { "name": "contactRoleName",      "value": "Technical" },
+        { "name": "contactRoleCode",      "value": "T" }
+      ]
+    }
+  ],
+  "contactMedium": [
+    {
+      "@type": "ContactMedium",
+      "mediumType": "PostalAddress",
+      "preferred": true,
+      "characteristic": {
+        "contactType": "customer-org:hq",
+        "street1": "900 N MICHIGAN AVE",
+        "street2": "FLOOR 14",
+        "city": "CHICAGO",
+        "stateOrProvince": "IL",
+        "postCode": "60611",
+        "country": "US"
+      }
+    },
+    {
+      "@type": "ContactMedium",
+      "mediumType": "TelephoneNumber",
+      "preferred": true,
+      "characteristic": { "contactType": "cust-contact-primary:directPhone", "phoneNumber": "3125550188" }
+    },
+    {
+      "@type": "ContactMedium",
+      "mediumType": "EmailAddress",
+      "preferred": true,
+      "characteristic": { "contactType": "cust-contact-primary:email", "emailAddress": "m.chen@vertexindustries.example.com" }
+    },
+    {
+      "@type": "ContactMedium",
+      "mediumType": "EmailAddress",
+      "characteristic": { "contactType": "cust-contact-secondary:email", "emailAddress": "it@vertexindustries.example.com" }
+    },
+    {
+      "@type": "ContactMedium",
+      "mediumType": "TelephoneNumber",
+      "characteristic": { "contactType": "cust-contact-secondary:directPhone", "phoneNumber": "3125550189" }
+    },
+    {
+      "@type": "ContactMedium",
+      "mediumType": "TelephoneNumber",
+      "characteristic": { "contactType": "site1-poc:mobile", "phoneNumber": "3125550301" }
+    },
+    {
+      "@type": "ContactMedium",
+      "mediumType": "EmailAddress",
+      "characteristic": { "contactType": "site1-poc:email", "emailAddress": "chicago.it@vertexindustries.example.com" }
+    },
+    {
+      "@type": "ContactMedium",
+      "mediumType": "TelephoneNumber",
+      "characteristic": { "contactType": "site2-poc:mobile", "phoneNumber": "3125550302" }
+    },
+    {
+      "@type": "ContactMedium",
+      "mediumType": "EmailAddress",
+      "characteristic": { "contactType": "site2-poc:email", "emailAddress": "detroit.it@vertexindustries.example.com" }
+    }
+  ],
+  "quoteItem": [
+    {
+      "@type": "QuoteItem",
+      "id": "QI-SITE1",
+      "action": "add",
+      "product": {
+        "@type": "Product",
+        "name": "Chicago HQ - 900 N Michigan Ave",
+        "place": [
+          {
+            "@type": "GeographicAddress",
+            "id": "service-location-1",
+            "role": "ServiceLocation",
+            "characteristic": [
+              { "name": "street1",         "value": "900 N MICHIGAN AVE" },
+              { "name": "street2",         "value": "FLOOR 14" },
+              { "name": "city",            "value": "CHICAGO" },
+              { "name": "stateOrProvince", "value": "IL" },
+              { "name": "postCode",        "value": "60611" },
+              { "name": "country",         "value": "US" }
+            ]
+          }
+        ],
+        "relatedParty": [
+          {
+            "@type": "RelatedParty",
+            "id": "site1-poc",
+            "name": "Kevin Park",
+            "role": "SiteContact",
+            "characteristic": [
+              { "name": "title",               "value": "IT Manager" },
+              { "name": "siteContactRoleName", "value": "POC" },
+              { "name": "siteContactRoleCode", "value": "Site POC" }
+            ]
+          }
+        ]
+      },
+      "quoteItem": [
+        {
+          "@type": "QuoteItem",
+          "id": "QI-SITE1-SDWAN",
+          "action": "add",
+          "productOffering": {
+            "id": "sdwan-edge-100",
+            "name": "SD-WAN Edge Device",
+            "characteristic": [
+              { "name": "productOfferingType",     "value": "Equipment" },
+              { "name": "productOfferingTypeGroup", "value": "Standalone" }
+            ]
+          },
+          "product": {
+            "@type": "Product",
+            "productCharacteristic": [
+              { "name": "Transport_Type_OMW",     "value": "Broadband + 4G LTE Failover" },
+              { "name": "Device_Acquisition_Type","value": "Purchase" },
+              { "name": "Installation_Method",    "value": "Self-Install" }
+            ]
+          },
+          "quantity": 1,
+          "quoteItemPrice": [
+            { "name": "One-time charge", "priceType": "oneTime", "price": { "dutyFreeAmount": { "value": 2400.00, "unit": "USD" } } }
+          ]
+        },
+        {
+          "@type": "QuoteItem",
+          "id": "QI-SITE1-MGMT",
+          "action": "add",
+          "productOffering": {
+            "id": "sdwan-mgmt-platform",
+            "name": "SD-WAN Management Platform",
+            "characteristic": [
+              { "name": "productOfferingType",     "value": "Managed Service" },
+              { "name": "productOfferingTypeGroup", "value": "Package" }
+            ]
+          },
+          "product": {
+            "@type": "Product",
+            "productCharacteristic": [
+              { "name": "Tier_Name", "value": "Enterprise - 12 sites, full analytics" }
+            ],
+            "productTerm": [{ "name": "Contract Term", "duration": { "amount": 12, "units": "month" } }]
+          },
+          "quantity": 1,
+          "quoteItemPrice": [
+            { "name": "Annual license", "priceType": "recurring", "recurringChargePeriod": "annual", "price": { "dutyFreeAmount": { "value": 18000.00, "unit": "USD" } } }
+          ]
+        }
+      ]
+    },
+    {
+      "@type": "QuoteItem",
+      "id": "QI-SITE2",
+      "action": "add",
+      "product": {
+        "@type": "Product",
+        "name": "Detroit Branch - 1500 Woodward Ave",
+        "place": [
+          {
+            "@type": "GeographicAddress",
+            "id": "service-location-2",
+            "role": "ServiceLocation",
+            "characteristic": [
+              { "name": "street1",         "value": "1500 WOODWARD AVE" },
+              { "name": "city",            "value": "DETROIT" },
+              { "name": "stateOrProvince", "value": "MI" },
+              { "name": "postCode",        "value": "48226" },
+              { "name": "country",         "value": "US" }
+            ]
+          }
+        ],
+        "relatedParty": [
+          {
+            "@type": "RelatedParty",
+            "id": "site2-poc",
+            "name": "Sandra Okonkwo",
+            "role": "SiteContact",
+            "characteristic": [
+              { "name": "title",               "value": "Branch IT Coordinator" },
+              { "name": "siteContactRoleName", "value": "POC" },
+              { "name": "siteContactRoleCode", "value": "Site POC" }
+            ]
+          }
+        ]
+      },
+      "quoteItem": [
+        {
+          "@type": "QuoteItem",
+          "id": "QI-SITE2-SDWAN",
+          "action": "add",
+          "productOffering": {
+            "id": "sdwan-edge-100",
+            "name": "SD-WAN Edge Device",
+            "characteristic": [
+              { "name": "productOfferingType",     "value": "Equipment" },
+              { "name": "productOfferingTypeGroup", "value": "Standalone" }
+            ]
+          },
+          "product": {
+            "@type": "Product",
+            "productCharacteristic": [
+              { "name": "Transport_Type_OMW",     "value": "Broadband + 4G LTE Failover" },
+              { "name": "Device_Acquisition_Type","value": "Purchase" },
+              { "name": "Installation_Method",    "value": "Self-Install" }
+            ]
+          },
+          "quantity": 1,
+          "quoteItemPrice": [
+            { "name": "One-time charge", "priceType": "oneTime", "price": { "dutyFreeAmount": { "value": 2400.00, "unit": "USD" } } }
+          ]
+        }
+      ]
+    }
+  ]
+}

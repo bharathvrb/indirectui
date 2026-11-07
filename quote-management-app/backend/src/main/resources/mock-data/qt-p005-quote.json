@@ -1,0 +1,123 @@
+{
+  "@type": "Quote",
+  "externalId": "PARTNER-QUOTE-P005",
+  "description": "IoT Sensor Fleet Connectivity - 1000 SIM Cards",
+  "category": "Indirect",
+  "relatedParty": [
+    {
+      "@type": "RelatedParty",
+      "@referredType": "Organization",
+      "id": "customer-org",
+      "name": "SensorLink IoT Solutions",
+      "role": "Customer",
+      "characteristic": [
+        { "name": "tradingName",       "value": "SensorLink" },
+        { "name": "isLegalEntity",     "value": true },
+        { "name": "organizationType",  "value": "B2B" },
+        { "name": "channelType",       "value": "Indirect" },
+        { "name": "customerType", "value": "Midmarket" },
+        { "name": "customerSubType", "value": "Majors" },
+        { "name": "industry",          "value": "TECHNOLOGY" },
+        { "name": "subIndustry",       "value": "IoT & Connected Devices" },
+        { "name": "sic4",              "value": "3679" },
+        { "name": "externalIdentifier","valueType": "object", "value": { "type": "customerId", "id": "CUST-0065" } }
+      ]
+    },
+    {
+      "@type": "RelatedParty",
+      "@referredType": "Individual",
+      "id": "cust-contact-primary",
+      "name": "Erin Zhao",
+      "role": "Contact",
+      "characteristic": [
+        { "name": "title",                "value": "Head of Connectivity" },
+        { "name": "preferredContactMethod","value": "Email" },
+        { "name": "contactRoleName",      "value": "Primary" },
+        { "name": "contactRoleCode",      "value": "P" },
+        { "name": "isSigner",             "value": true },
+        { "name": "signerAuthority",      "value": "Authorized Signatory" }
+      ]
+    }
+  ],
+  "contactMedium": [
+    {
+      "@type": "ContactMedium",
+      "mediumType": "PostalAddress",
+      "preferred": true,
+      "characteristic": {
+        "contactType": "customer-org:hq",
+        "street1": "950 TOWER AVENUE",
+        "city": "AUSTIN",
+        "stateOrProvince": "TX",
+        "postCode": "78701",
+        "country": "US"
+      }
+    },
+    {
+      "@type": "ContactMedium",
+      "mediumType": "TelephoneNumber",
+      "preferred": true,
+      "characteristic": { "contactType": "cust-contact-primary:mobile", "phoneNumber": "5125550065" }
+    },
+    {
+      "@type": "ContactMedium",
+      "mediumType": "EmailAddress",
+      "preferred": true,
+      "characteristic": { "contactType": "cust-contact-primary:email", "emailAddress": "e.zhao@sensorlink.example.com" }
+    }
+  ],
+  "quoteItem": [
+    {
+      "@type": "QuoteItem",
+      "id": "QI-SITE1",
+      "action": "add",
+      "product": {
+        "@type": "Product",
+        "name": "SensorLink HQ - 950 Tower Avenue, Austin TX",
+        "place": [
+          {
+            "@type": "GeographicAddress",
+            "id": "service-location-1",
+            "role": "ServiceLocation",
+            "characteristic": [
+              { "name": "street1",         "value": "950 TOWER AVENUE" },
+              { "name": "city",            "value": "AUSTIN" },
+              { "name": "stateOrProvince", "value": "TX" },
+              { "name": "postCode",        "value": "78701" },
+              { "name": "country",         "value": "US" }
+            ]
+          }
+        ],
+        "relatedParty": []
+      },
+      "quoteItem": [
+        {
+          "@type": "QuoteItem",
+          "id": "QI-SITE1-IOT-SIM",
+          "action": "add",
+          "productOffering": {
+            "id": "iot-sim-fleet",
+            "name": "IoT SIM Fleet Plan",
+            "characteristic": [
+              { "name": "productOfferingType",     "value": "IoT Connectivity" },
+              { "name": "productOfferingTypeGroup", "value": "Package" }
+            ]
+          },
+          "product": {
+            "@type": "Product",
+            "productCharacteristic": [
+              { "name": "Tier_Name",     "value": "Fleet IoT SIM - 500MB/month per SIM, multi-network roaming" },
+              { "name": "IP_Version",    "value": "IPv4 Private APN" }
+            ],
+            "productTerm": [{ "name": "Contract Term", "duration": { "amount": 24, "units": "month" } }]
+          },
+          "quantity": 1000,
+          "quoteItemPrice": [
+            { "name": "Per SIM per month", "priceType": "recurring", "recurringChargePeriod": "monthly", "price": { "dutyFreeAmount": { "value": 4.50, "unit": "USD" } } },
+            { "name": "Activation fee",    "priceType": "oneTime",   "price": { "dutyFreeAmount": { "value": 1.00, "unit": "USD" } } }
+          ]
+        }
+      ]
+    }
+  ]
+}

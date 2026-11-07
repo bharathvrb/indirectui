@@ -1,0 +1,172 @@
+{
+  "@type": "Quote",
+  "externalId": "PARTNER-QUOTE-P004",
+  "description": "Unified Communications Platform Refresh",
+  "category": "Indirect",
+  "relatedParty": [
+    {
+      "@type": "RelatedParty",
+      "@referredType": "Organization",
+      "id": "customer-org",
+      "name": "Cascade Retail Systems",
+      "role": "Customer",
+      "characteristic": [
+        { "name": "tradingName",       "value": "Cascade Retail" },
+        { "name": "isLegalEntity",     "value": true },
+        { "name": "organizationType",  "value": "B2B" },
+        { "name": "channelType",       "value": "Indirect" },
+        { "name": "customerType", "value": "Midmarket" },
+        { "name": "customerSubType", "value": "Majors" },
+        { "name": "industry",          "value": "RETAIL" },
+        { "name": "subIndustry",       "value": "General Merchandise Stores" },
+        { "name": "sic4",              "value": "5311" },
+        { "name": "externalIdentifier","valueType": "object", "value": { "type": "customerId", "id": "CUST-0055" } }
+      ]
+    },
+    {
+      "@type": "RelatedParty",
+      "@referredType": "Individual",
+      "id": "cust-contact-primary",
+      "name": "Natalie Burns",
+      "role": "Contact",
+      "characteristic": [
+        { "name": "title",                "value": "Head of IT" },
+        { "name": "preferredContactMethod","value": "Email" },
+        { "name": "contactRoleName",      "value": "Primary" },
+        { "name": "contactRoleCode",      "value": "P" },
+        { "name": "isSigner",             "value": true },
+        { "name": "signerAuthority",      "value": "Authorized Signatory" }
+      ]
+    },
+    {
+      "@type": "RelatedParty",
+      "@referredType": "Individual",
+      "id": "cust-contact-secondary",
+      "name": "Victor Hammond",
+      "role": "Contact",
+      "characteristic": [
+        { "name": "title",                "value": "Telecom Administrator" },
+        { "name": "preferredContactMethod","value": "Phone" },
+        { "name": "contactRoleName",      "value": "Technical" },
+        { "name": "contactRoleCode",      "value": "T" }
+      ]
+    }
+  ],
+  "contactMedium": [
+    {
+      "@type": "ContactMedium",
+      "mediumType": "PostalAddress",
+      "preferred": true,
+      "characteristic": {
+        "contactType": "customer-org:corporate",
+        "street1": "3000 MARKET STREET",
+        "street2": "SUITE 800",
+        "city": "PHILADELPHIA",
+        "stateOrProvince": "PA",
+        "postCode": "19104",
+        "country": "US"
+      }
+    },
+    {
+      "@type": "ContactMedium",
+      "mediumType": "TelephoneNumber",
+      "preferred": true,
+      "characteristic": { "contactType": "cust-contact-primary:directPhone", "phoneNumber": "2155550055" }
+    },
+    {
+      "@type": "ContactMedium",
+      "mediumType": "EmailAddress",
+      "preferred": true,
+      "characteristic": { "contactType": "cust-contact-primary:email", "emailAddress": "n.burns@cascaderetail.example.com" }
+    },
+    {
+      "@type": "ContactMedium",
+      "mediumType": "EmailAddress",
+      "characteristic": { "contactType": "cust-contact-secondary:email", "emailAddress": "telecom@cascaderetail.example.com" }
+    },
+    {
+      "@type": "ContactMedium",
+      "mediumType": "TelephoneNumber",
+      "characteristic": { "contactType": "cust-contact-secondary:mobile", "phoneNumber": "2155550056" }
+    }
+  ],
+  "quoteItem": [
+    {
+      "@type": "QuoteItem",
+      "id": "QI-SITE1",
+      "action": "add",
+      "product": {
+        "@type": "Product",
+        "name": "Cascade Corporate HQ - 3000 Market Street, Philadelphia PA",
+        "place": [
+          {
+            "@type": "GeographicAddress",
+            "id": "service-location-1",
+            "role": "ServiceLocation",
+            "characteristic": [
+              { "name": "street1",         "value": "3000 MARKET STREET" },
+              { "name": "street2",         "value": "SUITE 800" },
+              { "name": "city",            "value": "PHILADELPHIA" },
+              { "name": "stateOrProvince", "value": "PA" },
+              { "name": "postCode",        "value": "19104" },
+              { "name": "country",         "value": "US" }
+            ]
+          }
+        ],
+        "relatedParty": []
+      },
+      "quoteItem": [
+        {
+          "@type": "QuoteItem",
+          "id": "QI-SITE1-UC",
+          "action": "add",
+          "productOffering": {
+            "id": "uc-softphone-pro",
+            "name": "UC Softphone Pro",
+            "characteristic": [
+              { "name": "productOfferingType",     "value": "Cloud Service" },
+              { "name": "productOfferingTypeGroup", "value": "Package" }
+            ]
+          },
+          "product": {
+            "@type": "Product",
+            "productCharacteristic": [
+              { "name": "Tier_Name",    "value": "Enterprise - Unlimited calling, video, messaging" }
+            ],
+            "productTerm": [{ "name": "Contract Term", "duration": { "amount": 24, "units": "month" } }]
+          },
+          "quantity": 250,
+          "quoteItemPrice": [
+            { "name": "Per seat per month", "priceType": "recurring", "recurringChargePeriod": "monthly", "price": { "dutyFreeAmount": { "value": 28.00, "unit": "USD" } } }
+          ]
+        },
+        {
+          "@type": "QuoteItem",
+          "id": "QI-SITE1-SBC",
+          "action": "add",
+          "productOffering": {
+            "id": "sbc-session-border",
+            "name": "Session Border Controller",
+            "characteristic": [
+              { "name": "productOfferingType",     "value": "Equipment" },
+              { "name": "productOfferingTypeGroup", "value": "Standalone" }
+            ]
+          },
+          "product": {
+            "@type": "Product",
+            "productCharacteristic": [
+              { "name": "Transport_Type_OMW",     "value": "SIP Trunking" },
+              { "name": "Device_Acquisition_Type","value": "Lease" }
+            ],
+            "productTerm": [{ "name": "Contract Term", "duration": { "amount": 24, "units": "month" } }]
+          },
+          "quantity": 2,
+          "quoteItemPrice": [
+            { "name": "Monthly lease",   "priceType": "recurring", "recurringChargePeriod": "monthly", "price": { "dutyFreeAmount": { "value": 420.00, "unit": "USD" } } },
+            { "name": "Installation fee","priceType": "oneTime",   "price": { "dutyFreeAmount": { "value": 1800.00, "unit": "USD" } } }
+          ]
+        }
+      ]
+    }
+  ]
+}

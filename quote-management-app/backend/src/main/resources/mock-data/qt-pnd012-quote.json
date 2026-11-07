@@ -1,0 +1,147 @@
+{
+  "@type": "Quote",
+  "externalId": "PARTNER-QUOTE-PND012",
+  "description": "Global MPLS VPN Expansion",
+  "category": "Indirect",
+  "relatedParty": [
+    {
+      "@type": "RelatedParty",
+      "@referredType": "Organization",
+      "id": "customer-org",
+      "name": "Orbital Dynamics Group",
+      "role": "Customer",
+      "characteristic": [
+        { "name": "tradingName",       "value": "Orbital Dynamics" },
+        { "name": "isLegalEntity",     "value": true },
+        { "name": "organizationType",  "value": "B2B" },
+        { "name": "channelType",       "value": "Indirect" },
+        { "name": "customerType", "value": "Midmarket" },
+        { "name": "customerSubType", "value": "Majors" },
+        { "name": "industry",          "value": "AEROSPACE & DEFENCE" },
+        { "name": "subIndustry",       "value": "Aerospace Systems" },
+        { "name": "sic4",              "value": "3812" },
+        { "name": "externalIdentifier","valueType": "object", "value": { "type": "customerId", "id": "CUST-0077" } }
+      ]
+    },
+    {
+      "@type": "RelatedParty",
+      "@referredType": "Individual",
+      "id": "cust-contact-primary",
+      "name": "James Holloway",
+      "role": "Contact",
+      "characteristic": [
+        { "name": "title",                "value": "Global Network Director" },
+        { "name": "preferredContactMethod","value": "Email" },
+        { "name": "contactRoleName",      "value": "Primary" },
+        { "name": "contactRoleCode",      "value": "P" },
+        { "name": "isSigner",             "value": true },
+        { "name": "signerAuthority",      "value": "Authorized Signatory" }
+      ]
+    },
+    {
+      "@type": "RelatedParty",
+      "@referredType": "Individual",
+      "id": "cust-contact-noc",
+      "name": "Isabelle Fontaine",
+      "role": "Contact",
+      "characteristic": [
+        { "name": "title",                "value": "Network Operations Manager" },
+        { "name": "preferredContactMethod","value": "Phone" },
+        { "name": "contactRoleName",      "value": "Technical" },
+        { "name": "contactRoleCode",      "value": "T" }
+      ]
+    }
+  ],
+  "contactMedium": [
+    {
+      "@type": "ContactMedium",
+      "mediumType": "PostalAddress",
+      "preferred": true,
+      "characteristic": {
+        "contactType": "customer-org:global-hq",
+        "street1": "550 AEROSPACE BOULEVARD",
+        "street2": "BUILDING A",
+        "city": "HOUSTON",
+        "stateOrProvince": "TX",
+        "postCode": "77058",
+        "country": "US"
+      }
+    },
+    {
+      "@type": "ContactMedium",
+      "mediumType": "TelephoneNumber",
+      "preferred": true,
+      "characteristic": { "contactType": "cust-contact-primary:directPhone", "phoneNumber": "7135550077" }
+    },
+    {
+      "@type": "ContactMedium",
+      "mediumType": "EmailAddress",
+      "preferred": true,
+      "characteristic": { "contactType": "cust-contact-primary:email", "emailAddress": "j.holloway@orbitaldynamics.example.com" }
+    },
+    {
+      "@type": "ContactMedium",
+      "mediumType": "EmailAddress",
+      "characteristic": { "contactType": "cust-contact-noc:email", "emailAddress": "noc@orbitaldynamics.example.com" }
+    },
+    {
+      "@type": "ContactMedium",
+      "mediumType": "TelephoneNumber",
+      "characteristic": { "contactType": "cust-contact-noc:mobile", "phoneNumber": "7135550078" }
+    }
+  ],
+  "quoteItem": [
+    {
+      "@type": "QuoteItem",
+      "id": "QI-SITE1",
+      "action": "add",
+      "product": {
+        "@type": "Product",
+        "name": "Houston Global HQ - 550 Aerospace Blvd",
+        "place": [
+          {
+            "@type": "GeographicAddress",
+            "id": "service-location-1",
+            "role": "ServiceLocation",
+            "characteristic": [
+              { "name": "street1",         "value": "550 AEROSPACE BOULEVARD" },
+              { "name": "street2",         "value": "BUILDING A" },
+              { "name": "city",            "value": "HOUSTON" },
+              { "name": "stateOrProvince", "value": "TX" },
+              { "name": "postCode",        "value": "77058" },
+              { "name": "country",         "value": "US" }
+            ]
+          }
+        ],
+        "relatedParty": []
+      },
+      "quoteItem": [
+        {
+          "@type": "QuoteItem",
+          "id": "QI-SITE1-MPLS-HUB",
+          "action": "add",
+          "productOffering": {
+            "id": "mpls-vpn-hub-1g",
+            "name": "MPLS VPN Hub Site 1G",
+            "characteristic": [
+              { "name": "productOfferingType",     "value": "Connectivity" },
+              { "name": "productOfferingTypeGroup", "value": "Package" }
+            ]
+          },
+          "product": {
+            "@type": "Product",
+            "productCharacteristic": [
+              { "name": "Transport_Type_OMW", "value": "MPLS L3 VPN" },
+              { "name": "Tier_Name",          "value": "Hub 1Gbps CIR - Any-to-Any VPN, 20+ spoke sites" }
+            ],
+            "productTerm": [{ "name": "Contract Term", "duration": { "amount": 36, "units": "month" } }]
+          },
+          "quantity": 1,
+          "quoteItemPrice": [
+            { "name": "Monthly recurring", "priceType": "recurring", "recurringChargePeriod": "monthly", "price": { "dutyFreeAmount": { "value": 8500.00, "unit": "USD" } } }
+          ]
+        }
+      ]
+    }
+  ]
+}

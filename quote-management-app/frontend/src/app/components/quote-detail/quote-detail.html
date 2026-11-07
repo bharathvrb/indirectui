@@ -1,0 +1,677 @@
+<div class="container-fluid py-4 quote-detail-screen qm-page-shell" ng-if="!loading && quote">
+  <nav aria-label="Breadcrumb" class="qm-breadcrumb mb-3"><a href="#!/quotes">Quotes</a><span aria-hidden="true"> / </span><span aria-current="page">Quote details</span></nav>
+  <div class="alert alert-success" role="status" ng-if="completionNotice">{{completionNotice}}</div>
+  <section class="qm-hero-card qm-detail-hero mb-4">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
+      <button class="btn btn-light qm-action-btn" ng-click="goBack()">
+        <i class="bi bi-arrow-left me-1"></i>Back to Quotes
+      </button>
+      <button id="mark-completed" class="btn btn-success" ng-if="isFailed() && canUpdateQuotes" ng-click="openCompleteDialog()">
+        <i class="bi bi-check2-circle me-1"></i>Mark Completed
+      </button>
+    </div>
+
+    <div class="row align-items-start g-3">
+      <div class="col-lg-8">
+        <div class="qm-kicker">Quote Detail Workspace</div>
+        <h1 id="quote-detail-heading" tabindex="-1" class="qm-title mb-2">{{displayValue(quote.description || quote.externalId || quote.quoteRequestId)}}</h1>
+        <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+          <code>{{displayValue(quote.quoteRequestId)}}</code>
+          <span class="badge {{getStateBadgeClass(quote.state)}}">{{getStateLabel(quote.state)}}</span>
+          <span class="badge bg-light text-dark border">{{displayValue(quote.category)}}</span>
+          <span class="badge bg-light text-dark border">Design: {{displayValue(quote.designStatus)}}</span>
+          <span class="badge bg-light text-dark border">Sub-status: {{displayValue(quote.designSubStatus)}}</span>
+        </div>
+        <div class="small qm-subtitle">
+          External ID: <strong>{{displayValue(quote.externalId)}}</strong>
+          <span class="ms-3">Created By: <strong>{{displayValue(quote.createdBy)}}</strong></span>
+          <span class="ms-3">Support Ticket: <strong>{{displayValue(quote.supportTicketNumber)}}</strong></span>
+        </div>
+      </div>
+      <div class="col-lg-4 text-lg-end small qm-subtitle">
+        <div>Created At: {{quote.createdAt ? (quote.createdAt | date:'dd MMM yyyy HH:mm:ss') : '—'}}</div>
+        <div>Updated At: {{quote.updatedAt ? (quote.updatedAt | date:'dd MMM yyyy HH:mm:ss') : '—'}}</div>
+        <div>Completed At: {{quote.completedAt ? (quote.completedAt | date:'dd MMM yyyy HH:mm:ss') : '—'}}</div>
+        <div>Retry Of: {{displayValue(quote.retryOf)}}</div>
+        <div>Retry Count: {{displayValue(quote.retryCount)}}</div>
+      </div>
+    </div>
+
+    <div class="row g-2 mt-3">
+      <div class="col-6 col-md-3">
+        <div class="qm-kpi-card">
+          <div class="qm-kpi-label">Sites</div>
+          <div class="qm-kpi-value">{{detailStats.siteCount}}</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="qm-kpi-card">
+          <div class="qm-kpi-label">Products</div>
+          <div class="qm-kpi-value">{{detailStats.productCount}}</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="qm-kpi-card qm-kpi-card-danger">
+          <div class="qm-kpi-label">Errors</div>
+          <div class="qm-kpi-value">{{detailStats.errorCount}}</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="qm-kpi-card qm-kpi-card-warning">
+          <div class="qm-kpi-label">Failed Steps</div>
+          <div class="qm-kpi-value">{{detailStats.failedStepCount}}</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="card mb-4 border-danger qm-section-card qm-diagnostic" ng-if="isFailed() && failureSummary">
+    <div class="card-header bg-danger text-white py-2">
+      <i class="bi bi-exclamation-triangle-fill me-1"></i>Failure Summary
+    </div>
+    <div class="card-body">
+      <div class="row g-2">
+        <div class="col-md-3"><strong>Failing Step:</strong> {{displayValue(failureSummary.failingStepName)}}</div>
+        <div class="col-md-3"><strong>Error Code:</strong> <code>{{displayValue(failureSummary.errorCode)}}</code></div>
+        <div class="col-md-3"><strong>Stage Reached:</strong> {{displayValue(failureSummary.stageReached)}}</div>
+        <div class="col-md-3"><strong>Error Message:</strong> {{displayValue(failureSummary.errorMessage)}}</div>
+      </div>
+      <button class="btn btn-sm btn-outline-danger mt-3" ng-click="setTab('errors')">Inspect error details</button>
+    </div>
+  </div>
+
+  <div class="card shadow-sm mb-4 qm-section-card">
+    <div class="card-header py-2 d-flex justify-content-between align-items-center">
+      <strong>System IDs</strong>
+      <small class="text-muted">Copy values as needed</small>
+    </div>
+    <div class="card-body">
+      <div class="row g-2">
+        <div class="col-md-6 col-xl-4" ng-repeat="idRow in idRows track by idRow.label">
+          <div class="border rounded p-2 h-100">
+            <div class="small text-muted">{{idRow.label}}</div>
+            <div class="d-flex justify-content-between align-items-center gap-2">
+              <code class="text-break">{{displayValue(idRow.value)}}</code>
+              <button class="btn btn-sm btn-outline-secondary"
+                      ng-disabled="!canCopy(displayValue(idRow.value))"
+                      ng-click="copyValue(idRow.value)" aria-label="Copy {{idRow.label}}" title="Copy {{idRow.label}}">
+                <i class="bi bi-clipboard"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex align-items-center justify-content-between mb-2 qm-filter-summary" ng-if="selectedSiteId">
+    <span class="badge bg-info text-dark">
+      Site filter active: {{selectedSiteId}}
+    </span>
+    <button class="btn btn-sm btn-outline-secondary" ng-click="clearSiteFilter()">Clear Site Filter</button>
+  </div>
+  <p class="small text-success" role="status" aria-live="polite">{{copyFeedback}}</p>
+  <div class="alert alert-info" role="status" ng-if="navigationNotice">{{navigationNotice}}</div>
+  <div class="nav nav-tabs mb-3 flex-wrap qm-tabset" role="tablist" aria-label="Quote detail sections">
+    <button ng-repeat="tab in tabs" type="button" class="nav-link" role="tab"
+            id="detail-tab-{{tab.id}}" aria-controls="detail-panel-{{tab.id}}" aria-selected="{{activeTab === tab.id}}"
+            tabindex="{{activeTab === tab.id ? 0 : -1}}" ng-class="{active: activeTab === tab.id}"
+            ng-click="setTab(tab.id)" ng-keydown="tabKeydown($event, $index)">
+      {{tab.label}} <span class="badge rounded-pill bg-secondary ms-1" ng-if="tabCount(tab.id) !== undefined">{{tabCount(tab.id)}}</span>
+    </button>
+  </div>
+
+  <div ng-if="activeTab === 'customer'" role="tabpanel" id="detail-panel-customer" aria-labelledby="detail-tab-customer">
+    <div class="d-flex justify-content-end mb-2">
+      <button class="btn btn-sm btn-outline-primary" ng-click="exportCustomerCsv()" ng-disabled="!canExportCustomer()">
+        <i class="bi bi-download me-1"></i>Export CSV
+      </button>
+    </div>
+    <div class="card mb-3 qm-section-card">
+      <div class="card-header fw-semibold">Customer Information</div>
+      <div class="card-body">
+        <dl class="row mb-0 small">
+          <dt ng-repeat-start="field in customerFields" class="col-md-3 text-muted">{{field[1]}}</dt>
+          <dd ng-repeat-end class="col-md-9">{{displayValue(customer[field[0]])}}</dd>
+        </dl>
+      </div>
+    </div>
+
+    <div class="card mb-3 qm-section-card">
+      <div class="card-header fw-semibold">Address</div>
+      <div class="card-body">
+        <dl class="row mb-0 small">
+          <dt ng-repeat-start="field in addressFields" class="col-md-3 text-muted">{{field[1]}}</dt>
+          <dd ng-repeat-end class="col-md-9">{{displayValue(customerAddress[field[0]])}}</dd>
+        </dl>
+      </div>
+    </div>
+
+    <div class="card qm-section-card">
+      <div class="card-header fw-semibold">Contacts</div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0 qm-table">
+          <thead>
+            <tr>
+              <th ng-repeat="field in contactFields" scope="col">{{field[1]}}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr ng-if="customerContacts.length === 0">
+              <td colspan="{{contactFields.length}}" class="text-center text-muted py-3">Contacts: No records found</td>
+            </tr>
+            <tr ng-repeat="contact in customerContacts track by contact._key" id="{{contact._key}}" tabindex="-1">
+              <td ng-repeat="field in contactFields">{{contactValue(contact, field[0])}}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div ng-if="activeTab === 'sites'" role="tabpanel" id="detail-panel-sites" aria-labelledby="detail-tab-sites">
+    <p class="small text-muted">Select a site to scope products, promotions, processing and errors.</p>
+    <div class="card qm-section-card">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0 qm-table">
+          <thead>
+            <tr>
+              <th>Site Name</th>
+              <th>Action</th>
+              <th>Address</th>
+              <th>ELOC ID</th>
+              <th>NAX IDX9</th>
+              <th>Division</th>
+              <th>Region</th>
+              <th>Market</th>
+              <th>Latitude</th>
+              <th>Longitude</th>
+              <th>CUID</th>
+              <th>Site ID</th>
+              <th>Amdocs Address ID</th>
+              <th>Status</th>
+              <th>Site Type</th>
+              <th>Survey ID</th>
+              <th>Project ID</th>
+              <th>Site Item ID</th><th>Place ID</th><th>Record ID</th><th>Quote Request ID</th><th>Created At</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr ng-if="sites.length === 0">
+              <td colspan="22" class="text-center text-muted py-3">Sites: No records found</td>
+            </tr>
+            <tr ng-repeat="site in sites track by site._key" id="{{site._key}}" tabindex="-1"
+                ng-class="{'qm-removed table-danger': isRemoved(site), 'table-active': selectedSiteId === site.siteId}"
+                ng-click="setSiteFilter(site.siteId)"
+                style="cursor:pointer">
+              <td><button class="btn btn-link btn-sm p-0" ng-click="setSiteFilter(site.siteId)" aria-pressed="{{selectedSiteId === site.siteId}}" title="Filter by this site">{{displayValue(site.siteName)}}</button></td>
+              <td>{{displayValue(site.action)}} <span class="badge bg-danger" ng-if="isRemoved(site)">Removed</span></td>
+              <td>
+                {{displayValue(site.address.street1)}}
+                <span ng-if="site.address.street2">, {{site.address.street2}}</span>
+                <span ng-if="site.address.city">, {{site.address.city}}</span>
+                <span ng-if="site.address.state">, {{site.address.state}}</span>
+                <span ng-if="site.address.postCode"> {{site.address.postCode}}</span>
+                <span ng-if="site.address.country">, {{site.address.country}}</span>
+              </td>
+              <td>{{displayValue(site.elocId)}}</td>
+              <td>{{displayValue(site.naxIdx9)}}</td>
+              <td>{{displayValue(site.divisionId)}}</td>
+              <td>{{displayValue(site.regionId)}}</td>
+              <td>{{displayValue(site.marketId)}}</td>
+              <td>{{displayValue(site.latitude)}}</td>
+              <td>{{displayValue(site.longitude)}}</td>
+              <td>{{displayValue(site.cuid)}}</td>
+              <td><code>{{displayValue(site.siteId)}}</code></td>
+              <td>{{displayValue(site.amdocsAddressId)}}</td>
+              <td>{{displayValue(site.status)}}</td>
+              <td>{{displayValue(site.siteType)}}</td>
+              <td>{{displayValue(site.siteSurveyId)}}</td>
+              <td>{{displayValue(site.projectId)}}</td>
+              <td>{{displayValue(site.siteItemId)}}</td><td>{{displayValue(site.placeId)}}</td>
+              <td>{{displayValue(site.id)}}</td><td>{{displayValue(site.quoteRequestId)}}</td>
+              <td>{{site.createdAt ? (site.createdAt | date:'dd MMM yyyy HH:mm:ss') : '—'}}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card qm-section-card mt-3" ng-repeat="site in filteredSites() track by site._key">
+      <div class="card-header fw-semibold">Site contacts · {{displayValue(site.siteName)}}</div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0 qm-table">
+          <thead><tr><th ng-repeat="field in contactFields" scope="col">{{field[1]}}</th></tr></thead>
+          <tbody>
+            <tr ng-if="!site.contacts.length"><td colspan="{{contactFields.length}}" class="text-muted p-3">Site contacts: No records found</td></tr>
+            <tr ng-repeat="contact in site.contacts track by contact._key" id="{{contact._key}}" tabindex="-1">
+              <td ng-repeat="field in contactFields">{{contactValue(contact, field[0])}}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div ng-if="activeTab === 'products'" role="tabpanel" id="detail-panel-products" aria-labelledby="detail-tab-products">
+    <div class="card card-body text-muted" ng-if="!filteredSites().length">Products: No records found</div>
+    <div class="card mb-3 qm-section-card" ng-repeat="site in filteredSites() track by site._key">
+      <div class="card-header fw-semibold d-flex justify-content-between">
+        <span>{{displayValue(site.siteName)}}</span>
+        <code>{{displayValue(site.siteId)}}</code>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0 qm-table">
+          <thead>
+            <tr>
+              <th>Item ID</th>
+              <th>Product Offering Name</th>
+              <th>Type</th>
+              <th>Action</th>
+              <th>Qty</th>
+              <th>Bundle</th>
+              <th>Product Spec ID</th>
+              <th>Status</th>
+              <th>SQO Instance ID</th>
+              <th>SQO Agreement ID</th>
+              <th>Offering ID</th><th>SQO Root Offer ID</th><th>Created At</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr ng-if="site.visibleItems.length === 0">
+              <td colspan="13" class="text-center text-muted py-3">Products: No records found</td>
+            </tr>
+
+            <tr ng-repeat-start="item in site.visibleItems track by item._key" id="{{item._key}}" tabindex="-1"
+                ng-class="{'table-warning': focusItemId === item.itemId, 'qm-removed table-danger': isRemoved(item)}">
+              <td>
+                <button class="btn btn-sm btn-link p-0 me-1"
+                        ng-if="item._hasChildren"
+                        ng-click="toggleItem(site, item)" aria-expanded="{{item._expanded}}"
+                        aria-label="{{item._expanded ? 'Collapse' : 'Expand'}} children of {{item.itemId}}">
+                  <i class="bi" ng-class="item._expanded ? 'bi-caret-down-fill' : 'bi-caret-right-fill'"></i>
+                </button>
+                <span ng-if="!item._hasChildren" class="me-3"></span>
+                <code>{{displayValue(item.itemId)}}</code>
+              </td>
+              <td>
+                <span ng-style="{'padding-left': (item._depth * 18) + 'px'}">{{displayValue(item.productOfferingName)}}</span>
+                <button class="btn btn-sm btn-link text-danger p-0 ms-2"
+                        ng-if="item._hasFailedStep || getStepStatusLabel(item.status) === 'Failed'"
+                        ng-click="showItemErrors(item)"
+                        title="View related errors" aria-label="View errors for {{item.itemId}}">
+                  <i class="bi bi-exclamation-triangle-fill"></i>
+                </button>
+              </td>
+              <td>{{displayValue(item.productOfferingType)}}</td>
+              <td>{{displayValue(item.action)}} <span class="badge bg-danger" ng-if="isRemoved(item)">Removed</span></td>
+              <td>{{displayValue(item.quantity)}}</td>
+              <td>{{booleanLabel(item.isBundle)}}</td>
+              <td>{{displayValue(item.productSpecId)}}</td>
+              <td><span class="badge {{getStepStatusClass(item.status)}}">{{getStepStatusLabel(item.status)}}</span></td>
+              <td>{{displayValue(item.sqoProductOfferingInstanceId)}}</td>
+              <td>{{displayValue(item.sqoProductOfferingAgreementId)}}</td>
+              <td>{{displayValue(item.productOfferingId)}}</td><td>{{displayValue(item.sqoRootOfferInstanceId)}}</td>
+              <td>{{item.createdAt ? (item.createdAt | date:'dd MMM yyyy HH:mm:ss') : '—'}}</td>
+            </tr>
+            <tr ng-repeat-end>
+              <td colspan="13" class="bg-light-subtle">
+                <button class="btn btn-sm btn-outline-secondary mb-2" ng-click="item._detailsExpanded = !item._detailsExpanded"
+                        aria-expanded="{{item._detailsExpanded}}" aria-controls="{{item._key}}-details">
+                  {{item._detailsExpanded ? 'Hide' : 'Show'}} characteristics, prices and terms
+                </button>
+                <div class="row g-2 small" ng-if="item._detailsExpanded" id="{{item._key}}-details">
+                  <div class="col-md-4">
+                    <div class="fw-semibold">Characteristics</div>
+                    <div class="text-muted" ng-if="item.characteristics.length === 0">Characteristics: No records found</div>
+                    <div ng-repeat="char in item.characteristics track by $index">
+                      <strong>{{displayValue(char.name)}}</strong> · {{displayValue(char.displayName)}}:
+                      {{displayValue(char.value)}} <span class="text-muted">({{displayValue(char.valueType)}})</span>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="fw-semibold">Prices</div>
+                    <div class="text-muted" ng-if="item.prices.length === 0">Prices: No records found</div>
+                    <div ng-repeat="price in item.prices track by $index">
+                      <strong>{{displayValue(price.priceName)}}</strong> · {{displayValue(price.priceType)}}:
+                      {{price.amount !== null && price.amount !== undefined ? (price.amount | number:2) : '—'}}
+                      {{displayValue(price.currency)}}
+                      <span class="text-muted">({{displayValue(price.recurringPeriod)}})</span>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="fw-semibold">Terms</div>
+                    <div class="text-muted" ng-if="item.terms.length === 0">Terms: No records found</div>
+                    <div ng-repeat="term in item.terms track by $index">
+                      <strong>{{displayValue(term.termName)}}</strong>:
+                      {{displayValue(term.termDuration)}} {{displayValue(term.termUnits)}}
+                      <span class="text-muted">({{displayValue(term.termType)}})</span>
+                      <span>Requested: {{booleanLabel(term.isRequestedTerm)}}</span>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div ng-if="activeTab === 'promotions'" role="tabpanel" id="detail-panel-promotions" aria-labelledby="detail-tab-promotions">
+    <div class="card card-body text-muted" ng-if="!promotionGroups().length">Promotions: No records found</div>
+    <div class="card qm-section-card mb-3" ng-repeat="group in promotionGroups() track by group.item._key">
+      <div class="card-header fw-semibold">{{displayValue(group.item.productOfferingName)}} · {{displayValue(group.item.itemId)}} <span class="text-muted">{{displayValue(group.site.siteName)}}</span></div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0 qm-table">
+          <thead>
+            <tr>
+              <th>Product Item</th>
+              <th>Promotion ID</th>
+              <th>Promotion Name</th>
+              <th>Promotion Type</th>
+              <th>Qualified</th>
+              <th>Applied</th>
+              <th>SQO Immediate Promotion ID</th>
+              <th>SQO Qualified Response</th>
+              <th>Status</th>
+              <th>Created At</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr ng-repeat="promo in group.rows track by $index"
+                ng-class="{'table-warning': (promo.status || '').toUpperCase() === 'PENDING', 'table-danger': (promo.status || '').toUpperCase() === 'REJECTED'}">
+              <td>
+                <div>{{displayValue(promo.productItemName)}}</div>
+                <small class="text-muted">{{displayValue(promo.productItemId)}}</small>
+              </td>
+              <td><code>{{displayValue(promo.promotionId)}}</code></td>
+              <td>{{displayValue(promo.promotionName)}}</td>
+              <td>{{displayValue(promo.promotionType)}}</td>
+              <td>{{promo.qualified === null || promo.qualified === undefined ? '—' : (promo.qualified ? 'Yes' : 'No')}}</td>
+              <td>{{promo.applied === null || promo.applied === undefined ? '—' : (promo.applied ? 'Yes' : 'No')}}</td>
+              <td>{{displayValue(promo.sqoImmediatePromotionId)}}</td>
+              <td>{{displayValue(promo.sqoQualifiedResponse)}}</td>
+              <td>
+                <span class="badge"
+                      ng-class="(promo.status || '').toUpperCase() === 'PENDING' ? 'bg-warning text-dark' :
+                                (promo.status || '').toUpperCase() === 'REJECTED' ? 'bg-danger' : 'bg-secondary'">
+                  {{displayValue(promo.status)}}
+                </span>
+              </td>
+              <td>{{promo.createdAt ? (promo.createdAt | date:'dd MMM yyyy HH:mm') : '—'}}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div ng-if="activeTab === 'processing'" role="tabpanel" id="detail-panel-processing" aria-labelledby="detail-tab-processing">
+    <p class="small text-muted">Failed steps appear first. Retry is disabled in this release — Coming soon.</p>
+    <div class="card mb-3 qm-section-card">
+      <div class="card-header fw-semibold">Monitoring</div>
+      <div class="card-body" ng-if="monitoring">
+        <div class="row g-2 small">
+          <div class="col-md-3"><strong>Polling Status:</strong> {{displayValue(monitoring.pollingStatus)}}</div>
+          <div class="col-md-3"><strong>SQO Status:</strong> {{displayValue(monitoring.sqoStatus)}}</div>
+          <div class="col-md-3"><strong>Description:</strong> {{displayValue(monitoring.sqoStatusDescription)}}</div>
+          <div class="col-md-3"><strong>Last Polled:</strong> {{monitoring.lastPolledAt ? (monitoring.lastPolledAt | date:'dd MMM yyyy HH:mm:ss') : '—'}}</div>
+          <div class="col-md-3"><strong>Attempt Count:</strong> {{displayValue(monitoring.attemptCount)}}</div>
+          <div class="col-md-3"><strong>Max Retries:</strong> {{displayValue(monitoring.maxRetries)}}</div>
+          <div class="col-md-3"><strong>Completed:</strong> {{booleanLabel(monitoring.isCompleted)}}</div>
+          <div class="col-md-3"><strong>Failed:</strong> {{booleanLabel(monitoring.isFailed)}}</div>
+        </div>
+      </div>
+      <div class="card-body text-muted" ng-if="!monitoring">Not available</div>
+    </div>
+
+    <div class="card qm-section-card">
+      <div class="table-responsive">
+        <table class="table table-sm mb-0 qm-table">
+          <thead>
+            <tr>
+              <th>Step Order</th>
+              <th>Step Name</th>
+              <th>Scope</th>
+              <th>Status</th>
+              <th>Attempt / Max</th>
+              <th>Started At</th>
+              <th>Completed At</th>
+              <th>Retry</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr ng-if="filteredProcessingSteps().length === 0">
+              <td colspan="8" class="text-center text-muted py-3">Processing steps: No records found</td>
+            </tr>
+            <tr ng-repeat="step in filteredProcessingSteps() track by step._key" ng-class="{'table-danger': step.stepStatus === 'FAILURE'}">
+              <td>{{displayValue(step.stepOrder)}}</td>
+              <td>{{displayValue(step.stepName)}}</td>
+              <td>{{displayValue(step.scope)}} <span ng-if="step.itemId && step.itemId !== 'QUOTE'" class="text-muted small">({{step.itemId}})</span></td>
+              <td><span class="badge {{getStepStatusClass(step.stepStatus)}}">{{getStepStatusLabel(step.stepStatus)}}</span></td>
+              <td>{{displayValue(step.attemptCount)}} / {{displayValue(step.maxRetries)}}</td>
+              <td>{{step.startedAt ? (step.startedAt | date:'dd MMM yyyy HH:mm:ss') : '—'}}</td>
+              <td>{{step.completedAt ? (step.completedAt | date:'dd MMM yyyy HH:mm:ss') : '—'}}</td>
+              <td>
+                <button class="btn btn-sm btn-outline-secondary" ng-if="getStepStatusLabel(step.stepStatus) === 'Failed'" disabled title="Coming soon">
+                  Retry
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div ng-if="activeTab === 'errors'" role="tabpanel" id="detail-panel-errors" aria-labelledby="detail-tab-errors">
+    <div class="qm-filter-summary mb-2" ng-if="errorItemId">Product item: {{errorItemId}} <button class="btn btn-sm btn-outline-secondary" ng-click="clearErrorItemFilter()">Clear item filter</button></div>
+    <div class="card mb-3 qm-section-card">
+      <div class="card-body">
+        <div class="row g-2 align-items-end">
+          <div class="col-md-3">
+            <label for="error-source" class="form-label small text-muted mb-1">Error Source</label>
+            <select id="error-source" class="form-select form-select-sm" ng-model="errorFilters.source">
+              <option value="">All</option>
+              <option ng-repeat="source in errorSourceOptions" value="{{source}}">{{source}}</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label for="error-code" class="form-label small text-muted mb-1">Error Code</label>
+            <select id="error-code" class="form-select form-select-sm" ng-model="errorFilters.code">
+              <option value="">All</option>
+              <option ng-repeat="code in errorCodeOptions" value="{{code}}">{{code}}</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <button class="btn btn-sm btn-outline-secondary w-100" ng-click="clearErrorFilters()">Clear error filters</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card qm-section-card">
+      <div class="table-responsive">
+        <table class="table table-sm mb-0 qm-table">
+          <thead>
+            <tr>
+              <th>Error Source</th>
+              <th>Error Code</th>
+              <th>Error Message</th>
+              <th>Error Detail</th>
+              <th>HTTP Status</th>
+              <th>Retry Attempt</th>
+              <th>Created At</th>
+              <th>Context Links</th>
+              <th>Retry</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr ng-if="filteredErrors().length === 0">
+              <td colspan="9" class="text-center text-muted py-3">Errors: No records found</td>
+            </tr>
+            <tr ng-repeat="row in filteredErrors() track by row._key">
+              <td>{{displayValue(row.errorSource)}}</td>
+              <td><code>{{displayValue(row.errorCode)}}</code></td>
+              <td>{{displayValue(row.errorMessage)}}</td>
+              <td>{{displayValue(row.errorDetail)}}</td>
+              <td>{{displayValue(row.httpStatusCode)}}</td>
+              <td>{{displayValue(row.retryAttempt)}}</td>
+              <td>{{row.createdAt ? (row.createdAt | date:'dd MMM yyyy HH:mm:ss') : '—'}}</td>
+              <td>
+                <button class="btn btn-link btn-sm p-0 me-2" ng-if="row.siteId" ng-click="jumpToSite(row.siteId)">Site</button>
+                <button class="btn btn-link btn-sm p-0 me-2" ng-if="row.itemId" ng-click="jumpToItem(row.itemId, row.siteId)">Item</button>
+                <button class="btn btn-link btn-sm p-0 me-2" ng-if="row.contactId !== null" ng-click="jumpToContact(row.contactId)">Contact</button>
+                <span ng-if="!row.siteId && !row.itemId && !row.contactId" class="text-muted">—</span>
+              </td>
+              <td>
+                <button class="btn btn-sm btn-outline-secondary" disabled title="Coming soon">Retry</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div ng-if="activeTab === 'events'" role="tabpanel" id="detail-panel-events" aria-labelledby="detail-tab-events">
+    <div class="card qm-section-card">
+      <div class="table-responsive">
+        <table class="table table-sm mb-0 qm-table">
+          <thead>
+            <tr>
+              <th>Event Type</th>
+              <th>Published to ONP</th>
+              <th>ONP Response Code</th>
+              <th>ONP Response Message</th>
+              <th>Event Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr ng-if="events.length === 0">
+              <td colspan="5" class="text-center text-muted py-3">Events: No records found</td>
+            </tr>
+            <tr ng-repeat="eventRow in events track by $index">
+              <td>{{displayValue(eventRow.eventType)}}</td>
+              <td>{{booleanLabel(eventRow.publishedToOnp)}}</td>
+              <td>{{displayValue(eventRow.onpResponseCode)}}</td>
+              <td>{{displayValue(eventRow.onpResponseMessage)}}</td>
+              <td>{{eventRow.eventTime ? (eventRow.eventTime | date:'dd MMM yyyy HH:mm:ss') : '—'}}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div ng-if="activeTab === 'payload'" role="tabpanel" id="detail-panel-payload" aria-labelledby="detail-tab-payload">
+    <div class="card qm-section-card">
+      <div class="card-header py-2 d-flex flex-wrap gap-2 justify-content-between align-items-center">
+        <strong>Quote Payload</strong>
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+          <label for="payload-search" class="visually-hidden">Find text in payload</label>
+          <input id="payload-search" type="search" class="form-control form-control-sm qm-payload-search"
+                 ng-model="payloadQuery.text" ng-change="setPayloadSearch(payloadQuery.text)" placeholder="Find text in payload">
+          <span class="small text-muted" role="status" ng-if="payloadSearch">{{payloadSearchCount}} match(es)</span>
+          <button class="btn btn-sm btn-outline-primary" ng-click="findPayloadMatch(false)" ng-disabled="!payloadSearchCount">Find</button>
+          <button class="btn btn-sm btn-outline-primary" ng-click="findPayloadMatch(true)" ng-disabled="!payloadSearchCount">Next match</button>
+          <button class="btn btn-sm btn-outline-secondary" ng-click="copyPayload()" ng-disabled="!payloadFormatted">
+            <i class="bi bi-clipboard"></i> Copy
+          </button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="alert alert-warning py-2" ng-if="payloadWarning">{{payloadWarning}}</div>
+        <div class="alert alert-info py-2 d-flex justify-content-between align-items-center"
+             ng-if="payloadCollapsed && !showFullPayload">
+          <span>Payload is larger than 1 MB. Showing preview.</span>
+          <button class="btn btn-sm btn-outline-primary" ng-click="showFullPayloadContent()">Show full</button>
+        </div>
+        <p class="text-muted" ng-if="!payloadFormatted">Payload: No records found</p>
+        <pre id="quote-payload" class="payload-viewer" tabindex="0" aria-label="Read-only quote payload" ng-bind="payloadTextToDisplay()"></pre>
+      </div>
+    </div>
+  </div>
+
+  <div ng-if="activeTab === 'contract'" role="tabpanel" id="detail-panel-contract" aria-labelledby="detail-tab-contract">
+    <div class="card qm-section-card">
+      <div class="card-body">
+        <div ng-if="!contract.soa && !contract.msa" class="text-muted">No Contract is found.</div>
+        <div ng-if="contract.soa || contract.msa">
+          <div class="alert alert-info" ng-if="!canDownloadContract()">Contract download is unavailable: no download endpoint is configured. You can still copy the document IDs.</div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="border rounded p-3 h-100">
+                <div class="small text-muted">DMAASID SOA</div>
+                <div class="d-flex justify-content-between align-items-center mt-1">
+                  <code>{{displayValue(contract.soa)}}</code>
+                  <button class="btn btn-sm btn-outline-secondary" ng-disabled="!canCopy(contract.soa)" ng-click="copyValue(contract.soa)" aria-label="Copy SOA document ID" title="Copy SOA document ID"><i class="bi bi-clipboard"></i></button>
+                  <button class="btn btn-sm btn-outline-primary" ng-if="canDownloadContract()" ng-disabled="!contract.soa || contractDownloading" ng-click="downloadContract('SOA')">
+                    <i class="bi bi-download"></i> Download SOA
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="border rounded p-3 h-100">
+                <div class="small text-muted">DMAASID MSA</div>
+                <div class="d-flex justify-content-between align-items-center mt-1">
+                  <code>{{displayValue(contract.msa)}}</code>
+                  <button class="btn btn-sm btn-outline-secondary" ng-disabled="!canCopy(contract.msa)" ng-click="copyValue(contract.msa)" aria-label="Copy MSA document ID" title="Copy MSA document ID"><i class="bi bi-clipboard"></i></button>
+                  <button class="btn btn-sm btn-outline-primary" ng-if="canDownloadContract()" ng-disabled="!contract.msa || contractDownloading" ng-click="downloadContract('MSA')">
+                    <i class="bi bi-download"></i> Download MSA
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="alert alert-warning mt-3 mb-0 py-2" role="alert" ng-if="contractDownloadError">{{contractDownloadError}}
+            <span class="d-block small" ng-if="contractTrackingId">Tracking ID: <code>{{contractTrackingId}}</code></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+  <div class="recovery-dialog-backdrop" ng-if="completeDialogOpen" ng-click="closeCompleteDialog()">
+    <section id="complete-dialog" class="recovery-dialog" role="dialog" aria-modal="true" aria-labelledby="complete-dialog-title"
+             aria-describedby="complete-dialog-help" ng-click="$event.stopPropagation()" ng-keydown="completeDialogKeydown($event)">
+      <h2 id="complete-dialog-title" class="h5 mb-3">Mark Quote as Completed</h2>
+      <div class="small text-muted mb-2">Quote ID: <code>{{displayValue(completeContext.quoteRequestId)}}</code></div>
+      <div class="small text-muted mb-3">Ticket Number: <code>{{displayValue(completeContext.ticketNumber)}}</code></div>
+      <p id="complete-dialog-help" class="small text-muted">Confirm only after resolving the failure manually. A resolution note of 1–1000 characters is required.</p>
+
+      <label for="resolution-note" class="form-label fw-semibold">Resolution Note <span class="text-danger">*</span></label>
+      <textarea id="resolution-note" class="form-control" rows="4" maxlength="1000" required ng-model="completeForm.note" ng-readonly="completeSubmitting"
+                placeholder="Enter manual resolution details (1-1000 characters)"></textarea>
+      <div class="small text-muted mt-1">{{(completeForm.note || '').length}} / 1000</div>
+      <div class="alert alert-danger py-2 mt-3 mb-0" role="alert" ng-if="completeError">{{completeError}}
+        <span class="d-block small" ng-if="completeTrackingId">Tracking ID: <code>{{completeTrackingId}}</code></span>
+      </div>
+
+      <div class="d-flex justify-content-end gap-2 mt-3">
+        <button type="button" class="btn btn-outline-secondary" ng-click="closeCompleteDialog()" ng-disabled="completeSubmitting">Cancel</button>
+        <button type="button" class="btn btn-primary"
+                ng-disabled="!canSubmitComplete()"
+                ng-click="submitComplete()">
+          {{completeSubmitting ? 'Submitting...' : 'Confirm'}}
+        </button>
+      </div>
+    </section>
+  </div>
+
+<div class="text-center py-5" role="status" ng-if="loading">
+  <div class="loading-spinner mx-auto"></div>
+  <p class="text-muted mt-2">Loading quote details...</p>
+</div>
+
+<div class="container py-4" ng-if="!loading && error">
+  <div id="quote-load-error" class="alert alert-danger" role="alert" tabindex="-1">
+    {{error}}
+    <span class="d-block small mt-1" ng-if="trackingId">Tracking ID: <code>{{trackingId}}</code></span>
+    <a ng-if="supportUrl" ng-href="{{supportUrl}}" target="_blank" rel="noopener noreferrer" class="d-inline-block mt-2">Contact support</a>
+  </div>
+  <button class="btn btn-secondary" ng-click="goBack()">Back to Quotes</button>
+  <button class="btn btn-outline-primary" ng-click="loadQuote()" ng-if="error.indexOf('Unable to load') === 0">Try loading again</button>
+</div>

@@ -1,0 +1,191 @@
+{
+  "@type": "Quote",
+  "externalId": "PARTNER-QUOTE-A002",
+  "description": "Cloud Migration Bundle - Enterprise",
+  "category": "Indirect",
+  "relatedParty": [
+    {
+      "@type": "RelatedParty",
+      "@referredType": "Organization",
+      "id": "customer-org",
+      "name": "Meridian Group",
+      "role": "Customer",
+      "characteristic": [
+        { "name": "tradingName",       "value": "Meridian" },
+        { "name": "isLegalEntity",     "value": true },
+        { "name": "organizationType",  "value": "B2B" },
+        { "name": "channelType",       "value": "Indirect" },
+        { "name": "customerType", "value": "Midmarket" },
+        { "name": "customerSubType", "value": "Majors" },
+        { "name": "industry",          "value": "FINANCIAL SERVICES" },
+        { "name": "subIndustry",       "value": "Asset Management" },
+        { "name": "sic4",              "value": "6282" },
+        { "name": "externalIdentifier","valueType": "object", "value": { "type": "customerId", "id": "CUST-0042" } }
+      ]
+    },
+    {
+      "@type": "RelatedParty",
+      "@referredType": "Individual",
+      "id": "cust-contact-primary",
+      "name": "Oliver Bennett",
+      "role": "Contact",
+      "characteristic": [
+        { "name": "title",                "value": "Chief Technology Officer" },
+        { "name": "preferredContactMethod","value": "Email" },
+        { "name": "contactRoleName",      "value": "Primary" },
+        { "name": "contactRoleCode",      "value": "P" },
+        { "name": "isSigner",             "value": true },
+        { "name": "signerAuthority",      "value": "Authorized Signatory" }
+      ]
+    },
+    {
+      "@type": "RelatedParty",
+      "@referredType": "Individual",
+      "id": "cust-contact-procurement",
+      "name": "Sophie Clarke",
+      "role": "Contact",
+      "characteristic": [
+        { "name": "title",                "value": "Procurement Director" },
+        { "name": "preferredContactMethod","value": "Email" },
+        { "name": "contactRoleName",      "value": "Secondary" },
+        { "name": "contactRoleCode",      "value": "S" },
+        { "name": "isSigner",             "value": false }
+      ]
+    }
+  ],
+  "contactMedium": [
+    {
+      "@type": "ContactMedium",
+      "mediumType": "PostalAddress",
+      "preferred": true,
+      "characteristic": {
+        "contactType": "customer-org:registered-office",
+        "street1": "25 CANARY WHARF",
+        "city": "LONDON",
+        "stateOrProvince": "ENGLAND",
+        "postCode": "E14 5AB",
+        "country": "GB"
+      }
+    },
+    {
+      "@type": "ContactMedium",
+      "mediumType": "TelephoneNumber",
+      "preferred": true,
+      "characteristic": { "contactType": "cust-contact-primary:directPhone", "phoneNumber": "442079460802" }
+    },
+    {
+      "@type": "ContactMedium",
+      "mediumType": "EmailAddress",
+      "preferred": true,
+      "characteristic": { "contactType": "cust-contact-primary:email", "emailAddress": "o.bennett@meridiangroup.example.com" }
+    },
+    {
+      "@type": "ContactMedium",
+      "mediumType": "EmailAddress",
+      "characteristic": { "contactType": "cust-contact-procurement:email", "emailAddress": "procurement@meridiangroup.example.com" }
+    },
+    {
+      "@type": "ContactMedium",
+      "mediumType": "TelephoneNumber",
+      "characteristic": { "contactType": "cust-contact-procurement:mobile", "phoneNumber": "447911123456" }
+    },
+    {
+      "@type": "ContactMedium",
+      "mediumType": "TelephoneNumber",
+      "characteristic": { "contactType": "site1-poc:mobile", "phoneNumber": "442079460910" }
+    },
+    {
+      "@type": "ContactMedium",
+      "mediumType": "EmailAddress",
+      "characteristic": { "contactType": "site1-poc:email", "emailAddress": "cloud.ops@meridiangroup.example.com" }
+    }
+  ],
+  "quoteItem": [
+    {
+      "@type": "QuoteItem",
+      "id": "QI-SITE1",
+      "action": "add",
+      "product": {
+        "@type": "Product",
+        "name": "Meridian London HQ - 25 Canary Wharf",
+        "place": [
+          {
+            "@type": "GeographicAddress",
+            "id": "service-location-1",
+            "role": "ServiceLocation",
+            "characteristic": [
+              { "name": "street1",         "value": "25 CANARY WHARF" },
+              { "name": "city",            "value": "LONDON" },
+              { "name": "stateOrProvince", "value": "ENGLAND" },
+              { "name": "postCode",        "value": "E14 5AB" },
+              { "name": "country",         "value": "GB" }
+            ]
+          }
+        ],
+        "relatedParty": [
+          {
+            "@type": "RelatedParty",
+            "id": "site1-poc",
+            "name": "James Whitfield",
+            "role": "SiteContact",
+            "characteristic": [
+              { "name": "title",               "value": "Cloud Infrastructure Lead" },
+              { "name": "siteContactRoleName", "value": "POC" },
+              { "name": "siteContactRoleCode", "value": "Site POC" }
+            ]
+          }
+        ]
+      },
+      "quoteItem": [
+        {
+          "@type": "QuoteItem",
+          "id": "QI-SITE1-COMPUTE",
+          "action": "add",
+          "productOffering": {
+            "id": "cloud-compute-lg",
+            "name": "Cloud Compute - Large (24 months)",
+            "characteristic": [
+              { "name": "productOfferingType",     "value": "Managed Service" },
+              { "name": "productOfferingTypeGroup", "value": "Package" }
+            ]
+          },
+          "product": {
+            "@type": "Product",
+            "productCharacteristic": [
+              { "name": "Tier_Name",   "value": "Large - 32 vCPU / 128GB RAM" },
+              { "name": "IP_Version",  "value": "IPv4/IPv6 Dual Stack" }
+            ],
+            "productTerm": [{ "name": "Contract Term", "duration": { "amount": 24, "units": "month" } }]
+          },
+          "quantity": 10,
+          "quoteItemPrice": [
+            { "name": "Monthly recurring", "priceType": "recurring", "recurringChargePeriod": "monthly", "price": { "dutyFreeAmount": { "value": 4200.00, "unit": "USD" } } }
+          ]
+        },
+        {
+          "@type": "QuoteItem",
+          "id": "QI-SITE1-PS",
+          "action": "add",
+          "productOffering": {
+            "id": "ps-migration",
+            "name": "Professional Services - Migration",
+            "characteristic": [
+              { "name": "productOfferingType",     "value": "Professional Services" },
+              { "name": "productOfferingTypeGroup", "value": "Standalone" }
+            ]
+          },
+          "product": {
+            "@type": "Product",
+            "productCharacteristic": [
+              { "name": "Tier_Name", "value": "Enterprise Migration Package - 500 workloads" }
+            ]
+          },
+          "quantity": 1,
+          "quoteItemPrice": [
+            { "name": "One-time charge", "priceType": "oneTime", "price": { "dutyFreeAmount": { "value": 35000.00, "unit": "USD" } } }
+          ]
+        }
+      ]
+    }
+  ]
+}

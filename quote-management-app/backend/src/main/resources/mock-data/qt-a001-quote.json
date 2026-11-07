@@ -1,0 +1,219 @@
+{
+  "@type": "Quote",
+  "externalId": "PARTNER-QUOTE-A001",
+  "description": "Enterprise Network Upgrade - Q2 2026",
+  "category": "Indirect",
+  "relatedParty": [
+    {
+      "@type": "RelatedParty",
+      "@referredType": "Organization",
+      "id": "customer-org",
+      "name": "Apex Technologies Ltd",
+      "role": "Customer",
+      "characteristic": [
+        { "name": "tradingName",       "value": "Apex Tech" },
+        { "name": "isLegalEntity",     "value": true },
+        { "name": "organizationType",  "value": "B2B" },
+        { "name": "channelType",       "value": "Indirect" },
+        { "name": "customerType", "value": "Midmarket" },
+        { "name": "customerSubType", "value": "Majors" },
+        { "name": "industry",          "value": "INFORMATION TECHNOLOGY" },
+        { "name": "subIndustry",       "value": "Software & Cloud Services" },
+        { "name": "sic4",              "value": "7372" },
+        { "name": "externalIdentifier","valueType": "object", "value": { "type": "customerId", "id": "CUST-0019" } }
+      ]
+    },
+    {
+      "@type": "RelatedParty",
+      "@referredType": "Individual",
+      "id": "cust-contact-primary",
+      "name": "Rachel Nguyen",
+      "role": "Contact",
+      "characteristic": [
+        { "name": "title",                "value": "VP of Infrastructure" },
+        { "name": "preferredContactMethod","value": "Email" },
+        { "name": "contactRoleName",      "value": "Primary" },
+        { "name": "contactRoleCode",      "value": "P" },
+        { "name": "isSigner",             "value": true },
+        { "name": "signerAuthority",      "value": "Authorized Signatory" }
+      ]
+    },
+    {
+      "@type": "RelatedParty",
+      "@referredType": "Individual",
+      "id": "cust-contact-billing",
+      "name": "Tom Harrington",
+      "role": "Contact",
+      "characteristic": [
+        { "name": "title",                "value": "Finance Manager" },
+        { "name": "preferredContactMethod","value": "Email" },
+        { "name": "contactRoleName",      "value": "Billing" },
+        { "name": "contactRoleCode",      "value": "B" }
+      ]
+    },
+    {
+      "@type": "RelatedParty",
+      "@referredType": "Individual",
+      "id": "cust-contact-technical",
+      "name": "Priya Kapoor",
+      "role": "Contact",
+      "characteristic": [
+        { "name": "title",                "value": "Network Operations Lead" },
+        { "name": "preferredContactMethod","value": "Phone" },
+        { "name": "contactRoleName",      "value": "Technical" },
+        { "name": "contactRoleCode",      "value": "T" }
+      ]
+    }
+  ],
+  "contactMedium": [
+    {
+      "@type": "ContactMedium",
+      "mediumType": "PostalAddress",
+      "preferred": true,
+      "characteristic": {
+        "contactType": "customer-org:headquarters",
+        "street1": "1 INNOVATION DRIVE",
+        "street2": "SUITE 400",
+        "city": "SAN FRANCISCO",
+        "stateOrProvince": "CA",
+        "postCode": "94105",
+        "country": "US"
+      }
+    },
+    {
+      "@type": "ContactMedium",
+      "mediumType": "TelephoneNumber",
+      "preferred": true,
+      "characteristic": { "contactType": "cust-contact-primary:directPhone", "phoneNumber": "4155550191" }
+    },
+    {
+      "@type": "ContactMedium",
+      "mediumType": "EmailAddress",
+      "preferred": true,
+      "characteristic": { "contactType": "cust-contact-primary:email", "emailAddress": "r.nguyen@apextech.example.com" }
+    },
+    {
+      "@type": "ContactMedium",
+      "mediumType": "EmailAddress",
+      "characteristic": { "contactType": "cust-contact-billing:email", "emailAddress": "billing@apextech.example.com" }
+    },
+    {
+      "@type": "ContactMedium",
+      "mediumType": "TelephoneNumber",
+      "characteristic": { "contactType": "cust-contact-technical:directPhone", "phoneNumber": "4155550102" }
+    },
+    {
+      "@type": "ContactMedium",
+      "mediumType": "EmailAddress",
+      "characteristic": { "contactType": "cust-contact-technical:email", "emailAddress": "noc@apextech.example.com" }
+    },
+    {
+      "@type": "ContactMedium",
+      "mediumType": "TelephoneNumber",
+      "characteristic": { "contactType": "customer-org:mainLine", "phoneNumber": "4155550101" }
+    },
+    {
+      "@type": "ContactMedium",
+      "mediumType": "TelephoneNumber",
+      "characteristic": { "contactType": "site1-poc:mobile", "phoneNumber": "4155550201" }
+    },
+    {
+      "@type": "ContactMedium",
+      "mediumType": "EmailAddress",
+      "characteristic": { "contactType": "site1-poc:email", "emailAddress": "datacenter.ops@apextech.example.com" }
+    }
+  ],
+  "quoteItem": [
+    {
+      "@type": "QuoteItem",
+      "id": "QI-SITE1",
+      "action": "add",
+      "product": {
+        "@type": "Product",
+        "name": "HQ Data Center - 1 Innovation Drive, San Francisco CA",
+        "place": [
+          {
+            "@type": "GeographicAddress",
+            "id": "service-location-1",
+            "role": "ServiceLocation",
+            "characteristic": [
+              { "name": "street1",         "value": "1 INNOVATION DRIVE" },
+              { "name": "street2",         "value": "SUITE 400" },
+              { "name": "city",            "value": "SAN FRANCISCO" },
+              { "name": "stateOrProvince", "value": "CA" },
+              { "name": "postCode",        "value": "94105" },
+              { "name": "country",         "value": "US" }
+            ]
+          }
+        ],
+        "relatedParty": [
+          {
+            "@type": "RelatedParty",
+            "id": "site1-poc",
+            "name": "Derek Walsh",
+            "role": "SiteContact",
+            "characteristic": [
+              { "name": "title",                "value": "Data Center Manager" },
+              { "name": "siteContactRoleName",  "value": "POC" },
+              { "name": "siteContactRoleCode",  "value": "Site POC" }
+            ]
+          }
+        ]
+      },
+      "quoteItem": [
+        {
+          "@type": "QuoteItem",
+          "id": "QI-SITE1-SWITCH",
+          "action": "add",
+          "productOffering": {
+            "id": "network-switch-10g",
+            "name": "10G Core Switch Stack",
+            "characteristic": [
+              { "name": "productOfferingType",      "value": "Equipment" },
+              { "name": "productOfferingTypeGroup",  "value": "Standalone" }
+            ]
+          },
+          "product": {
+            "@type": "Product",
+            "productCharacteristic": [
+              { "name": "Transport_Type_OMW",    "value": "Ethernet" },
+              { "name": "Installation_Method",   "value": "Professional Install" },
+              { "name": "Device_Acquisition_Type","value": "Purchase" }
+            ]
+          },
+          "quantity": 2,
+          "quoteItemPrice": [
+            { "name": "One-time charge",  "priceType": "oneTime",    "price": { "dutyFreeAmount": { "value": 8500.00, "unit": "USD" } } },
+            { "name": "Monthly support",  "priceType": "recurring",  "recurringChargePeriod": "monthly", "price": { "dutyFreeAmount": { "value": 1200.00, "unit": "USD" } } }
+          ]
+        },
+        {
+          "@type": "QuoteItem",
+          "id": "QI-SITE1-FIREWALL",
+          "action": "add",
+          "productOffering": {
+            "id": "firewall-ng-ha",
+            "name": "Enterprise Firewall (HA Pair)",
+            "characteristic": [
+              { "name": "productOfferingType",      "value": "Equipment" },
+              { "name": "productOfferingTypeGroup",  "value": "Standalone" }
+            ]
+          },
+          "product": {
+            "@type": "Product",
+            "productCharacteristic": [
+              { "name": "Transport_Type_OMW",    "value": "Ethernet" },
+              { "name": "Installation_Method",   "value": "Professional Install" },
+              { "name": "Device_Acquisition_Type","value": "Purchase" }
+            ]
+          },
+          "quantity": 1,
+          "quoteItemPrice": [
+            { "name": "One-time charge", "priceType": "oneTime",   "price": { "dutyFreeAmount": { "value": 12500.00, "unit": "USD" } } },
+            { "name": "Monthly support", "priceType": "recurring", "recurringChargePeriod": "monthly", "price": { "dutyFreeAmount": { "value": 850.00, "unit": "USD" } } }
+          ]
+        }
+      ]
+    }
+  ]
+}
