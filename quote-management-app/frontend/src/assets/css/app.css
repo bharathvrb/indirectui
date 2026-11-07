@@ -188,7 +188,6 @@ code, .font-monospace { font-family: var(--qm-mono); font-size: .86em; color: va
 .qm-breadcrumb { color: var(--qm-muted); font-size: 13px; font-weight: 500; }
 .qm-breadcrumb a { color: var(--qm-muted); }
 .qm-breadcrumb a:hover { color: var(--qm-primary); }
-.qm-topbar-title { font-size: 15px; font-weight: 650; letter-spacing: -.01em; color: var(--qm-text); }
 .qm-topbar-actions { display: flex; align-items: center; gap: 12px; }
 .qm-theme-picker { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 6px 0 11px; border: 1px solid var(--qm-border); border-radius: 9px; background: var(--qm-surface); color: var(--qm-muted); }
 .qm-theme-picker select { border: 0; background: transparent; color: var(--qm-text); font-size: 13px; font-weight: 500; padding: 4px 2px; cursor: pointer; }
@@ -226,9 +225,6 @@ code, .font-monospace { font-family: var(--qm-mono); font-size: .86em; color: va
 .qm-nav-link span { flex: 1; }
 .qm-nav-arrow { font-size: 12px; opacity: 0; transition: opacity .15s, transform .15s; }
 .qm-nav-link.active .qm-nav-arrow, .qm-nav-link:hover .qm-nav-arrow { opacity: .85; transform: translateX(2px); }
-.qm-sidebar-footer { margin-top: auto; padding: 14px 12px 4px; border-top: 1px solid var(--qm-ink-border); font-size: 11.5px; color: #6f7c95; }
-.qm-sidebar-footer strong { display: block; color: #c6cfdf; font-weight: 600; font-size: 12px; margin-bottom: 2px; }
-.qm-env-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #22c55e; margin-right: 6px; box-shadow: 0 0 0 3px rgba(34, 197, 94, .18); }
 .qm-sidebar-backdrop { display: none; }
 
 body.qm-app:not(.is-login) .app-topbar,
@@ -498,12 +494,12 @@ body.is-login .qm-theme-picker select { color: #fff; }
 }
 .qm-auth-page::before { content: ''; position: absolute; inset: 0; z-index: -1; background-image: linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px); background-size: 40px 40px; mask-image: radial-gradient(70% 60% at 50% 40%, #000, transparent); }
 .qm-auth-card { width: min(100%, 460px); background: var(--qm-surface); border: 1px solid rgba(255,255,255,.1); border-radius: 22px; box-shadow: 0 30px 80px rgba(0, 0, 0, .5), 0 0 0 1px rgba(255,255,255,.04); overflow: hidden; }
-.qm-login-header { position: relative; display: flex; align-items: center; gap: 14px; padding: 30px 32px 6px; color: var(--qm-text); }
+.qm-login-header { position: relative; display: flex; align-items: center; gap: 14px; padding: 30px 32px 4px; color: var(--qm-text); }
 .qm-auth-symbol { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 14px; font-size: 22px; color: #fff; background: linear-gradient(140deg, #3b82f6, #1d4ed8 55%, #0b1220); box-shadow: 0 10px 24px rgba(29, 78, 216, .35); }
 .qm-login-brand { font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--qm-primary); }
 .qm-login-header h1 { font-size: 26px; font-weight: 750; letter-spacing: -.035em; margin: 0; }
 .qm-login-header-mark { display: none; }
-.qm-login-lead { padding: 10px 32px 0; margin: 0; color: var(--qm-muted); font-size: 13.5px; }
+.qm-login-lead { margin: 2px 0 0; color: var(--qm-muted); font-size: 13.5px; }
 .qm-login-body { padding: 22px 32px 26px; }
 .qm-login-btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px; font-size: 14.5px; border-radius: 11px; }
 .qm-sso-btn { color: #fff; background: linear-gradient(180deg, #111a2e, #05080f); border: 1px solid #05080f; box-shadow: 0 8px 20px rgba(5, 8, 15, .25), inset 0 1px 0 rgba(255,255,255,.08); }
@@ -535,7 +531,7 @@ body.is-login .qm-theme-picker select { color: #fff; }
     .app-sidebar.is-open { transform: none; box-shadow: 30px 0 60px rgba(0,0,0,.35); }
     .qm-page-shell { padding: 20px 18px 40px !important; }
     .app-topbar { padding: 0 16px; }
-    .qm-user-name, .qm-breadcrumb, .qm-topbar-title { display: none; }
+    .qm-user-name, .qm-breadcrumb { display: none; }
 }
 @media (max-width: 575.98px) {
     .qm-title { font-size: 23px; }
@@ -552,7 +548,6 @@ body.is-login .qm-theme-picker select { color: #fff; }
     .qm-kpi-value { font-size: 21px; }
     .qm-auth-page { padding: 84px 14px 30px; }
     .qm-login-header, .qm-login-body { padding-left: 22px; padding-right: 22px; }
-    .qm-login-lead { padding: 10px 22px 0; }
     .recovery-dialog .qm-dialog-meta { grid-template-columns: 1fr; }
     .qm-toast { left: 16px; right: 16px; bottom: 16px; }
 }

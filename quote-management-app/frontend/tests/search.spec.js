@@ -585,7 +585,7 @@ describe('Unified quote search workspace', function() {
     timeout.flush(300);
     expect(requests.length).toBe(2);
     expect(requests[1].params.search).toBe('submitted');
-    expect(element[0].querySelector('button[type="submit"]').textContent).toBe('Search quotes');
+    expect(element[0].querySelector('button[type="submit"]').textContent).toBe('Search');
   });
 
   it('restores Back/Forward URL filters and pages with exactly one request per navigation', function() {

@@ -42,6 +42,8 @@ angular.module('quoteManagement')
         return criteria.quoteRequestId ? 'quote request ID' : criteria.externalId ? 'external ID' : 'proposal ID';
       };
 
+      function capitalize(text) { return text.charAt(0).toUpperCase() + text.slice(1); }
+
       function rememberOptions(rows) {
         filterKeys.forEach(function(key) {
           var options = $scope[key + 'Options'];
@@ -188,7 +190,7 @@ angular.module('quoteManagement')
         var chips = [];
         var labels = { state: 'State', designStatus: 'Design', category: 'Category', channelType: 'Channel' };
         if (view.text($scope.searchTerm)) chips.push({
-          key: 'search', label: ($scope.isExactLookup() ? $scope.lookupLabel() + ': ' : 'Search: ') + view.text($scope.searchTerm)
+          key: 'search', label: ($scope.isExactLookup() ? capitalize($scope.lookupLabel()) + ': ' : 'Search: ') + view.text($scope.searchTerm)
         });
         if ($scope.isExactLookup()) {
           if (!angular.equals(chips, filterChips)) filterChips = chips;

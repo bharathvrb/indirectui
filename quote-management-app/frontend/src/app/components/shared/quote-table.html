@@ -1,10 +1,10 @@
 <section class="card qm-section-card qm-table-shell" aria-label="Quote results" ng-attr-aria-busy="{{$ctrl.loading}}">
   <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
-    <h2 class="qm-card-title qm-results-heading" tabindex="-1"><i class="bi bi-table" aria-hidden="true"></i>Quote results</h2>
+    <h2 class="qm-card-title qm-results-heading" tabindex="-1"><i class="bi bi-table" aria-hidden="true"></i>Results</h2>
     <span class="small text-muted" role="status" aria-live="polite">
-      <span ng-if="$ctrl.loading"><i class="bi bi-arrow-repeat qm-spin me-1" aria-hidden="true"></i>Loading quotes…</span>
+      <span ng-if="$ctrl.loading"><i class="bi bi-arrow-repeat qm-spin me-1" aria-hidden="true"></i>Loading…</span>
       <span ng-if="$ctrl.ready && !$ctrl.loading && !$ctrl.error">
-        {{$ctrl.firstRow()}}–{{$ctrl.lastRow()}} of {{$ctrl.totalElements | number}} matching quotes
+        {{$ctrl.firstRow()}}–{{$ctrl.lastRow()}} of {{$ctrl.totalElements | number}}
       </span>
     </span>
   </div>
@@ -14,12 +14,12 @@
         <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>{{$ctrl.error}}
         <div class="small mt-1">Tracking ID: <code>{{$ctrl.value($ctrl.trackingId)}}</code></div>
       </div>
-      <button type="button" class="btn btn-outline-danger btn-sm" ng-click="$ctrl.onRetry()">Retry loading quotes</button>
+      <button type="button" class="btn btn-outline-danger btn-sm" ng-click="$ctrl.onRetry()">Try again</button>
     </div>
   </div>
   <div class="qm-empty-state py-5 px-3" ng-if="!$ctrl.loading && !$ctrl.error && !$ctrl.ready">
     <i class="bi bi-search" aria-hidden="true"></i>
-    <p class="mb-0 mt-2">{{$ctrl.idleMessage || 'Choose search criteria to find quotes.'}}</p>
+    <p class="mb-0 mt-2">{{$ctrl.idleMessage || 'Enter search criteria to see results.'}}</p>
   </div>
   <div class="table-responsive" tabindex="0" role="region" aria-label="Quote results table; scroll horizontally for all columns"
        ng-if="$ctrl.loading || ($ctrl.ready && !$ctrl.error)">
@@ -50,7 +50,7 @@
             <div class="qm-empty-state">
               <i class="bi bi-inbox" aria-hidden="true"></i>
               <div class="fw-semibold mt-2">{{$ctrl.emptyMessage || 'No records found — Quotes'}}</div>
-              <div class="small text-muted mt-1">Try another search or clear the filters.</div>
+              <div class="small text-muted mt-1">Check the value or clear the filters.</div>
             </div>
           </td>
         </tr>
