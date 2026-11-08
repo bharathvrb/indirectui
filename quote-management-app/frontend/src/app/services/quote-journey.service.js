@@ -1,7 +1,7 @@
 'use strict';
 
 // Turns raw step executions into one ordered sequence of steps with progress,
-// the current step and durations. Steps keep their actual OMW names.
+// and the current step. Steps keep their actual OMW names.
 angular.module('quoteManagement')
   .factory('QuoteJourney', [function() {
     // Known OMW steps in flow order. Unknown steps are still shown, after the known ones.
@@ -56,23 +56,6 @@ angular.module('quoteManagement')
       return TONES[normalized] || { tone: 'pending', label: humanize(normalized), icon: 'bi-circle' };
     }
 
-    function time(value) {
-      if (!value) return null;
-      var parsed = new Date(value).getTime();
-      return isNaN(parsed) ? null : parsed;
-    }
-
-    function formatDuration(ms) {
-      if (typeof ms !== 'number' || !isFinite(ms) || ms < 0) return null;
-      if (ms < 1000) return '<1 s';
-      var seconds = Math.round(ms / 1000);
-      if (seconds < 60) return seconds + ' s';
-      var minutes = Math.floor(seconds / 60);
-      if (minutes < 60) return minutes + ' min' + (seconds % 60 ? ' ' + (seconds % 60) + ' s' : '');
-      var hours = Math.floor(minutes / 60);
-      return hours + ' h' + (minutes % 60 ? ' ' + (minutes % 60) + ' min' : '');
-    }
-
     function number(value) {
       var parsed = parseInt(value, 10);
       return isNaN(parsed) ? null : parsed;
@@ -96,13 +79,11 @@ angular.module('quoteManagement')
       var list = (angular.isArray(steps) ? steps : []).map(function(step, position) {
         var info = stepInfo(step.stepName);
         var status = statusInfo(step.stepStatus);
-        var started = time(step.startedAt), completed = time(step.completedAt);
         return angular.extend({}, step, {
           info: info, label: info.label,
           // Name split after each underscore so long names wrap between words, never inside one.
           parts: info.label.match(/[^_]+_*|_+/g) || [info.label],
           status: normalizeStatus(step.stepStatus), tone: status.tone, statusLabel: status.label, icon: status.icon,
-          duration: started !== null && completed !== null ? formatDuration(completed - started) : null,
           position: position
         });
       });
@@ -126,6 +107,6 @@ angular.module('quoteManagement')
 
     return {
       build: build, stepInfo: stepInfo, statusInfo: statusInfo,
-      normalizeStatus: normalizeStatus, formatDuration: formatDuration, humanize: humanize
+      normalizeStatus: normalizeStatus, humanize: humanize
     };
   }]);

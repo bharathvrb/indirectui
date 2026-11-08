@@ -55,16 +55,6 @@ describe('Quote journey model', function() {
     expect(journey.statusInfo('ON_HOLD')).toEqual({ tone: 'pending', label: 'On hold', icon: 'bi-circle' });
   });
 
-  it('formats durations for seconds, minutes and hours and rejects invalid values', function() {
-    expect(journey.formatDuration(250)).toBe('<1 s');
-    expect(journey.formatDuration(45000)).toBe('45 s');
-    expect(journey.formatDuration(60000)).toBe('1 min');
-    expect(journey.formatDuration(65000)).toBe('1 min 5 s');
-    expect(journey.formatDuration(7200000)).toBe('2 h');
-    expect(journey.formatDuration(7380000)).toBe('2 h 3 min');
-    [-1, NaN, Infinity, '5', null, undefined].forEach(function(value) { expect(journey.formatDuration(value)).toBeNull(); });
-  });
-
   it('returns an empty journey for missing or empty input', function() {
     [undefined, null, [], 'steps'].forEach(function(input) {
       var result = journey.build(input);
@@ -125,17 +115,14 @@ describe('Quote journey model', function() {
     expect(finished.current).toBeNull();
   });
 
-  it('computes step durations only from valid start and end times and keeps the input unchanged', function() {
-    var input = [
-      step('ADDRESS_VALIDATION', 'SUCCESS', { startedAt: '2026-09-28T13:59:00Z', completedAt: '2026-09-28T13:59:03Z' }),
-      step('CREATE_CONTACT', 'SUCCESS', { startedAt: '2026-09-28T13:59:00Z' }),
-      step('CREATE_CUSTOMER', 'SUCCESS', { startedAt: 'not a date', completedAt: '2026-09-28T13:59:03Z' })
-    ];
+  it('does not add durations or attempt counts to steps, and keeps the input unchanged', function() {
+    var input = [step('ADDRESS_VALIDATION', 'SUCCESS', { startedAt: '2026-09-28T13:59:00Z', completedAt: '2026-09-28T13:59:03Z', attemptCount: 2 })];
     var copy = angular.copy(input);
     var result = journey.build(input);
-    expect(result.steps.map(function(s) { return s.duration; })).toEqual(['3 s', null, null]);
+    expect(result.steps[0].duration).toBeUndefined();
     expect(result.steps[0].label).toBe('ADDRESS_VALIDATION');
     expect(result.steps[0].statusLabel).toBe('Completed');
+    expect(journey.formatDuration).toBeUndefined();
     expect(input).toEqual(copy);
   });
 });

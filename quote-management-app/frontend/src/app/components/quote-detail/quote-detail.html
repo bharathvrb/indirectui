@@ -81,8 +81,7 @@
           <span>{{displayValue(journey.spotlight.error.errorMessage)}}</span>
         </p>
         <p class="qm-spotlight-meta">
-          <span class="qm-spotlight-stage">Step {{journey.spotlight.number}} of {{journey.total}}</span> ·
-          Attempt {{displayValue(journey.spotlight.attemptCount)}} of {{displayValue(journey.spotlight.maxRetries)}}
+          <span class="qm-spotlight-stage">Step {{journey.spotlight.number}} of {{journey.total}}</span>
           <span ng-if="journey.spotlight.scope && journey.spotlight.scope !== 'QUOTE'"> · {{humanize(journey.spotlight.scope)}} {{journey.spotlight.itemId}}</span>
           <span ng-if="journey.spotlight.startedAt"> · started {{journey.spotlight.startedAt | date:'dd MMM, HH:mm:ss'}}</span>
         </p>
@@ -104,7 +103,7 @@
         <div class="qm-step-body">
           <span class="qm-step-name" title="{{step.stepName}}"><span ng-repeat="part in step.parts track by $index">{{part}}<wbr></span></span>
           <span class="qm-step-meta">
-            {{step.statusLabel}}<span ng-if="step.duration"> · {{step.duration}}</span><span ng-if="step.tone === 'failure' || step.attemptCount > 1"> · attempt {{displayValue(step.attemptCount)}}/{{displayValue(step.maxRetries)}}</span><span ng-if="step.scope && step.scope !== 'QUOTE'"> · {{humanize(step.scope)}}</span>
+            {{step.statusLabel}}<span ng-if="step.scope && step.scope !== 'QUOTE'"> · {{humanize(step.scope)}}</span>
           </span>
         </div>
         <span class="qm-step-no" aria-hidden="true">{{step.number < 10 ? '0' + step.number : step.number}}</span>

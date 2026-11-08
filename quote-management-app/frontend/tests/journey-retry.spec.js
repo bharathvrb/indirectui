@@ -93,9 +93,10 @@ describe('Quote journey and step retry', function() {
       expect(names).toEqual(['ADDRESS_VALIDATION', 'CREATE_CONTACT', 'CREATE_PROPOSAL', 'ADD_SITE', 'CONTRACT_GENERATION']);
       var numbers = Array.prototype.map.call(page.querySelectorAll('.qm-step-no'), function(n) { return n.textContent.trim(); });
       expect(numbers).toEqual(['01', '02', '03', '04', '05']);
-      expect(page.querySelector('.qm-step.is-failure .qm-step-meta').textContent).toContain('attempt 3/3');
+      expect(page.querySelector('.qm-step.is-failure .qm-step-meta').textContent.trim()).toBe('Failed');
       expect(page.querySelectorAll('.qm-step-desc, .qm-spotlight-desc').length).toBe(0);
-      expect(page.querySelector('.qm-step.is-success .qm-step-meta').textContent).toContain('4 s');
+      expect(page.querySelector('.qm-step.is-success .qm-step-meta').textContent.trim()).toBe('Completed');
+      expect(page.querySelector('.qm-steps').textContent).not.toMatch(/attempt|\d+ ?(s|min)\b/i);
       expect(page.querySelectorAll('.qm-step.is-current').length).toBe(1);
       expect(page.querySelector('.qm-journey-counts').textContent.replace(/\s+/g, ' ')).toContain('2 done 1 failed 2 waiting');
     });
@@ -107,7 +108,7 @@ describe('Quote journey and step retry', function() {
       expect(summary.textContent).toContain('Step 3 of 5');
       expect(summary.textContent).toContain('CREATE_PROPOSAL_POLLING_ERROR');
       expect(summary.textContent).toContain('Polling API timed out');
-      expect(summary.textContent).toContain('Attempt 3 of 3');
+      expect(summary.textContent).not.toMatch(/attempt/i);
     });
 
     it('omits the failure summary while the quote is not in a failed state', function() {
