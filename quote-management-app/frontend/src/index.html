@@ -37,7 +37,7 @@
       <div class="qm-user" ng-if="currentUser && !isLoginRoute">
         <span class="qm-avatar" aria-hidden="true">{{currentUser.name.charAt(0)}}</span>
         <span class="qm-user-name" ng-bind="currentUser.name"></span>
-        <span class="badge bg-warning" ng-if="currentUser.authType === 'local'">Local</span>
+
         <button type="button" class="btn qm-signout" ng-click="logout()" ng-disabled="signingOut" title="Sign out" aria-label="Sign out"><i class="bi bi-box-arrow-right" aria-hidden="true"></i></button>
       </div>
     </div>

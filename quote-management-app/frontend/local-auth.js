@@ -25,9 +25,6 @@ function credentialsFromEnvironment() {
         throw new Error('Local login requires both LOCAL_LOGIN_USERNAME (1–128 characters) ' +
             'and LOCAL_LOGIN_PASSWORD (1–1024 characters).');
     }
-    if (process.env.NODE_ENV === 'production') {
-        return { enabled: false };
-    }
     const salt = crypto.randomBytes(32);
     return {
         enabled: true,
@@ -45,7 +42,40 @@ function isLoopback(address) {
     return net.isIP(ipv4) === 4 && ipv4.startsWith('127.');
 }
 
+// QM_PUBLIC_ORIGIN (e.g. https://quotes.example.com) opens the app to other machines. Without it,
+// only browsers on this machine are accepted. Either way requests must come from the app's own origin.
+function publicOrigin() {
+    const value = process.env.QM_PUBLIC_ORIGIN;
+    if (!value) {
+        return null;
+    }
+    try {
+        const url = new URL(value);
+        if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password ||
+            url.pathname !== '/' || url.search || url.hash) {
+            return null;
+        }
+        return url;
+    } catch (error) {
+        return null;
+    }
+}
+
+function matchesPublicOrigin(req) {
+    const url = publicOrigin();
+    return !!url && typeof req.headers.host === 'string' && req.headers.host.toLowerCase() === url.host.toLowerCase() ? url : null;
+}
+
 function isLocalRequest(req) {
+    const fetchSite = req.headers['sec-fetch-site'];
+    if (fetchSite && fetchSite !== 'same-origin' && fetchSite !== 'none') {
+        return false;
+    }
+    const origin = req.headers.origin;
+    const configured = matchesPublicOrigin(req);
+    if (configured) {
+        return (origin === undefined && req.method !== 'POST') || origin === configured.origin;
+    }
     if (!isLoopback(req.socket.remoteAddress)) {
         return false;
     }
@@ -66,11 +96,6 @@ function isLocalRequest(req) {
     } catch (error) {
         return false;
     }
-    const fetchSite = req.headers['sec-fetch-site'];
-    if (fetchSite && fetchSite !== 'same-origin' && fetchSite !== 'none') {
-        return false;
-    }
-    const origin = req.headers.origin;
     return (origin === undefined && req.method !== 'POST') || origin === expectedOrigin;
 }
 
@@ -79,9 +104,14 @@ function json(res, status, value) {
     res.end(JSON.stringify(value));
 }
 
+function isSecure(req) {
+    const configured = matchesPublicOrigin(req);
+    return configured ? configured.protocol === 'https:' : !!req.socket.encrypted;
+}
+
 function cookie(req, token, maxAge, cookiePath = '/') {
     return COOKIE_NAME + '=' + token + '; Path=' + cookiePath + '; Max-Age=' + maxAge +
-        '; HttpOnly; SameSite=Strict' + (req.socket.encrypted ? '; Secure' : '');
+        '; HttpOnly; SameSite=Strict' + (isSecure(req) ? '; Secure' : '');
 }
 
 function sessionHashes(req) {
@@ -319,3 +349,4 @@ function createLocalAuth(options = {}) {
 
 module.exports = createLocalAuth;
 module.exports.isLocalRequest = isLocalRequest;
+module.exports.publicOrigin = publicOrigin;
