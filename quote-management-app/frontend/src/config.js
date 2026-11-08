@@ -7,6 +7,7 @@ window.APP_CONFIG = Object.assign({
     supportUrl: '',
     // Quote list auto-refresh interval (seconds, minimum 15). The toggle is off by default.
     autoRefreshSeconds: 60,
+    // Step retry: true shows enabled Retry buttons. The server also needs QUOTEDATA_RETRY_ENABLED=true.
     features: { retryEnabled: false }
 }, window.APP_CONFIG || {});
 

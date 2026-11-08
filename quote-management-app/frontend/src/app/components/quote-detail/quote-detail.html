@@ -45,44 +45,81 @@
     </div>
   </section>
 
-  <div class="card mb-4 qm-section-card qm-diagnostic" ng-if="isFailed() && failureSummary">
-    <div class="qm-diag-head">
-      <i class="bi bi-exclamation-octagon-fill" aria-hidden="true"></i>
-      <div class="flex-grow-1">
-        <h2>Failure Summary</h2>
-        <p>Latest failed step and its error.</p>
+  <section class="card mb-4 qm-section-card qm-journey" ng-if="journey.total" aria-labelledby="journey-title">
+    <div class="qm-journey-head">
+      <div class="qm-ring" ng-class="'is-' + journey.status" role="img" aria-label="{{journey.done}} of {{journey.total}} steps completed">
+        <svg viewBox="0 0 44 44" aria-hidden="true">
+          <circle class="qm-ring-track" cx="22" cy="22" r="18"></circle>
+          <circle class="qm-ring-value" cx="22" cy="22" r="18" ng-attr-stroke-dasharray="{{(journey.percent * 1.131).toFixed(1)}} 113.1"></circle>
+        </svg>
+        <span>{{journey.percent}}%</span>
       </div>
-      <button class="btn btn-sm btn-outline-danger" ng-click="setTab('errors')">View errors <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></button>
-    </div>
-    <div class="card-body">
-      <div class="row g-3">
-        <div class="col-md-3"><strong>Failing Step</strong> {{displayValue(failureSummary.failingStepName)}}</div>
-        <div class="col-md-3"><strong>Error Code</strong> <code>{{displayValue(failureSummary.errorCode)}}</code></div>
-        <div class="col-md-3"><strong>Stage Reached</strong> {{displayValue(failureSummary.stageReached)}}</div>
-        <div class="col-md-3"><strong>Error Message</strong> {{displayValue(failureSummary.errorMessage)}}</div>
+      <div class="qm-journey-intro">
+        <h2 id="journey-title" class="qm-journey-title">Processing journey</h2>
+        <p class="qm-journey-status" ng-switch="journey.status">
+          <span ng-switch-when="failure">Stopped at <strong>{{(journey.spotlight || journey.current).label}}</strong></span>
+          <span ng-switch-when="success">All {{journey.total}} steps completed</span>
+          <span ng-switch-when="pending">Waiting to start</span>
+          <span ng-switch-default>Now on <strong>{{journey.current.label}}</strong></span>
+        </p>
       </div>
+      <ul class="qm-journey-counts" aria-label="Step summary">
+        <li class="is-success"><b>{{journey.done}}</b> done</li>
+        <li class="is-failure" ng-if="journey.failed"><b>{{journey.failed}}</b> failed</li>
+        <li class="is-progress" ng-if="journey.active"><b>{{journey.active}}</b> running</li>
+        <li class="is-pending" ng-if="journey.pending"><b>{{journey.pending}}</b> waiting</li>
+      </ul>
     </div>
-  </div>
 
-  <div class="card mb-4 qm-section-card qm-pipeline-card" ng-if="pipeline.length">
-    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
-      <h2 class="qm-card-title"><i class="bi bi-diagram-3" aria-hidden="true"></i>Processing steps</h2>
-      <div class="d-flex align-items-center gap-3 small text-muted">
-        <span>{{pipelineProgress.done}} of {{pipelineProgress.total}} complete</span>
-        <div class="qm-progress" style="width: 140px" role="progressbar" aria-label="Processing progress"
-             aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{pipelineProgress.percent}}"><span ng-style="{width: pipelineProgress.percent + '%'}"></span></div>
+    <div class="qm-spotlight" ng-if="isFailed() && journey.spotlight" role="group" aria-labelledby="spotlight-title" id="failure-summary">
+      <span class="qm-spotlight-icon" aria-hidden="true"><i class="bi bi-x-octagon-fill"></i></span>
+      <div class="qm-spotlight-body">
+        <h3 id="spotlight-title">{{journey.spotlight.label}} failed</h3>
+        <p class="qm-spotlight-desc" ng-if="journey.spotlight.description">{{journey.spotlight.description}}</p>
+        <p class="qm-spotlight-error" ng-if="journey.spotlight.error">
+          <code>{{displayValue(journey.spotlight.error.errorCode)}}</code>
+          <span>{{displayValue(journey.spotlight.error.errorMessage)}}</span>
+        </p>
+        <p class="qm-spotlight-meta">
+          <span class="qm-spotlight-stage">Stage: {{displayValue(journey.spotlight.phaseLabel)}} · {{journey.spotlight.stepName}}</span> ·
+          Attempt {{displayValue(journey.spotlight.attemptCount)}} of {{displayValue(journey.spotlight.maxRetries)}}
+          <span ng-if="journey.spotlight.scope && journey.spotlight.scope !== 'QUOTE'"> · {{humanize(journey.spotlight.scope)}} {{journey.spotlight.itemId}}</span>
+          <span ng-if="journey.spotlight.startedAt"> · started {{journey.spotlight.startedAt | date:'dd MMM, HH:mm:ss'}}</span>
+        </p>
+      </div>
+      <div class="qm-spotlight-actions">
+        <button type="button" id="spotlight-retry" class="btn btn-sm" ng-class="canRetry(journey.spotlight) ? 'btn-primary' : 'btn-outline-secondary'"
+                ng-disabled="!canRetry(journey.spotlight)" title="{{retryTitle(journey.spotlight)}}" ng-click="openRetryDialog(journey.spotlight)">
+          <i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>{{retryRequested[journey.spotlight.id] ? 'Retry requested' : 'Retry step'}}
+        </button>
+        <button type="button" id="spotlight-errors" class="btn btn-sm btn-outline-secondary" ng-click="setTab('errors')">View errors</button>
+        <span class="qm-soon" ng-if="!retryEnabled">Retry coming soon</span>
       </div>
     </div>
-    <div class="card-body">
-      <ol class="qm-pipeline list-unstyled mb-0">
-        <li class="qm-pipe-step" ng-repeat="step in pipeline track by step._key" ng-class="pipelineTone(step.stepStatus)">
-          <span class="qm-pipe-dot" aria-hidden="true"><i class="bi" ng-class="pipelineIcon(step.stepStatus)"></i></span>
-          <span class="qm-pipe-name">{{humanize(step.stepName)}}</span>
-          <span class="qm-pipe-state">{{getStepStatusLabel(step.stepStatus)}}<span ng-if="step.scope && step.scope !== 'QUOTE'"> · {{humanize(step.scope)}}</span></span>
-        </li>
-      </ol>
+
+    <div class="qm-phases">
+      <section class="qm-phase" ng-repeat="phase in journey.phases track by phase.id" ng-class="'is-' + phase.status" aria-label="{{phase.label}}">
+        <header class="qm-phase-head">
+          <span class="qm-phase-icon" aria-hidden="true"><i class="bi {{phase.icon}}"></i></span>
+          <h3>{{phase.label}}</h3>
+          <span class="qm-phase-count">{{phase.done}}/{{phase.total}}</span>
+        </header>
+        <div class="qm-phase-bar" aria-hidden="true"><span ng-style="{width: (phase.total ? phase.done * 100 / phase.total : 0) + '%'}"></span></div>
+        <ol class="qm-steps">
+          <li class="qm-step" ng-repeat="step in phase.steps track by step._key" ng-class="['is-' + step.tone, {'is-current': step === journey.current}]"
+              ng-style="{'animation-delay': ($index * 35) + 'ms'}">
+            <span class="qm-step-icon" aria-hidden="true"><i class="bi {{step.icon}}"></i></span>
+            <div class="qm-step-body">
+              <span class="qm-step-name" title="{{step.description || step.stepName}}">{{step.label}}</span>
+              <span class="qm-step-meta">
+                {{step.statusLabel}}<span ng-if="step.duration"> · {{step.duration}}</span><span ng-if="step.tone === 'failure' || step.attemptCount > 1"> · attempt {{displayValue(step.attemptCount)}}/{{displayValue(step.maxRetries)}}</span><span ng-if="step.scope && step.scope !== 'QUOTE'"> · {{humanize(step.scope)}}</span>
+              </span>
+            </div>
+          </li>
+        </ol>
+      </section>
     </div>
-  </div>
+  </section>
 
   <div class="card mb-4 qm-section-card">
     <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
@@ -459,8 +496,10 @@
               <td>{{step.startedAt ? (step.startedAt | date:'dd MMM yyyy HH:mm:ss') : '—'}}</td>
               <td>{{step.completedAt ? (step.completedAt | date:'dd MMM yyyy HH:mm:ss') : '—'}}</td>
               <td>
-                <button class="btn btn-sm btn-outline-secondary" ng-if="getStepStatusLabel(step.stepStatus) === 'Failed'" disabled title="Coming soon">
-                  <i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>Retry
+                <button type="button" class="btn btn-sm" ng-class="canRetry(step) ? 'btn-outline-primary' : 'btn-outline-secondary'"
+                        ng-if="getStepStatusLabel(step.stepStatus) === 'Failed'" ng-disabled="!canRetry(step)"
+                        title="{{retryTitle(step)}}" ng-click="openRetryDialog(step)">
+                  <i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>{{retryRequested[step.id] ? 'Requested' : 'Retry'}}
                 </button>
               </td>
             </tr>
@@ -531,7 +570,9 @@
                 <span ng-if="!row.siteId && !row.itemId && !row.contactId" class="text-muted">—</span>
               </td>
               <td>
-                <button class="btn btn-sm btn-outline-secondary" disabled title="Coming soon"><i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>Retry</button>
+                <button type="button" class="btn btn-sm" ng-class="canRetry(stepForError(row)) ? 'btn-outline-primary' : 'btn-outline-secondary'"
+                        ng-disabled="!canRetry(stepForError(row))" title="{{retryTitle(stepForError(row))}}"
+                        ng-click="openRetryDialog(stepForError(row))"><i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>Retry</button>
               </td>
             </tr>
           </tbody>
@@ -679,6 +720,37 @@
       </div>
     </section>
   </div>
+
+<div class="recovery-dialog-backdrop" ng-if="retry.open" ng-click="closeRetryDialog()">
+  <section id="retry-dialog" class="recovery-dialog" role="dialog" aria-modal="true" aria-labelledby="retry-dialog-title"
+           aria-describedby="retry-dialog-help" ng-click="$event.stopPropagation()" ng-keydown="retryDialogKeydown($event)">
+    <div class="qm-dialog-head">
+      <i class="bi bi-arrow-repeat is-retry" aria-hidden="true"></i>
+      <div>
+        <h2 id="retry-dialog-title">Retry {{stepLabel(retry.step.stepName)}}?</h2>
+        <p id="retry-dialog-help" class="small text-muted mb-0">The step runs again from where it failed. Later steps continue automatically if it succeeds.</p>
+      </div>
+    </div>
+    <div class="qm-dialog-body">
+      <div class="qm-dialog-meta">
+        <div><span>Step</span><code>{{displayValue(retry.step.stepName)}}</code></div>
+        <div><span>Attempts so far</span><code>{{displayValue(retry.step.attemptCount)}} of {{displayValue(retry.step.maxRetries)}}</code></div>
+      </div>
+      <div class="alert alert-warning py-2 mb-0" ng-if="retry.step.maxRetries !== null && retry.step.attemptCount >= retry.step.maxRetries">
+        Automatic retries are used up. This is a manual retry.
+      </div>
+      <div class="alert alert-danger py-2 mt-3 mb-0" role="alert" ng-if="retry.error">{{retry.error}}
+        <span class="d-block small" ng-if="retry.trackingId">Tracking ID: <code>{{retry.trackingId}}</code></span>
+      </div>
+    </div>
+    <div class="qm-dialog-foot">
+      <button type="button" class="btn btn-outline-secondary" ng-click="closeRetryDialog()" ng-disabled="retry.submitting">Cancel</button>
+      <button type="button" id="retry-confirm" class="btn btn-primary" ng-click="submitRetry()" ng-disabled="retry.submitting">
+        <i class="bi me-1" ng-class="retry.submitting ? 'bi-arrow-repeat qm-spin' : 'bi-arrow-repeat'" aria-hidden="true"></i>{{retry.submitting ? 'Requesting…' : 'Retry step'}}
+      </button>
+    </div>
+  </section>
+</div>
 
 <div class="container-fluid qm-page-shell" role="status" ng-if="loading" aria-label="Loading quote details">
   <div class="qm-skeleton-line qm-skeleton-block mb-4" style="height: 260px"></div>

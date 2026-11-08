@@ -10,7 +10,8 @@ AngularJS + Bootstrap workspace for OMW indirect quote requests, served by a Nod
 | `npm start` | Build into `dist/`, load `server.properties`, serve on http://127.0.0.1:8081/. |
 | `npm run dev` | Rebuild on every change under `src/` (run alongside `npm start`, then refresh the browser). |
 | `npm test` | Karma/Jasmine UI specs in headless Chrome. Set `CHROME_BIN` if Chrome/Edge is not auto-detected. |
-| `npm run test:server` | Node tests for the server, login and proxy (synthetic data; no network calls). |
+| `npm run test:server` | Node tests for the server, login, proxy, properties loader and page routing (synthetic data; no network calls). |
+| `npm run test:coverage` | Both suites with coverage: HTML report in `coverage/ui/html`, server summary in the console. |
 
 Always serve `dist/`, not `src/`: vendor libraries (Angular, Bootstrap, icons, MSAL) are copied into `dist/vendor` at build time.
 
@@ -23,6 +24,7 @@ Always serve `dist/`, not `src/`: vendor libraries (Angular, Bootstrap, icons, M
 | `QUOTEDATA_CLIENT_ID`, `QUOTEDATA_CLIENT_SECRET`, `QUOTEDATA_SCOPE` | QuoteData service account (OAuth `client_credentials`). Required for any data. |
 | `QUOTEDATA_TOKEN_URL` | Token endpoint. Default `https://sat-ci.codebig2.net/v2/ws/token.oauth2`. Must be HTTPS. |
 | `QUOTEDATA_BASE_URL` | QuoteData base including `/quotedata/v1`. Default `https://quotedata-flx.as-g8.cf.comcast.net/quotedata/v1`. |
+| `QUOTEDATA_RETRY_ENABLED` | `true` forwards step retries to QuoteData (see Step retry). Anything else answers `501 RETRY_NOT_AVAILABLE`. |
 | `QUOTEDATA_ALLOW_HTTP` | Set `true` only if the QuoteData host serves plain HTTP; then use an `http://` base URL. The token URL stays HTTPS-only. |
 | `SSO_CLIENT_ID`, `SSO_TENANT_ID` | Used to verify SSO users' ID tokens. Must match `AUTH_CONFIG` in `src/config.js`. Without them SSO users get `503 SSO_AUTH_NOT_CONFIGURED`. |
 | `LOCAL_LOGIN_USERNAME`, `LOCAL_LOGIN_PASSWORD` | Optional local development login (both or neither). Ignored when `NODE_ENV=production`. |
@@ -38,10 +40,22 @@ Restart the server after changing settings.
 | `APP_CONFIG.autoRefreshSeconds` | Quote list auto-refresh interval (default 60, minimum 15). The toggle starts off. |
 | `APP_CONFIG.contractDownloadUrl` | Optional contract download endpoint (`documentType`, `dmaasId` query). Blank shows IDs with copy buttons only. |
 | `APP_CONFIG.supportUrl` | Optional HTTPS support link shown in the menu and on error pages. |
-| `APP_CONFIG.features.retryEnabled` | Keep `false`; Retry buttons show "Coming soon". |
+| `APP_CONFIG.features.retryEnabled` | `false` (default): Retry buttons are visible but disabled with "Coming soon". `true`: failed steps can be retried (see Step retry). |
 | `AUTH_CONFIG.clientId`, `tenantId`, `loginScopes`, `loginPrompt`, `redirectUri` | Entra ID (MSAL) sign-in. Currently the ONP UI LOWER - INT registration; its SPA redirect URIs must include `http://127.0.0.1:8081/`. |
 
 `config.js` is public: never put secrets in it.
+
+## Processing journey and step retry
+
+The quote detail page shows the processing steps (`stepExecutions`) as a journey grouped into phases: Customer setup, Proposal, Validation & approval, Contract & design, and Other steps for names it doesn't know. Each step shows a plain-English name, status, duration and attempts. The mapping from OMW step names to labels and phases is in `src/app/services/quote-journey.service.js`; add new step names there. When the quote has failed, the failure summary (latest failed step, stage, error code and message) sits at the top of the journey.
+
+Retry appears on the failure summary, on failed rows in the Processing tab and on every row in the Errors tab. To turn it on when the backend API exists:
+
+1. Confirm the QuoteData endpoint. The app currently calls `POST {QUOTEDATA_BASE_URL}/quote/{quoteRequestId}/steps/{stepExecutionId}/retry` with no body; adjust `quote-data-proxy.js` if the real path differs.
+2. Set `QUOTEDATA_RETRY_ENABLED=true` in `server.properties`.
+3. Set `features: { retryEnabled: true }` in `src/config.js`, then restart (`npm start` rebuilds).
+
+Users confirm each retry in a dialog. The page then reloads the quote, and that step can't be retried again until the page is opened again. 403, 404, 409, 501 and network errors show specific messages with the tracking ID.
 
 ## Sign-in
 
@@ -57,6 +71,7 @@ Only these routes are forwarded, with a `trackingId` header on every request and
 | --- | --- |
 | `GET /api/quotedata/v1/quote?…` | `GET {QUOTEDATA_BASE_URL}/quote?…` with `quoteRequestId`, `externalId`, `proposalId`, `ticketNumber`, `page`, `size`, `sort`, `search`, `state`, `designStatus`, `category`, `channelType`, `createdFrom`, `createdTo` |
 | `POST /api/quotedata/v1/quote/{id}/complete` | Same path upstream, body `{ "resolutionNote": "…" }` (1–1000 chars). **Assumed contract; confirm with the QuoteData owner.** |
+| `POST /api/quotedata/v1/quote/{id}/steps/{stepExecutionId}/retry` | Same path upstream, no body. Only when `QUOTEDATA_RETRY_ENABLED=true`. **Assumed contract; change `RETRY_ROUTE` and the forwarded path in `quote-data-proxy.js` if the real API differs.** |
 
 The service token is cached in memory until 10 seconds before it expires, and concurrent requests share one token request. A QuoteData 401 refreshes the token and retries a GET once; a POST is never replayed.
 
@@ -68,6 +83,7 @@ The service token is cached in memory until 10 seconds before it expires, and co
 | `502 SERVICE_TOKEN_FAILED` | Token endpoint unreachable or rejected the credentials. Check the secret/scope and network access to the token host. |
 | `502 UPSTREAM_UNAUTHORIZED` | QuoteData rejected the service token; the service account lacks access. |
 | `403 UPSTREAM_FORBIDDEN`, `404 QUOTE_NOT_FOUND`, `409 QUOTE_CONFLICT` | Passed through from QuoteData with safe messages. |
+| `501 RETRY_NOT_AVAILABLE` | Step retry is switched off on the server (`QUOTEDATA_RETRY_ENABLED`). |
 | `502 UPSTREAM_FAILED` | QuoteData unreachable, timed out or returned invalid JSON. |
 
 Provider error bodies and secrets are never sent to the browser; the UI shows the tracking ID so you can search the server logs.
@@ -86,7 +102,7 @@ Provider error bodies and secrets are never sent to the browser; the UI shows th
 | UI-01/02 Quote list and ticket search | `quote-list`, `support-tickets`, shared `quote-table` component |
 | UI-03 Header, failure summary, IDs | `quote-detail` header, failure summary, system IDs, processing pipeline |
 | UI-04–UI-10, UI-16/17 Tabs | Customer (CSV export), Sites, Products, Promotions, Processing, Errors, Events, Payload, Contracts |
-| UI-11 Retry | Disabled buttons with "Coming soon" behind `features.retryEnabled` |
+| UI-11 Retry | Retry on every failed step and error row; disabled "Coming soon" until `features.retryEnabled` and `QUOTEDATA_RETRY_ENABLED` are on |
 | UI-12 Complete | Mark Completed dialog (note 1–1000 chars, 403/409 handling) |
 | UI-13–15 Case links, access, empty/error states | Route guard with return URL, Access denied / Quote not found / Quote archived pages, tracking IDs |
 

@@ -46,6 +46,15 @@ angular.module('quoteManagement')
         );
       },
 
+      // Assumed contract (UI-11); the server forwards it only when QUOTEDATA_RETRY_ENABLED=true.
+      retryStep: function(quoteRequestId, stepExecutionId) {
+        return $http.post(
+          QUOTEDATA_BASE + '/quote/' + encodeURIComponent(quoteRequestId) + '/steps/' + encodeURIComponent(stepExecutionId) + '/retry',
+          undefined,
+          { headers: trackingHeaders() }
+        );
+      },
+
       canDownloadContract: function() {
         return typeof APP_CONFIG.contractDownloadUrl === 'string' && !!APP_CONFIG.contractDownloadUrl.trim();
       },

@@ -224,7 +224,7 @@ describe('Unified quote detail workspace', function() {
     expect(scope.navigationNotice).toContain('not present');
   });
 
-  it('renders every tab and keeps retry disabled regardless of runtime flags', function() {
+  it('renders every tab and keeps retry disabled when it was not enabled at load', function() {
     var config = window.APP_CONFIG, originalFeatures = config.features;
     config.features = { retryEnabled: true };
     load();
@@ -236,7 +236,7 @@ describe('Unified quote detail workspace', function() {
       expect(element[0].querySelector('[role="tab"][aria-selected="true"]').textContent).toContain(tab.label);
     });
     scope.setTab('processing'); root.$digest();
-    var retries = element[0].querySelectorAll('button[title="Coming soon"]');
+    var retries = element[0].querySelectorAll('#detail-panel-processing button[title="Coming soon"]');
     expect(retries.length).toBe(2);
     Array.prototype.forEach.call(retries, function(button) { expect(button.disabled).toBe(true); });
     expect(element[0].textContent).toContain('Not available');

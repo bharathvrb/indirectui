@@ -39,7 +39,8 @@ angular.module('quoteManagement')
       var valueText = text(value);
       if (searchBy === 'quoteRequestId') return valueText;
       if (searchBy === 'text') return '';
-      return /^(?:\d+-)?[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(valueText) ? valueText : '';
+      // Quote request IDs end in a UUID, optionally after a prefix such as "708649176-", "EXT-2026-1340-" or "PARTNER-QUOTE-1509260632-".
+      return /^(?:[A-Za-z0-9_.]+(?:-[A-Za-z0-9_.]+)*-)?[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(valueText) ? valueText : '';
     }
 
     function lookupCriteria(value, searchBy, lookupOnly) {
@@ -49,7 +50,8 @@ angular.module('quoteManagement')
       if (searchBy === 'proposalId') return { proposalId: valueText };
       var quoteId = exactQuoteId(valueText, searchBy);
       if (quoteId) return { quoteRequestId: quoteId };
-      if (lookupOnly && (!searchBy || searchBy === 'auto')) return { externalId: valueText };
+      // Smart search: anything else is tried as an external ID, then as a quote request ID if not found.
+      if (lookupOnly && (!searchBy || searchBy === 'auto')) return { externalId: valueText, fallbackToQuoteRequestId: true };
       return null;
     }
 
@@ -172,7 +174,7 @@ angular.module('quoteManagement')
               : response && response.status === 401
                 ? 'Your session has expired. Sign in again to continue.'
               : response && response.status === 404 && (params.quoteRequestId || params.externalId || params.proposalId)
-                ? (params.quoteRequestId ? 'Quote not found for this request ID.' : 'Quote not found for this identifier.')
+                ? (params.quoteRequestId ? 'Quote not found for this request ID.' : params.fallbackToQuoteRequestId ? 'No quote has this external ID or quote request ID.' : 'Quote not found for this identifier.')
               : response && response.status === 0
                 ? 'Cannot reach the Quote Management server. Check that it is running and your network connection, then retry.'
               : serverMessage ? serverMessage
@@ -180,16 +182,24 @@ angular.module('quoteManagement')
                 ? 'Access denied. Your session does not have access to QuoteData.'
                 : 'Unable to load quotes. Please retry.';
           }
+          var resultParams = params;
           var operation = params.quoteRequestId
             ? QuoteService.getQuote(params.quoteRequestId)
             : params.externalId || params.proposalId
               ? QuoteService.findQuote(params.externalId ? { externalId: params.externalId } : { proposalId: params.proposalId })
             : QuoteService.getQuotes(angular.copy(params));
+          if (params.externalId && params.fallbackToQuoteRequestId) {
+            operation = operation.catch(function(response) {
+              if (!response || response.status !== 404 || destroyed || request !== generation) throw response;
+              resultParams = { quoteRequestId: params.externalId, page: params.page, size: params.size };
+              return QuoteService.getQuote(params.externalId);
+            });
+          }
           operation.then(function(response) {
             if (destroyed || request !== generation) return;
             var page;
             try {
-              page = readPage(response.data, params);
+              page = readPage(response.data, resultParams);
             } catch (error) {
               fail(response, true);
               return;

@@ -209,6 +209,154 @@ describe('Unified quote search workspace', function() {
     expect(view.exactQuoteId(uuid, 'text')).toBe('');
   });
 
+  describe('auto-refresh', function() {
+    var interval;
+    beforeEach(angular.mock.inject(function($interval) { interval = $interval; }));
+
+    it('is off by default and reloads the current page every interval once switched on', function() {
+      start();
+      resolve(0, [{ quoteRequestId: 'Q-1' }]);
+      expect(scope.autoRefresh).toEqual({ enabled: false, seconds: 60 });
+      interval.flush(120000);
+      expect(requests.length).toBe(1);
+      scope.autoRefresh.enabled = true;
+      scope.toggleAutoRefresh();
+      interval.flush(60000);
+      expect(requests.length).toBe(2);
+      interval.flush(60000);
+      expect(requests.length).toBe(2); // the previous refresh is still loading
+      resolve(1, [{ quoteRequestId: 'Q-1' }]);
+      interval.flush(60000);
+      expect(requests.length).toBe(3);
+      expect(scope.lastLoadedAt instanceof Date).toBe(true);
+    });
+
+    it('stops when switched off or when the page is left', function() {
+      start();
+      resolve(0, []);
+      scope.autoRefresh.enabled = true;
+      scope.toggleAutoRefresh();
+      scope.autoRefresh.enabled = false;
+      scope.toggleAutoRefresh();
+      interval.flush(180000);
+      expect(requests.length).toBe(1);
+      scope.autoRefresh.enabled = true;
+      scope.toggleAutoRefresh();
+      scope.$destroy();
+      interval.flush(180000);
+      expect(requests.length).toBe(1);
+    });
+
+    it('uses a configured interval', function() {
+      window.APP_CONFIG.autoRefreshSeconds = 30;
+      start();
+      expect(scope.autoRefresh.seconds).toBe(30);
+    });
+
+    it('ignores intervals shorter than 15 seconds', function() {
+      window.APP_CONFIG.autoRefreshSeconds = 5;
+      start();
+      expect(scope.autoRefresh.seconds).toBe(60);
+    });
+  });
+
+  it('moves focus to the results heading after a page change, then cleans up its timer', function() {
+    start('QuoteListCtrl', '/quotes?page=0');
+    resolve(0, [{ quoteRequestId: 'Q-1' }], { totalElements: 60, totalPages: 3 });
+    var table = renderTable();
+    document.body.appendChild(element[0]);
+    angular.element(table.querySelector('button[aria-label="Page 2"]')).triggerHandler('click');
+    root.$digest();
+    resolve(1, [{ quoteRequestId: 'Q-26' }], { totalElements: 60, totalPages: 3 });
+    timeout.flush(0);
+    expect(document.activeElement).toBe(table.querySelector('.qm-results-heading'));
+  });
+
+  it('keeps the ticket URL in sync when the server corrects the page', function() {
+    start('SupportTicketsCtrl', '/support-tickets?ticketNumber=SUP-1&page=9');
+    requests[0].deferred.resolve({ data: { content: [{ quoteRequestId: 'Q-1' }], totalElements: 1, totalPages: 1, page: 0, size: 25 } });
+    root.$digest();
+    expect(location.search().page).toBe(0);
+  });
+
+  it('labels exact lookups and their filter chips by identifier type', function() {
+    start();
+    scope.searchBy = 'proposalId'; scope.searchTerm = 'P-1';
+    expect(scope.lookupLabel()).toBe('proposal ID');
+    expect(scope.activeFilterChips()[0].label).toBe('Proposal ID: P-1');
+    scope.searchBy = 'externalId';
+    expect(scope.activeFilterChips()[0].label).toBe('External ID: P-1');
+    scope.searchBy = 'text';
+    expect(scope.lookupLabel()).toBe('');
+    expect(scope.activeFilterChips()[0].label).toBe('Search: P-1');
+  });
+
+  it('recognizes quote request IDs with any prefix before the UUID', function() {
+    var uuid = 'df5d85a2-3f08-4876-8848-826f2d3c1551';
+    ['PARTNER-QUOTE-1509260632-' + uuid, 'EXT-20261709-1340-' + uuid, '708649176-' + uuid, 'EXT_2026.01-' + uuid, uuid.toUpperCase()]
+      .forEach(function(value) { expect(view.exactQuoteId(value, 'auto')).toBe(value); });
+    ['EXT-20261709-1340', 'has space-' + uuid, uuid + '-suffix', '-' + uuid, 'A--' + uuid, uuid.slice(1)]
+      .forEach(function(value) { expect(view.exactQuoteId(value, 'auto')).toBe(''); });
+    expect(view.lookupCriteria('PARTNER-QUOTE-1509260632-' + uuid, 'auto', true)).toEqual({ quoteRequestId: 'PARTNER-QUOTE-1509260632-' + uuid });
+    expect(view.lookupCriteria('EXT-1', 'auto', true)).toEqual({ externalId: 'EXT-1', fallbackToQuoteRequestId: true });
+    expect(view.lookupCriteria('EXT-1', 'externalId', true)).toEqual({ externalId: 'EXT-1' });
+    expect(view.lookupCriteria('EXT-1', 'auto', false)).toBeNull();
+  });
+
+  it('retries a smart search as a quote request ID when no quote has that external ID', function() {
+    window.APP_CONFIG.quoteDataLookupOnly = true;
+    start('QuoteListCtrl', '/quotes?search=PARTNER-QUOTE-7');
+    expect(service.findQuote).toHaveBeenCalledOnceWith({ externalId: 'PARTNER-QUOTE-7' });
+    requests[0].deferred.reject({ status: 404, data: { code: 'QUOTE_NOT_FOUND', message: 'The requested quote was not found.' } });
+    root.$digest();
+    expect(service.getQuote).toHaveBeenCalledOnceWith('PARTNER-QUOTE-7');
+    expect(scope.loading).toBe(true);
+    requests[1].deferred.resolve({ data: { quoteRequestId: 'PARTNER-QUOTE-7', externalId: 'EXT-OTHER', state: 'FAILED' } });
+    root.$digest();
+    expect(scope.error).toBeNull();
+    expect(scope.quotes[0].quoteRequestId).toBe('PARTNER-QUOTE-7');
+  });
+
+  it('reports a clear message when neither the external ID nor the quote request ID exists', function() {
+    window.APP_CONFIG.quoteDataLookupOnly = true;
+    start('QuoteListCtrl', '/quotes?search=NOPE-1');
+    requests[0].deferred.reject({ status: 404, data: { code: 'QUOTE_NOT_FOUND', message: 'x' } });
+    root.$digest();
+    requests[1].deferred.reject({ status: 404, data: { code: 'QUOTE_NOT_FOUND', message: 'x', trackingId: 'TRACE-404' } });
+    root.$digest();
+    expect(scope.error).toBe('No quote has this external ID or quote request ID.');
+    expect(scope.trackingId).toBe('TRACE-404');
+  });
+
+  it('does not fall back for other errors or for an explicit external ID search', function() {
+    window.APP_CONFIG.quoteDataLookupOnly = true;
+    start('QuoteListCtrl', '/quotes?search=EXT-500');
+    requests[0].deferred.reject({ status: 502, data: { code: 'UPSTREAM_FAILED', message: 'QuoteData is unavailable.' } });
+    root.$digest();
+    expect(service.getQuote).not.toHaveBeenCalled();
+    expect(scope.error).toBe('QuoteData is unavailable.');
+    scope.$destroy();
+    start('QuoteListCtrl', '/quotes?search=EXT-404&searchBy=externalId');
+    requests[1].deferred.reject({ status: 404 });
+    root.$digest();
+    expect(service.getQuote).not.toHaveBeenCalled();
+    expect(scope.error).toBe('Quote not found for this identifier.');
+  });
+
+  it('ignores a fallback result that arrives after the user started another search', function() {
+    window.APP_CONFIG.quoteDataLookupOnly = true;
+    start('QuoteListCtrl', '/quotes?search=FIRST-1');
+    requests[0].deferred.reject({ status: 404 });
+    root.$digest();
+    scope.searchTerm = 'SECOND-2';
+    scope.applyFilters();
+    root.$digest();
+    requests[1].deferred.resolve({ data: { quoteRequestId: 'FIRST-1' } });
+    root.$digest();
+    expect(scope.loading).toBe(true);
+    expect(scope.quotes).toEqual([]);
+  });
+
   it('supports explicit ID lookup for IDs with other formats and saves the search type', function() {
     start('QuoteListCtrl', '/quotes?search=EXAMPLE-ID&searchBy=quoteRequestId&page=4');
     expect(scope.searchBy).toBe('quoteRequestId');
