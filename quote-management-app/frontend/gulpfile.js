@@ -9,24 +9,22 @@ function clean() {
 }
 
 function application() {
-    return gulp.src('src/**/*', { base: 'src', dot: true })
+    return gulp.src('src/**/*', { base: 'src', dot: true, encoding: false })
         .pipe(gulp.dest('dist'));
 }
 
 function angular() {
     return gulp.src([
         'node_modules/angular/angular.min.js{,.map}',
-        'node_modules/angular-route/angular-route.min.js{,.map}',
-        'node_modules/angular-sanitize/angular-sanitize.min.js{,.map}',
-        'node_modules/angular-animate/angular-animate.min.js{,.map}'
-    ], { base: 'node_modules' })
+        'node_modules/angular-route/angular-route.min.js{,.map}'
+    ], { base: 'node_modules', encoding: false })
         .pipe(gulp.dest('dist/vendor'));
 }
 
 function bootstrap() {
     return gulp.src([
         'node_modules/bootstrap/dist/css/bootstrap.min.css{,.map}'
-    ], { base: 'node_modules/bootstrap/dist' })
+    ], { base: 'node_modules/bootstrap/dist', encoding: false })
         .pipe(gulp.dest('dist/vendor/bootstrap'));
 }
 
@@ -34,7 +32,7 @@ function icons() {
     return gulp.src([
         'node_modules/bootstrap-icons/font/bootstrap-icons.css',
         'node_modules/bootstrap-icons/font/fonts/*.woff{,2}'
-    ], { base: 'node_modules/bootstrap-icons/font' })
+    ], { base: 'node_modules/bootstrap-icons/font', encoding: false })
         .pipe(gulp.dest('dist/vendor/bootstrap-icons'));
 }
 
@@ -49,7 +47,7 @@ function fonts() {
 }
 
 function msal() {
-    return gulp.src('node_modules/@azure/msal-browser/lib/msal-browser.min.js')
+    return gulp.src('node_modules/@azure/msal-browser/lib/msal-browser.min.js', { encoding: false })
         .pipe(gulp.dest('dist/vendor/msal'));
 }
 

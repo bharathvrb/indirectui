@@ -38,6 +38,23 @@ describe('Application shell', function() {
     timeout.flush();
   });
 
+  it('skip link moves focus to the main content without changing the route', function() {
+    var main = document.createElement('main');
+    main.id = 'main-content';
+    main.tabIndex = -1;
+    document.body.appendChild(main);
+    var event = { preventDefault: jasmine.createSpy('preventDefault') };
+    location.url('/quotes');
+    root.$digest();
+    root.skipToContent(event);
+    expect(event.preventDefault).toHaveBeenCalled();
+    expect(document.activeElement).toBe(main);
+    expect(location.url()).toBe('/quotes');
+    main.remove();
+    expect(function() { root.skipToContent(event); }).not.toThrow();
+    timeout.flush();
+  });
+
   it('sends a signed-in user on /login back to their return URL', function() {
     location.url('/login');
     root.$digest();

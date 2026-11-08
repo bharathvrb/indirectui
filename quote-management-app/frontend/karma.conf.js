@@ -29,8 +29,6 @@ module.exports = function(config) {
         files: [
             'node_modules/angular/angular.js',
             'node_modules/angular-route/angular-route.js',
-            'node_modules/angular-sanitize/angular-sanitize.js',
-            'node_modules/angular-animate/angular-animate.js',
             'node_modules/angular-mocks/angular-mocks.js',
             'src/config.js',
             'src/theme.js',

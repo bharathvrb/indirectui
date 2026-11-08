@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" ng-csp="no-unsafe-eval">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,12 +12,11 @@
   <link href="vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
   <link href="vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
   <link href="assets/css/app.css" rel="stylesheet">
-  <style>[ng-cloak] { display: none !important; }</style>
 </head>
 <body class="qm-app" ng-class="{'is-login': isLoginRoute, 'sidebar-collapsed': sidebarCollapsed}">
   <div class="qm-boot" ng-if="!appReady" role="status"><div class="loading-spinner"></div>Loading…</div>
   <noscript><div class="alert alert-warning">JavaScript is required to use Quote Management.</div></noscript>
-  <a class="qm-skip-link" href="#main-content" onclick="document.getElementById('main-content').focus(); return false;">Skip to content</a>
+  <a class="qm-skip-link" href="#main-content" ng-click="skipToContent($event)">Skip to content</a>
   <header class="app-topbar" ng-cloak>
     <div class="d-flex align-items-center gap-3">
       <button type="button" class="qm-menu-toggle btn btn-outline-secondary" ng-if="!isLoginRoute" ng-click="toggleNavigation()" aria-controls="workspace-nav" ng-attr-aria-expanded="{{!!mobileMenuOpen}}" aria-label="Toggle navigation"><i class="bi bi-list" aria-hidden="true"></i></button>
@@ -63,8 +62,6 @@
   <script src="vendor/msal/msal-browser.min.js"></script>
   <script src="vendor/angular/angular.min.js"></script>
   <script src="vendor/angular-route/angular-route.min.js"></script>
-  <script src="vendor/angular-sanitize/angular-sanitize.min.js"></script>
-  <script src="vendor/angular-animate/angular-animate.min.js"></script>
   <script src="app/app.js"></script>
   <script src="app/services/auth.service.js"></script>
   <script src="app/services/services.js"></script>
