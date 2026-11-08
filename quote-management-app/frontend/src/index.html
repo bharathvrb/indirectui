@@ -23,7 +23,7 @@
       <button type="button" class="qm-collapse-toggle" ng-if="!isLoginRoute" ng-click="toggleSidebar()" aria-controls="workspace-nav" ng-attr-aria-expanded="{{!sidebarCollapsed}}" ng-attr-aria-label="{{sidebarCollapsed ? 'Expand navigation' : 'Collapse navigation'}}" ng-attr-title="{{sidebarCollapsed ? 'Expand navigation' : 'Collapse navigation'}}"><i class="bi" ng-class="sidebarCollapsed ? 'bi-layout-sidebar-inset' : 'bi-layout-sidebar-inset-reverse'" aria-hidden="true"></i></button>
       <a class="app-brand" ng-href="{{isLoginRoute ? '#!/login' : '#!/quotes'}}" aria-label="Quote Management home">
         <span class="app-brand-mark"><i class="bi bi-intersect" aria-hidden="true"></i></span>
-        <span><strong>Quote<span class="app-brand-accent">Management</span></strong></span>
+        <span><strong>Quote <span class="app-brand-accent">Management</span></strong></span>
       </a>
     </div>
     <div class="qm-topbar-actions">
@@ -45,9 +45,9 @@
   <div class="qm-sidebar-backdrop" ng-if="!isLoginRoute && mobileMenuOpen" ng-click="toggleNavigation()" aria-hidden="true"></div>
   <nav id="workspace-nav" class="app-sidebar" ng-if="!isLoginRoute" ng-class="{'is-open': mobileMenuOpen}" aria-label="Workspace navigation" ng-cloak>
     <div class="qm-sidebar-brand">
-      <a class="app-brand" href="#!/quotes" aria-label="Quote Management home">
+      <a class="app-brand" href="#!/quotes" aria-label="Quote Management Orion Middleware home">
         <span class="app-brand-mark"><i class="bi bi-intersect" aria-hidden="true"></i></span>
-        <span><strong>Quote<span class="app-brand-accent">Management</span></strong><small>Orion Middleware</small></span>
+        <span><strong>Quote <span class="app-brand-accent">Management</span></strong> <small>Orion Middleware</small></span>
       </a>
     </div>
     <span class="qm-nav-label">MENU</span>

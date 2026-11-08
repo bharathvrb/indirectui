@@ -60,7 +60,6 @@ angular.module('quoteManagement', ['ngRoute'])
     }])
     .run(['$rootScope', '$location', '$timeout', 'AuthService', function($rootScope, $location, $timeout, AuthService) {
         $rootScope.appReady = true;
-        $rootScope.appName = 'Quote Management';
         $rootScope.themePreference = window.QuoteTheme ? window.QuoteTheme.getPreference() : 'light';
         $rootScope.setTheme = function() {
             window.QuoteTheme.setPreference($rootScope.themePreference);
