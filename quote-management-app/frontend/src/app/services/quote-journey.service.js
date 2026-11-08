@@ -1,51 +1,45 @@
 'use strict';
 
-// Turns raw step executions into the "quote journey": steps with plain-English names,
-// grouped into phases, with progress, the current step and durations.
+// Turns raw step executions into one ordered sequence of steps with progress,
+// the current step and durations. Steps keep their actual OMW names.
 angular.module('quoteManagement')
   .factory('QuoteJourney', [function() {
-    var PHASES = [
-      { id: 'setup', label: 'Customer setup', icon: 'bi-person-vcard' },
-      { id: 'proposal', label: 'Proposal', icon: 'bi-file-earmark-ruled' },
-      { id: 'approval', label: 'Validation & approval', icon: 'bi-patch-check' },
-      { id: 'contract', label: 'Contract & design', icon: 'bi-pen' },
-      { id: 'other', label: 'Other steps', icon: 'bi-three-dots' }
-    ];
-
-    // Known OMW steps in their natural order. Unknown steps still show, under "Other steps".
+    // Known OMW steps in flow order, each with a one-line description. Unknown steps
+    // are still shown, after the known ones.
     var CATALOG = [
-      ['ADDRESS_VALIDATION', 'setup', 'Address validation', 'Validate the customer and service addresses'],
-      ['DYNAMICS_ACCOUNT_OPPORTUNITY', 'setup', 'Account & opportunity', 'Create the Dynamics account and opportunity'],
-      ['CREATE_CONTACT', 'setup', 'Create contacts', 'Create the customer contacts in Dynamics'],
-      ['CREATE_CUSTOMER', 'setup', 'Create customer', 'Create the customer in Amdocs'],
-      ['CREATE_SITE', 'setup', 'Create sites', 'Create the service sites and addresses'],
-      ['CREATE_PROPOSAL', 'proposal', 'Create proposal', 'Create the SQO proposal'],
-      ['CREATE_AMENDMENT_PROPOSAL', 'proposal', 'Create amendment proposal', 'Create the SQO amendment proposal'],
-      ['SEARCH_PRODUCT_OFFERING_AGREEMENT_ITEMS', 'proposal', 'Find agreement items', 'Find the existing product offering agreement items'],
-      ['REMOVE_PRODUCT_OFFERING', 'proposal', 'Remove product offerings', 'Remove the products being disconnected'],
-      ['ADD_SITE', 'proposal', 'Add sites', 'Add the sites to the proposal'],
-      ['ASSIGN_OFFERS', 'proposal', 'Assign offers', 'Assign product offers to each site'],
-      ['MODIFY_PRODUCT_CONFIGURATION', 'proposal', 'Configure products', 'Apply product configuration and characteristics'],
-      ['MODIFY_TERM', 'proposal', 'Set terms', 'Apply the requested contract terms'],
-      ['QUALIFY_APPLY_PROMOTION', 'proposal', 'Apply promotions', 'Qualify and apply promotions'],
-      ['ADD_TRANSACTIONAL_INFORMATION', 'proposal', 'Add transaction details', 'Add transactional information to the proposal'],
-      ['QUOTE_ALIGNMENT', 'proposal', 'Align quote', 'Align the quote with the proposal'],
-      ['QUOTE_AGGREGATOR', 'proposal', 'Aggregate quote', 'Aggregate the quote results'],
-      ['FINALIZE', 'proposal', 'Finalize proposal', 'Finalize the proposal'],
-      ['PREPARE_FOR_VALIDATION', 'approval', 'Prepare validation', 'Prepare the proposal for validation'],
-      ['PROPOSAL_VALIDATION', 'approval', 'Validate proposal', 'Run proposal validation'],
-      ['RETRIEVE_VALIDATION_REQUEST', 'approval', 'Validation request', 'Retrieve the validation request'],
-      ['RETRIEVE_VALIDATION_RESULTS', 'approval', 'Validation results', 'Retrieve the validation results'],
-      ['RETRIEVE_APPROVAL_RULES', 'approval', 'Approval rules', 'Retrieve the approval rules'],
-      ['INITIATE_INTERNAL_APPROVAL', 'approval', 'Request approval', 'Start the internal approval'],
-      ['INTERNAL_APPROVAL', 'approval', 'Internal approval', 'Wait for internal approval'],
-      ['CONTRACT_GENERATION', 'contract', 'Generate contract', 'Generate the SOA and MSA documents'],
-      ['RETRIEVE_DESIGN_STATUS', 'contract', 'Design status', 'Retrieve the design status'],
-      ['RETRIEVE_SURVEY_RESULTS', 'contract', 'Site survey results', 'Retrieve the site survey results']
+      ['ADDRESS_VALIDATION', 'Validate the customer and service addresses'],
+      ['DYNAMICS_ACCOUNT_OPPORTUNITY', 'Create the Dynamics account and opportunity'],
+      ['CREATE_CONTACT', 'Create the customer contacts in Dynamics'],
+      ['CREATE_CUSTOMER', 'Create the customer in Amdocs'],
+      ['CREATE_SITE', 'Create the service sites and addresses'],
+      ['CREATE_PROPOSAL', 'Create the SQO proposal'],
+      ['CREATE_AMENDMENT_PROPOSAL', 'Create the SQO amendment proposal'],
+      ['SEARCH_PRODUCT_OFFERING_AGREEMENT_ITEMS', 'Find the existing product offering agreement items'],
+      ['REMOVE_PRODUCT_OFFERING', 'Remove the products being disconnected'],
+      ['ADD_SITE', 'Add the sites to the proposal'],
+      ['ASSIGN_OFFERS', 'Assign product offers to each site'],
+      ['MODIFY_PRODUCT_CONFIGURATION', 'Apply product configuration and characteristics'],
+      ['MODIFY_TERM', 'Apply the requested contract terms'],
+      ['QUALIFY_APPLY_PROMOTION', 'Qualify and apply promotions'],
+      ['ADD_TRANSACTIONAL_INFORMATION', 'Add transactional information to the proposal'],
+      ['QUOTE_ALIGNMENT', 'Align the quote with the proposal'],
+      ['QUOTE_AGGREGATOR', 'Aggregate the quote results'],
+      ['FINALIZE', 'Finalize the proposal'],
+      ['PREPARE_FOR_VALIDATION', 'Prepare the proposal for validation'],
+      ['PROPOSAL_VALIDATION', 'Run proposal validation'],
+      ['RETRIEVE_VALIDATION_REQUEST', 'Retrieve the validation request'],
+      ['RETRIEVE_VALIDATION_RESULTS', 'Retrieve the validation results'],
+      ['RETRIEVE_APPROVAL_RULES', 'Retrieve the approval rules'],
+      ['INITIATE_INTERNAL_APPROVAL', 'Start the internal approval'],
+      ['INTERNAL_APPROVAL', 'Wait for internal approval'],
+      ['GENERATE_CONTRACT', 'Generate the SOA and MSA documents'],
+      ['CONTRACT_GENERATION', 'Generate the SOA and MSA documents'],
+      ['RETRIEVE_DESIGN_STATUS', 'Retrieve the design status'],
+      ['RETRIEVE_SURVEY_RESULTS', 'Retrieve the site survey results']
     ];
     var INDEX = Object.create(null);
     CATALOG.forEach(function(entry, index) {
-      INDEX[entry[0]] = { index: index, phase: entry[1], label: entry[2], description: entry[3] };
+      INDEX[entry[0]] = { index: index, description: entry[1] };
     });
 
     var TONES = {
@@ -71,12 +65,16 @@ angular.module('quoteManagement')
       return text.replace(/_/g, ' ').toLowerCase().replace(/^\S/, function(c) { return c.toUpperCase(); });
     }
 
+    // label is the step's actual name; description is a short plain-English hint (null for unknown steps).
     function stepInfo(name) {
-      var key = String(name || '').trim().toUpperCase();
-      var known = INDEX[key];
-      return known
-        ? { key: key, label: known.label, description: known.description, phase: known.phase, index: known.index }
-        : { key: key, label: humanize(name), description: null, phase: 'other', index: Infinity };
+      var raw = String(name === null || name === undefined ? '' : name).trim();
+      var known = INDEX[raw.toUpperCase()];
+      return {
+        key: raw.toUpperCase(),
+        label: raw || 'Unnamed step',
+        description: known ? known.description : null,
+        index: known ? known.index : Infinity
+      };
     }
 
     function statusInfo(status) {
@@ -119,13 +117,6 @@ angular.module('quoteManagement')
       };
     }
 
-    function phaseStatus(steps) {
-      if (steps.some(function(step) { return step.tone === 'failure'; })) return 'failure';
-      if (steps.every(function(step) { return step.tone === 'success' || step.tone === 'skipped'; })) return 'success';
-      if (steps.some(function(step) { return step.tone !== 'pending'; })) return 'progress';
-      return 'pending';
-    }
-
     // steps: normalized processing steps ({ id, stepName, stepStatus, stepOrder, attemptCount, maxRetries, startedAt, completedAt, scope, ... }).
     function build(steps) {
       var list = (angular.isArray(steps) ? steps : []).map(function(step, position) {
@@ -133,7 +124,9 @@ angular.module('quoteManagement')
         var status = statusInfo(step.stepStatus);
         var started = time(step.startedAt), completed = time(step.completedAt);
         return angular.extend({}, step, {
-          info: info, label: info.label, description: info.description, phase: info.phase,
+          info: info, label: info.label, description: info.description,
+          // Name split after each underscore so long names wrap between words, never inside one.
+          parts: info.label.match(/[^_]+_*|_+/g) || [info.label],
           status: normalizeStatus(step.stepStatus), tone: status.tone, statusLabel: status.label, icon: status.icon,
           duration: started !== null && completed !== null ? formatDuration(completed - started) : null,
           position: position
@@ -141,21 +134,14 @@ angular.module('quoteManagement')
       });
       var useOrder = list.some(function(step) { return number(step.stepOrder) !== null; });
       list.sort(compare(useOrder));
-      var phases = PHASES.map(function(phase) {
-        var phaseSteps = list.filter(function(step) { return step.phase === phase.id; });
-        return {
-          id: phase.id, label: phase.label, icon: phase.icon, steps: phaseSteps,
-          done: phaseSteps.filter(function(step) { return step.tone === 'success' || step.tone === 'skipped'; }).length,
-          total: phaseSteps.length, status: phaseStatus(phaseSteps)
-        };
-      }).filter(function(phase) { return phase.total > 0; });
+      list.forEach(function(step, index) { step.number = index + 1; });
       var count = function(tone) { return list.filter(function(step) { return step.tone === tone; }).length; };
       var done = count('success') + count('skipped');
       var current = list.filter(function(step) { return step.tone === 'failure'; })[0] ||
         list.filter(function(step) { return step.tone === 'progress'; })[0] ||
         list.filter(function(step) { return step.tone === 'pending'; })[0] || null;
       return {
-        steps: list, phases: phases, total: list.length, done: done,
+        steps: list, total: list.length, done: done,
         failed: count('failure'), active: count('progress'), pending: count('pending'),
         percent: list.length ? Math.round(done * 100 / list.length) : 0,
         current: current,
@@ -165,7 +151,7 @@ angular.module('quoteManagement')
     }
 
     return {
-      PHASES: PHASES, build: build, stepInfo: stepInfo, statusInfo: statusInfo,
+      build: build, stepInfo: stepInfo, statusInfo: statusInfo,
       normalizeStatus: normalizeStatus, formatDuration: formatDuration, humanize: humanize
     };
   }]);

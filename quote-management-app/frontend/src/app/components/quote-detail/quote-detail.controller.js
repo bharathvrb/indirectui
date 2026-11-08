@@ -863,7 +863,7 @@ angular.module('quoteManagement')
         };
       }
 
-      // The journey groups steps into phases and attaches each failed step's latest recorded error.
+      // The journey lists the steps in order and attaches each failed step's latest recorded error.
       function hydrateJourney() {
         var latestError = Object.create(null);
         $scope.errorRows.forEach(function(row) {
@@ -873,16 +873,11 @@ angular.module('quoteManagement')
         $scope.journey = QuoteJourney.build($scope.processingSteps.map(function(step) {
           return angular.extend({}, step, { error: step.id !== null ? latestError[String(step.id)] || null : null });
         }));
-        // UI-03 failure summary: the latest failed step, shown with its stage (phase) and error.
+        // UI-03 failure summary: the latest failed step, with its position in the sequence and its error.
         var summary = $scope.failureSummary;
         $scope.journey.spotlight = summary ? $scope.journey.steps.filter(function(step) {
           return String(step.id) === String(summary.stepId);
         })[0] || null : null;
-        if ($scope.journey.spotlight) {
-          $scope.journey.spotlight.phaseLabel = (QuoteJourney.PHASES.filter(function(phase) {
-            return phase.id === $scope.journey.spotlight.phase;
-          })[0] || {}).label;
-        }
       }
       $scope.humanize = function(value) {
         return value === null || value === undefined || value === '' ? '—' : QuoteJourney.humanize(value);

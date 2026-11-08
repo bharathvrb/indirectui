@@ -82,17 +82,19 @@ describe('Quote journey and step retry', function() {
   function key(name, shift) { return { key: name, shiftKey: !!shift, preventDefault: jasmine.createSpy('preventDefault') }; }
 
   describe('journey card', function() {
-    it('shows progress, phases with friendly step names and the stopping point', function() {
+    it('shows progress and every step in order under its actual name, with no phase groups', function() {
       var page = start();
       var ring = page.querySelector('.qm-ring');
       expect(ring.getAttribute('aria-label')).toBe('2 of 5 steps completed');
       expect(ring.textContent).toContain('40%');
-      expect(page.querySelector('.qm-journey-status').textContent).toContain('Stopped at Create proposal');
-      var phases = Array.prototype.map.call(page.querySelectorAll('.qm-phase h3'), function(h) { return h.textContent; });
-      expect(phases).toEqual(['Customer setup', 'Proposal', 'Contract & design']);
+      expect(page.querySelector('.qm-journey-status').textContent).toContain('Stopped at CREATE_PROPOSAL');
+      expect(page.querySelectorAll('.qm-phase, .qm-phases').length).toBe(0);
       var names = Array.prototype.map.call(page.querySelectorAll('.qm-step-name'), function(n) { return n.textContent.trim(); });
-      expect(names).toEqual(['Address validation', 'Create contacts', 'Create proposal', 'Add sites', 'Generate contract']);
+      expect(names).toEqual(['ADDRESS_VALIDATION', 'CREATE_CONTACT', 'CREATE_PROPOSAL', 'ADD_SITE', 'CONTRACT_GENERATION']);
+      var numbers = Array.prototype.map.call(page.querySelectorAll('.qm-step-no'), function(n) { return n.textContent.trim(); });
+      expect(numbers).toEqual(['01', '02', '03', '04', '05']);
       expect(page.querySelector('.qm-step.is-failure .qm-step-meta').textContent).toContain('attempt 3/3');
+      expect(page.querySelector('.qm-step.is-failure .qm-step-desc').textContent).toBe('Create the SQO proposal');
       expect(page.querySelector('.qm-step.is-success .qm-step-meta').textContent).toContain('4 s');
       expect(page.querySelectorAll('.qm-step.is-current').length).toBe(1);
       expect(page.querySelector('.qm-journey-counts').textContent.replace(/\s+/g, ' ')).toContain('2 done 1 failed 2 waiting');
@@ -101,8 +103,8 @@ describe('Quote journey and step retry', function() {
     it('shows the failure summary (UI-03) with stage, step, error code and message only when the quote failed', function() {
       var page = start();
       var summary = page.querySelector('#failure-summary');
-      expect(summary.textContent).toContain('Create proposal failed');
-      expect(summary.textContent).toContain('Stage: Proposal · CREATE_PROPOSAL');
+      expect(summary.textContent).toContain('CREATE_PROPOSAL failed');
+      expect(summary.textContent).toContain('Step 3 of 5');
       expect(summary.textContent).toContain('CREATE_PROPOSAL_POLLING_ERROR');
       expect(summary.textContent).toContain('Polling API timed out');
       expect(summary.textContent).toContain('Attempt 3 of 3');
@@ -126,6 +128,45 @@ describe('Quote journey and step retry', function() {
       angular.element(page.querySelector('#spotlight-errors')).triggerHandler('click');
       root.$digest();
       expect(scope.activeTab).toBe('errors');
+    });
+  });
+
+  describe('quote header', function() {
+    it('shows the name, state, IDs, facts and counts in a light header with the actions beside the title', function() {
+      var page = start();
+      var head = page.querySelector('.qm-quote-head');
+      expect(head).not.toBeNull();
+      expect(page.querySelector('.qm-detail-hero')).toBeNull();
+      expect(head.querySelector('#quote-detail-heading')).not.toBeNull();
+      expect(head.querySelector('.badge').textContent.trim()).toBe('Failed');
+      expect(head.querySelector('.qm-id-chip code').textContent).toBe('PARTNER-QUOTE-1-SYNTHETIC');
+      var facts = Array.prototype.map.call(head.querySelectorAll('.qm-quote-fact dt'), function(dt) { return dt.textContent; });
+      expect(facts).toEqual(['External ID', 'Support ticket', 'Created by', 'Design status', 'Created at', 'Updated at', 'Completed at', 'Retries']);
+      expect(head.querySelector('.qm-quote-head-actions #mark-completed')).not.toBeNull();
+      expect(head.querySelector('.qm-quote-head-actions .btn-primary').textContent).toContain('Mark completed');
+    });
+
+    function countLabels(page) {
+      return Array.prototype.map.call(page.querySelectorAll('.qm-quote-counts li'), function(li) { return li.textContent.replace(/\s+/g, ' ').trim(); });
+    }
+
+    it('uses singular labels for a count of one', function() {
+      var data = fixture();
+      data.sites = [{ id: 1, siteId: 'S1', siteName: 'Only site', items: [] }];
+      data.errorDetails = data.errorDetails.slice(0, 1);
+      expect(countLabels(start({ data: data }))).toEqual(['1 Site', '0 Products', '1 Error', '1 Failed step']);
+    });
+
+    it('uses plural labels otherwise', function() {
+      var data = fixture();
+      data.sites = [{ id: 1, siteId: 'S1', items: [{ id: 5, itemId: 'I1', productName: 'P' }] }, { id: 2, siteId: 'S2', items: [] }];
+      expect(countLabels(start({ data: data }))).toEqual(['2 Sites', '1 Product', '2 Errors', '1 Failed step']);
+    });
+
+    it('hides Mark completed when the quote is not failed', function() {
+      var page = start({ data: fixture('COMPLETED') });
+      expect(page.querySelector('#mark-completed')).toBeNull();
+      expect(page.querySelector('.qm-quote-head .badge').textContent.trim()).toBe('Completed');
     });
   });
 
@@ -225,7 +266,7 @@ describe('Quote journey and step retry', function() {
       root.$digest(); flushFocus();
       var dialog = document.getElementById('retry-dialog');
       expect(dialog.getAttribute('role')).toBe('dialog');
-      expect(dialog.textContent).toContain('Retry Create proposal?');
+      expect(dialog.textContent).toContain('Retry CREATE_PROPOSAL?');
       expect(dialog.textContent).toContain('3 of 3');
       expect(dialog.textContent).toContain('Automatic retries are used up');
       expect(document.activeElement.id).toBe('retry-confirm');
@@ -260,7 +301,7 @@ describe('Quote journey and step retry', function() {
       expect(document.getElementById('retry-confirm').textContent).toContain('Requesting');
       retries[0].resolve({ status: 202 }); root.$digest();
       expect(scope.retry.open).toBe(false);
-      expect(scope.copyFeedback).toBe('Retry requested for Create proposal.');
+      expect(scope.copyFeedback).toBe('Retry requested for CREATE_PROPOSAL.');
       expect(service.getQuote).toHaveBeenCalledTimes(2);
       expect(scope.retryRequested['5']).toBe(true);
       expect(scope.canRetry(step)).toBe(false);

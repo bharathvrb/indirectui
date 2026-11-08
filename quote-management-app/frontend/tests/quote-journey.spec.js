@@ -11,23 +11,44 @@ describe('Quote journey model', function() {
     return angular.extend({ id: name, stepName: name, stepStatus: status }, extra || {});
   }
 
-  it('gives known steps plain-English names, descriptions and phases', function() {
+  it('keeps the actual step name and adds a plain-English description for known steps', function() {
     expect(journey.stepInfo('ADDRESS_VALIDATION')).toEqual(jasmine.objectContaining({
-      label: 'Address validation', description: 'Validate the customer and service addresses', phase: 'setup'
+      label: 'ADDRESS_VALIDATION', description: 'Validate the customer and service addresses'
     }));
-    expect(journey.stepInfo(' create_contact ').label).toBe('Create contacts');
-    expect(journey.stepInfo('CREATE_PROPOSAL').phase).toBe('proposal');
-    expect(journey.stepInfo('INTERNAL_APPROVAL').phase).toBe('approval');
-    expect(journey.stepInfo('CONTRACT_GENERATION').phase).toBe('contract');
+    expect(journey.stepInfo(' create_contact ').label).toBe('create_contact');
+    expect(journey.stepInfo(' create_contact ').description).toBe('Create the customer contacts in Dynamics');
+    expect(journey.stepInfo('GENERATE_CONTRACT').description).toBe('Generate the SOA and MSA documents');
+    expect(journey.stepInfo('CONTRACT_GENERATION').description).toBe('Generate the SOA and MSA documents');
   });
 
-  it('keeps unknown steps visible under Other steps with a readable name', function() {
+  it('splits long step names after each underscore so they wrap between words', function() {
+    var built = journey.build([step('DYNAMICS_ACCOUNT_OPPORTUNITY', 'PENDING'), step('FINALIZE', 'PENDING'), step('', 'PENDING')]);
+    var byName = {};
+    built.steps.forEach(function(s) { byName[s.stepName] = s.parts; });
+    expect(byName.DYNAMICS_ACCOUNT_OPPORTUNITY).toEqual(['DYNAMICS_', 'ACCOUNT_', 'OPPORTUNITY']);
+    expect(byName.DYNAMICS_ACCOUNT_OPPORTUNITY.join('')).toBe('DYNAMICS_ACCOUNT_OPPORTUNITY');
+    expect(byName.FINALIZE).toEqual(['FINALIZE']);
+    expect(byName['']).toEqual(['Unnamed step']);
+  });
+
+  it('knows every step of the standard quote flow', function() {
+    ['ADDRESS_VALIDATION', 'DYNAMICS_ACCOUNT_OPPORTUNITY', 'CREATE_CONTACT', 'CREATE_CUSTOMER', 'CREATE_SITE', 'CREATE_PROPOSAL', 'ADD_SITE',
+      'ASSIGN_OFFERS', 'MODIFY_PRODUCT_CONFIGURATION', 'MODIFY_TERM', 'QUALIFY_APPLY_PROMOTION', 'FINALIZE', 'PROPOSAL_VALIDATION',
+      'RETRIEVE_APPROVAL_RULES', 'INTERNAL_APPROVAL', 'GENERATE_CONTRACT'].forEach(function(name) {
+      expect(journey.stepInfo(name).description).not.toBeNull();
+      expect(journey.stepInfo(name).index).not.toBe(Infinity);
+    });
+  });
+
+  it('keeps unknown steps visible under their own name without a description', function() {
     var info = journey.stepInfo('SYNC_BILLING_ACCOUNT');
-    expect(info.label).toBe('Sync billing account');
+    expect(info.label).toBe('SYNC_BILLING_ACCOUNT');
     expect(info.description).toBeNull();
-    expect(info.phase).toBe('other');
+    expect(info.index).toBe(Infinity);
     expect(journey.stepInfo(null).label).toBe('Unnamed step');
+    expect(journey.stepInfo('  ').label).toBe('Unnamed step');
     expect(journey.humanize('')).toBe('Unnamed step');
+    expect(journey.humanize('QUOTE_ITEM')).toBe('Quote item');
   });
 
   it('normalizes step status spellings', function() {
@@ -62,7 +83,7 @@ describe('Quote journey model', function() {
       var result = journey.build(input);
       expect(result.status).toBe('empty');
       expect(result.total).toBe(0);
-      expect(result.phases).toEqual([]);
+      expect(result.steps).toEqual([]);
       expect(result.percent).toBe(0);
       expect(result.current).toBeNull();
     });
@@ -79,18 +100,15 @@ describe('Quote journey model', function() {
       .toEqual(['CREATE_CUSTOMER', 'CREATE_CONTACT', 'ADDRESS_VALIDATION', 'FINALIZE']);
   });
 
-  it('groups steps into phases in flow order, omitting empty phases, with per-phase progress and status', function() {
-    var result = journey.build([
-      step('ADDRESS_VALIDATION', 'SUCCESS'), step('CREATE_CONTACT', 'SUCCESS'),
-      step('CREATE_PROPOSAL', 'FAILED'), step('ADD_SITE', 'PENDING'),
-      step('CONTRACT_GENERATION', 'PENDING'), step('SYNC_BILLING', 'IN_PROGRESS')
-    ]);
-    expect(result.phases.map(function(p) { return p.id; })).toEqual(['setup', 'proposal', 'contract', 'other']);
-    expect(result.phases.map(function(p) { return p.status; })).toEqual(['success', 'failure', 'pending', 'progress']);
-    expect(result.phases[0].done).toBe(2);
-    expect(result.phases[0].total).toBe(2);
-    expect(result.phases[1].done).toBe(0);
-    expect(result.phases[1].label).toBe('Proposal');
+  it('lists the standard flow in order as one numbered sequence, with unknown steps last', function() {
+    var names = ['GENERATE_CONTRACT', 'INTERNAL_APPROVAL', 'RETRIEVE_APPROVAL_RULES', 'PROPOSAL_VALIDATION', 'FINALIZE', 'QUALIFY_APPLY_PROMOTION',
+      'MODIFY_TERM', 'MODIFY_PRODUCT_CONFIGURATION', 'ASSIGN_OFFERS', 'ADD_SITE', 'CREATE_PROPOSAL', 'CREATE_SITE', 'CREATE_CUSTOMER',
+      'CREATE_CONTACT', 'DYNAMICS_ACCOUNT_OPPORTUNITY', 'ADDRESS_VALIDATION'];
+    var result = journey.build(names.concat(['SYNC_BILLING']).map(function(name) { return step(name, 'PENDING'); }));
+    expect(result.steps.map(function(s) { return s.stepName; })).toEqual(names.slice().reverse().concat(['SYNC_BILLING']));
+    expect(result.steps.map(function(s) { return s.number; })).toEqual(Array.apply(null, Array(17)).map(function(_, i) { return i + 1; }));
+    expect(result.total).toBe(17);
+    expect(result.phases).toBeUndefined();
   });
 
   it('summarizes counts, percent, overall status and the current step', function() {
@@ -118,7 +136,6 @@ describe('Quote journey model', function() {
     expect(finished.status).toBe('success');
     expect(finished.percent).toBe(100);
     expect(finished.current).toBeNull();
-    expect(finished.phases[0].status).toBe('success');
   });
 
   it('computes step durations only from valid start and end times and keeps the input unchanged', function() {
@@ -130,7 +147,7 @@ describe('Quote journey model', function() {
     var copy = angular.copy(input);
     var result = journey.build(input);
     expect(result.steps.map(function(s) { return s.duration; })).toEqual(['3 s', null, null]);
-    expect(result.steps[0].label).toBe('Address validation');
+    expect(result.steps[0].label).toBe('ADDRESS_VALIDATION');
     expect(result.steps[0].statusLabel).toBe('Completed');
     expect(input).toEqual(copy);
   });
