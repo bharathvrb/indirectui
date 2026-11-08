@@ -38,10 +38,9 @@ function icons() {
 
 function fonts() {
     return gulp.src([
-        'node_modules/@fontsource-variable/manrope/files/manrope-latin-wght-normal.woff2',
-        'node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2',
-        'node_modules/@fontsource-variable/inter/files/inter-latin-ext-wght-normal.woff2',
-        'node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2'
+        'node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2',
+        'node_modules/@fontsource-variable/geist/files/geist-latin-ext-wght-normal.woff2',
+        'node_modules/@fontsource-variable/geist-mono/files/geist-mono-latin-wght-normal.woff2'
     ], { encoding: false })
         .pipe(gulp.dest('dist/vendor/fonts'));
 }

@@ -119,12 +119,12 @@ Logs go to stdout: one line per QuoteData call with its tracking ID, route and q
 
 ## Design system
 
-The look lives in `src/assets/css/app.css`: a blue and white theme with black text in the light theme and white text in the dark theme. Everything is defined as tokens (`:root` for light, `[data-theme="dark"]` for dark). The dark theme uses neutral charcoal surfaces with the same blue accent; there are no navy or blue-black surfaces.
+The look lives in `src/assets/css/app.css`: a blue and white theme ("Azure") with black text in the light theme and white text in the dark theme. Everything is defined as tokens (`:root` for light, `[data-theme="dark"]` for dark). Pages open with a blue banner (title, summary tiles and the quote header) over white cards and a white navigation rail; the dark theme uses neutral charcoal surfaces with the same blue accent. `--qm-primary` is for blue text and strokes, `--qm-solid` for filled areas that carry white text.
 
-- **Type scale:** every text size is one of 11, 12, 13, 14, 16, 18, 22 and 28 px (`--fs-label` to `--fs-2xl`), with weights 500, 600, 700 and 800 only. Manrope is used for headings, Inter for text and JetBrains Mono for IDs. All three are self-hosted and copied to `dist/vendor/fonts` by the build, so the app needs no internet access. Use the tokens for new CSS instead of pixel values.
-- **Navigation:** a blue rail with white text that collapses to icons with the button at the top left (remembered per browser) and slides in on phones.
+- **Type scale:** every text size is one of 12, 13, 14, 15, 17, 20, 24 and 32 px (`--fs-label` to `--fs-2xl`). Geist is used for all text and headings and Geist Mono for IDs and code. Both are self-hosted and copied to `dist/vendor/fonts` by the build, so the app needs no internet access. Use the tokens for new CSS instead of pixel values.
+- **Navigation:** a white rail with a blue active item that collapses to icons with the button at the top left (remembered per browser) and slides in on phones.
 - **Quotes:** summary tiles, a state-mix bar for the current page, quick state filters, search with filters, and rows marked by state.
-- **Quote detail:** a light header with the name, state, IDs, key facts and counts; the processing steps; copyable system IDs; and a sticky tab bar that shows the quote's ID and state once the header scrolls away.
+- **Quote detail:** a blue banner with the name, state, IDs, key facts and counts; the processing steps; copyable system IDs; and a sticky tab bar that shows the quote's ID and state once the header scrolls away.
 - **Motion:** short entrance, hover and state animations. They all turn off when the operating system asks for reduced motion.
 - **Accessibility:** text meets WCAG AA contrast in both themes, controls have visible focus rings and keyboard support, and status is never shown by colour alone.
 
