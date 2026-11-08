@@ -698,3 +698,76 @@ test('plain HTTP QuoteData base URLs require the explicit QUOTEDATA_ALLOW_HTTP o
     check(await request(app, quoteRoute, { headers: { cookie: await login(app) } }), 503, 'SERVICE_AUTH_NOT_CONFIGURED');
     assert.equal(backend.tokenCalls.length, 0);
 });
+
+const retryRoute = quoteRoute + '/synthetic-quote/steps/42/retry';
+
+test('step retry is unavailable (501) unless QUOTEDATA_RETRY_ENABLED=true, without contacting QuoteData', async t => {
+    for (const flag of [undefined, 'false', 'TRUE', '1']) {
+        const backend = await upstream(t);
+        const app = await start(t, backend, { environment: { QUOTEDATA_RETRY_ENABLED: flag } });
+        check(await request(app, retryRoute, { method: 'POST', headers: { cookie: await login(app) } }),
+            501, 'RETRY_NOT_AVAILABLE');
+        assert.equal(backend.tokenCalls.length, 0);
+        assert.equal(backend.backendCalls.length, 0);
+    }
+});
+
+test('enabled step retry forwards one bodiless POST with service authorization and tracking ID', async t => {
+    const backend = await upstream(t, { backend: (req, res) => json(res, 202, { status: 'ACCEPTED' }) });
+    const app = await start(t, backend, { environment: { QUOTEDATA_RETRY_ENABLED: 'true' } });
+    const result = await request(app, retryRoute, {
+        method: 'POST', headers: { cookie: await login(app), trackingid: 'TRACE-RETRY' }
+    });
+    check(result, 202);
+    assert.deepEqual(result.body, { status: 'ACCEPTED' });
+    assert.equal(result.headers.trackingid, 'TRACE-RETRY');
+    assert.equal(backend.backendCalls.length, 1);
+    const call = backend.backendCalls[0];
+    assert.equal(call.method, 'POST');
+    assert.equal(call.url, '/quotedata/v1/quote/synthetic-quote/steps/42/retry');
+    assert.equal(call.raw, '');
+    assert.equal(call.headers['content-length'], '0');
+    assert.equal(call.headers.trackingid, 'TRACE-RETRY');
+    assert.equal(call.headers.authorization, 'Bearer ' + backend.issued[0]);
+    assert.equal(call.headers.cookie, undefined);
+});
+
+test('step retry rejects bodies, wrong methods, malformed IDs, queries and cross-origin callers', async t => {
+    const backend = await upstream(t);
+    const app = await start(t, backend, { environment: { QUOTEDATA_RETRY_ENABLED: 'true' } });
+    const cookie = await login(app);
+    check(await request(app, retryRoute, { method: 'POST', headers: { cookie }, body: { force: true } }), 400, 'INVALID_REQUEST');
+    check(await request(app, retryRoute, { headers: { cookie } }), 405, 'METHOD_NOT_ALLOWED');
+    check(await request(app, retryRoute + '?force=1', { method: 'POST', headers: { cookie } }), 400, 'INVALID_REQUEST');
+    for (const path of [quoteRoute + '/synthetic-quote/steps/4.2/retry', quoteRoute + '/synthetic-quote/steps//retry',
+        quoteRoute + '/synthetic-quote/steps/' + 'x'.repeat(65) + '/retry', quoteRoute + '/synthetic-quote/steps/42/retry/now']) {
+        check(await request(app, path, { method: 'POST', headers: { cookie } }), 404, 'NOT_FOUND');
+    }
+    check(await request(app, retryRoute, { method: 'POST', origin: false, headers: { cookie } }), 403, 'REQUEST_FORBIDDEN');
+    check(await request(app, retryRoute, { method: 'POST', headers: { cookie, origin: 'https://outside.invalid' } }), 403, 'REQUEST_FORBIDDEN');
+    check(await request(app, retryRoute, { method: 'POST' }), 401, 'SIGN_IN_REQUIRED');
+    assert.equal(backend.backendCalls.length, 0);
+});
+
+test('step retry is never replayed on upstream 401 and maps conflict, not found and forbidden', async t => {
+    for (const [upstreamStatus, expectedStatus, code] of [
+        [401, 502, 'UPSTREAM_UNAUTHORIZED'], [409, 409, 'QUOTE_CONFLICT'], [404, 404, 'QUOTE_NOT_FOUND'],
+        [403, 403, 'UPSTREAM_FORBIDDEN'], [500, 502, 'UPSTREAM_FAILED']
+    ]) {
+        const backend = await upstream(t, { backend: (req, res) => json(res, upstreamStatus, { secret: clientSecret }) });
+        const app = await start(t, backend, { environment: { QUOTEDATA_RETRY_ENABLED: 'true' } });
+        check(await request(app, retryRoute, { method: 'POST', headers: { cookie: await login(app) } }), expectedStatus, code);
+        assert.equal(backend.backendCalls.length, 1);
+    }
+});
+
+test('the request log line names the tracking ID, route and status without secrets', async t => {
+    const lines = [];
+    const backend = await upstream(t);
+    const app = await start(t, backend, { proxy: { log: line => lines.push(line) } });
+    check(await request(app, quoteRoute + '?quoteRequestId=Q-1', { headers: { cookie: await login(app), trackingid: 'TRACE-LOG' } }), 200);
+    assert.equal(lines.length, 1);
+    assert.match(lines[0], /TRACE-LOG GET \/api\/quotedata\/v1\/quote\?quoteRequestId=Q-1 -> 200 \(\d+ ms\)$/);
+    assert.equal(lines[0].includes(clientSecret), false);
+    assert.equal(lines[0].includes(password), false);
+});

@@ -38,12 +38,21 @@ function icons() {
         .pipe(gulp.dest('dist/vendor/bootstrap-icons'));
 }
 
+function fonts() {
+    return gulp.src([
+        'node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2',
+        'node_modules/@fontsource-variable/inter/files/inter-latin-ext-wght-normal.woff2',
+        'node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2'
+    ], { encoding: false })
+        .pipe(gulp.dest('dist/vendor/fonts'));
+}
+
 function msal() {
     return gulp.src('node_modules/@azure/msal-browser/lib/msal-browser.min.js')
         .pipe(gulp.dest('dist/vendor/msal'));
 }
 
-const build = gulp.series(clean, gulp.parallel(application, angular, bootstrap, icons, msal));
+const build = gulp.series(clean, gulp.parallel(application, angular, bootstrap, icons, fonts, msal));
 
 function watch() {
     return gulp.watch('src/**/*', build);

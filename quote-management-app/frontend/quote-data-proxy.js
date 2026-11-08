@@ -211,16 +211,29 @@ function createTokenProvider(config, options) {
     };
 }
 
-function routeFor(req) {
+const RETRY_ROUTE = /^\/api\/quotedata\/v1\/quote\/[A-Za-z0-9_-]{1,200}\/steps\/[A-Za-z0-9_-]{1,64}\/retry$/;
+
+function routeFor(req, retryEnabled) {
     const [pathname, query = ''] = req.url.split('?');
     let method;
     let suffix;
+    let kind;
     if (pathname === '/api/quotedata/v1/quote') {
         method = 'GET';
         suffix = '/quote';
+        kind = 'query';
     } else if (/^\/api\/quotedata\/v1\/quote\/[A-Za-z0-9_-]{1,200}\/complete$/.test(pathname)) {
         method = 'POST';
         suffix = pathname.slice('/api/quotedata/v1'.length);
+        kind = 'complete';
+    } else if (RETRY_ROUTE.test(pathname)) {
+        // Assumed QuoteData contract: POST {base}/quote/{quoteRequestId}/steps/{stepExecutionId}/retry, no body.
+        if (!retryEnabled) {
+            throw failure(501, 'RETRY_NOT_AVAILABLE', 'Step retry is not available yet.');
+        }
+        method = 'POST';
+        suffix = pathname.slice('/api/quotedata/v1'.length);
+        kind = 'retry';
     } else {
         throw failure(404, 'NOT_FOUND', 'This API route is not available.');
     }
@@ -246,10 +259,10 @@ function routeFor(req) {
     } catch (error) {
         throw failure(400, 'INVALID_REQUEST', 'Invalid QuoteData query.');
     }
-    if (method === 'GET' && (req.headers['transfer-encoding'] || Number(req.headers['content-length']) > 0)) {
-        throw failure(400, 'INVALID_REQUEST', 'GET requests must not contain a body.');
+    if (kind !== 'complete' && (req.headers['transfer-encoding'] || Number(req.headers['content-length']) > 0)) {
+        throw failure(400, 'INVALID_REQUEST', 'This request must not contain a body.');
     }
-    return suffix + (query ? '?' + query : '');
+    return { path: suffix + (query ? '?' + query : ''), kind };
 }
 
 function readCompletion(req, signal, timeoutMs) {
@@ -340,12 +353,13 @@ function createQuoteDataProxy(options = {}) {
     const config = serviceConfiguration(options);
     const tokens = config ? createTokenProvider(config, options) : null;
     const getUser = options.getUser || (() => null);
+    const retryEnabled = (options.environment || process.env).QUOTEDATA_RETRY_ENABLED === 'true';
     const verifyIdentity = createSsoIdentity({
         environment: options.environment, now: options.now, jwks: options.jwks
     });
 
     async function handle(req, res, trackingId, signal) {
-        const suffix = routeFor(req);
+        const route = routeFor(req, retryEnabled);
         if (!isLocalRequest(req)) {
             throw failure(403, 'REQUEST_FORBIDDEN', 'Only same-origin loopback requests are allowed.');
         }
@@ -361,7 +375,7 @@ function createQuoteDataProxy(options = {}) {
         // Union starts streaming after dispatch, so attach bounded body readers before awaiting SSO.
         const [, body] = await Promise.all([
             identity,
-            req.method === 'POST' ? readCompletion(req, signal, options.bodyTimeoutMs || 10000) : undefined
+            route.kind === 'complete' ? readCompletion(req, signal, options.bodyTimeoutMs || 10000) : undefined
         ]);
         if (signal.aborted) {
             return;
@@ -370,7 +384,7 @@ function createQuoteDataProxy(options = {}) {
             throw failure(503, 'SERVICE_AUTH_NOT_CONFIGURED',
                 'Configure server QUOTEDATA_CLIENT_ID, QUOTEDATA_CLIENT_SECRET and QUOTEDATA_SCOPE, and valid HTTPS service URLs.');
         }
-        const url = new URL(config.baseUrl.href.replace(/\/$/, '') + suffix);
+        const url = new URL(config.baseUrl.href.replace(/\/$/, '') + route.path);
         let token = await tokens.get();
         for (let attempt = 0; attempt < 2; attempt++) {
             if (signal.aborted) {
@@ -382,7 +396,7 @@ function createQuoteDataProxy(options = {}) {
                     method: req.method,
                     headers: {
                         Authorization: 'Bearer ' + token.value, trackingId, Accept: 'application/json',
-                        ...(body === undefined ? {} : {
+                        ...(body === undefined ? (req.method === 'POST' ? { 'Content-Length': 0 } : {}) : {
                             'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body)
                         })
                     },
@@ -425,6 +439,7 @@ function createQuoteDataProxy(options = {}) {
         response.setHeader('trackingId', trackingId);
         const controller = new AbortController();
         const disconnect = () => controller.abort();
+        const started = Date.now();
         response.once('close', disconnect);
         request.once('aborted', disconnect);
         handle(request, response, trackingId, controller.signal).catch(error => {
@@ -437,6 +452,11 @@ function createQuoteDataProxy(options = {}) {
                 response.end(JSON.stringify({ code: safe.code, message: safe.message, trackingId }));
             }
         }).finally(() => {
+            // One line per call for support: tracking ID, route and query (no tokens, cookies or bodies).
+            if (typeof options.log === 'function') {
+                options.log(new Date().toISOString() + ' ' + trackingId + ' ' + request.method + ' ' +
+                    request.url.slice(0, 300) + ' -> ' + response.statusCode + ' (' + (Date.now() - started) + ' ms)');
+            }
             controller.abort();
             response.removeListener('close', disconnect);
             request.removeListener('aborted', disconnect);

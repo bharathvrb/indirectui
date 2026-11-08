@@ -1,8 +1,8 @@
 'use strict';
 
 angular.module('quoteManagement')
-  .controller('QuoteDetailCtrl', ['$scope', '$routeParams', '$location', '$timeout', '$window', '$document', '$q', 'QuoteService',
-    function($scope, $routeParams, $location, $timeout, $window, $document, $q, QuoteService) {
+  .controller('QuoteDetailCtrl', ['$scope', '$routeParams', '$location', '$timeout', '$window', '$document', '$q', 'QuoteService', 'QuoteJourney',
+    function($scope, $routeParams, $location, $timeout, $window, $document, $q, QuoteService, QuoteJourney) {
       var document = $document[0];
       var requestGeneration = 0;
       var returnFocus = null;
@@ -61,8 +61,11 @@ angular.module('quoteManagement')
         { id: 'events', label: 'Events', icon: 'bi-broadcast' }, { id: 'payload', label: 'Payload', icon: 'bi-braces' },
         { id: 'contract', label: 'Contracts', icon: 'bi-file-earmark-text' }
       ];
-      $scope.pipeline = [];
-      $scope.pipelineProgress = { done: 0, total: 0, percent: 0 };
+      $scope.journey = QuoteJourney.build([]);
+      // Step retry (UI-11): visible everywhere a step failed; enabled only by features.retryEnabled.
+      $scope.retryEnabled = !!($window.APP_CONFIG && $window.APP_CONFIG.features && $window.APP_CONFIG.features.retryEnabled === true);
+      $scope.retry = { open: false, step: null, submitting: false, error: null, trackingId: null };
+      $scope.retryRequested = Object.create(null);
       $scope.customerFields = [
         ['customerName', 'Customer Name'], ['tradingName', 'Trading Name'], ['organizationType', 'Organization Type'],
         ['channelType', 'Channel Type'], ['customerType', 'Customer Type'], ['customerSubType', 'Customer Sub-Type'],
@@ -821,6 +824,7 @@ angular.module('quoteManagement')
           .filter(function(error) { return String(error.stepExecutionId) === String(failedStep.id); })[0];
 
         $scope.failureSummary = {
+          stepId: failedStep.id,
           failingStepName: failedStep.stepName,
           stageReached: failedStep.stepName,
           errorCode: relatedError ? relatedError.errorCode : null,
@@ -856,40 +860,34 @@ angular.module('quoteManagement')
         };
       }
 
-      // Ordered view of step executions for the overview pipeline (the Processing tab keeps failures first).
-      function hydratePipeline() {
-        $scope.pipeline = $scope.processingSteps.slice().sort(function(a, b) {
-          var ao = toNumber(a.stepOrder, null), bo = toNumber(b.stepOrder, null);
-          if (ao !== null || bo !== null) {
-            if (ao === null) return 1;
-            if (bo === null) return -1;
-            if (ao !== bo) return ao - bo;
-          }
-          return toNumber(a.stepDefinitionId, Infinity) - toNumber(b.stepDefinitionId, Infinity) ||
-            toNumber(a.id, Infinity) - toNumber(b.id, Infinity);
+      // The journey groups steps into phases and attaches each failed step's latest recorded error.
+      function hydrateJourney() {
+        var latestError = Object.create(null);
+        $scope.errorRows.forEach(function(row) {
+          var key = String(row.stepExecutionId);
+          if (row.stepExecutionId !== null && !latestError[key]) latestError[key] = row;
         });
-        var done = $scope.pipeline.filter(function(step) { return step.stepStatus === 'SUCCESS'; }).length;
-        $scope.pipelineProgress = {
-          done: done,
-          total: $scope.pipeline.length,
-          percent: $scope.pipeline.length ? Math.round(done * 100 / $scope.pipeline.length) : 0
-        };
+        $scope.journey = QuoteJourney.build($scope.processingSteps.map(function(step) {
+          return angular.extend({}, step, { error: step.id !== null ? latestError[String(step.id)] || null : null });
+        }));
+        // UI-03 failure summary: the latest failed step, shown with its stage (phase) and error.
+        var summary = $scope.failureSummary;
+        $scope.journey.spotlight = summary ? $scope.journey.steps.filter(function(step) {
+          return String(step.id) === String(summary.stepId);
+        })[0] || null : null;
+        if ($scope.journey.spotlight) {
+          $scope.journey.spotlight.phaseLabel = (QuoteJourney.PHASES.filter(function(phase) {
+            return phase.id === $scope.journey.spotlight.phase;
+          })[0] || {}).label;
+        }
       }
-      $scope.pipelineTone = function(status) {
-        var value = normalizeStepStatus(status);
-        return value === 'SUCCESS' ? 'is-success' : value === 'FAILURE' ? 'is-failure' : value === 'IN_PROGRESS' ? 'is-progress' : 'is-pending';
-      };
-      $scope.pipelineIcon = function(status) {
-        var value = normalizeStepStatus(status);
-        return value === 'SUCCESS' ? 'bi-check-lg' : value === 'FAILURE' ? 'bi-x-lg' : value === 'IN_PROGRESS' ? 'bi-arrow-repeat' : 'bi-circle';
-      };
       $scope.humanize = function(value) {
-        return value === null || value === undefined || value === '' ? '—' :
-          String(value).replace(/_/g, ' ').toLowerCase().replace(/(^|\s)\S/g, function(c) { return c.toUpperCase(); });
+        return value === null || value === undefined || value === '' ? '—' : QuoteJourney.humanize(value);
       };
+      $scope.stepLabel = function(name) { return QuoteJourney.stepInfo(name).label; };
 
       function hydrateDetailStats() {
-        hydratePipeline();
+        hydrateJourney();
         var productCount = 0;
         asArray($scope.sites).forEach(function(site) {
           productCount += countProducts(site.productItems);
@@ -1050,13 +1048,8 @@ angular.module('quoteManagement')
       $scope.copyValue = function(value) {
         if (!$scope.canCopy(value)) return;
         $scope.copyFeedback = '';
-        function announce(message) {
-          $scope.copyFeedback = message;
-          if (copyTimer) $timeout.cancel(copyTimer);
-          copyTimer = $timeout(function() { $scope.copyFeedback = ''; }, 2500);
-        }
-        function copied() { announce('Copied to clipboard.'); }
-        function failed() { announce('Copy unavailable. Select the text and copy it manually.'); }
+        function copied() { notify('Copied to clipboard.'); }
+        function failed() { notify('Copy unavailable. Select the text and copy it manually.'); }
         if ($window.navigator.clipboard && $window.navigator.clipboard.writeText) {
           try {
             return $q.when($window.navigator.clipboard.writeText(String(value))).then(copied, failed);
@@ -1216,12 +1209,14 @@ angular.module('quoteManagement')
           if (target) target.focus();
         }));
       };
-      $scope.completeDialogKeydown = function(event) {
+      $scope.completeDialogKeydown = function(event) { trapDialogFocus(event, 'complete-dialog', $scope.closeCompleteDialog); };
+
+      function trapDialogFocus(event, dialogId, close) {
         if (event.key === 'Escape') {
           event.preventDefault();
-          $scope.closeCompleteDialog();
+          close();
         } else if (event.key === 'Tab') {
-          var dialog = document.getElementById('complete-dialog');
+          var dialog = document.getElementById(dialogId);
           var elements = dialog && dialog.querySelectorAll('button:not([disabled]), textarea:not([disabled]), [tabindex="0"]');
           if (!elements || !elements.length) return;
           var first = elements[0], last = elements[elements.length - 1];
@@ -1233,6 +1228,70 @@ angular.module('quoteManagement')
             first.focus();
           }
         }
+      }
+
+      function notify(message) {
+        $scope.copyFeedback = message;
+        if (copyTimer) $timeout.cancel(copyTimer);
+        copyTimer = $timeout(function() { $scope.copyFeedback = ''; }, 3500);
+      }
+
+      function stepById(id) {
+        if (id === null || id === undefined) return null;
+        return $scope.processingSteps.filter(function(step) { return String(step.id) === String(id); })[0] || null;
+      }
+      $scope.stepForError = function(row) { return row ? stepById(row.stepExecutionId) : null; };
+      $scope.isRetryable = function(step) {
+        return !!step && normalizeStepStatus(step.stepStatus) === 'FAILURE' && step.id !== null && step.id !== undefined &&
+          !$scope.completionSucceeded && !$scope.retryRequested[String(step.id)];
+      };
+      $scope.canRetry = function(step) {
+        return $scope.retryEnabled && !!$scope.canUpdateQuotes && $scope.isRetryable(step) && !$scope.retry.submitting;
+      };
+      $scope.retryTitle = function(step) {
+        if (!$scope.retryEnabled) return 'Coming soon';
+        if (step && $scope.retryRequested[String(step.id)]) return 'Retry requested';
+        return $scope.isRetryable(step) ? 'Retry this step' : 'Only failed steps can be retried';
+      };
+      $scope.openRetryDialog = function(step) {
+        if (!$scope.canRetry(step) || $scope.retry.open) return;
+        returnFocus = document.activeElement;
+        $scope.retry = { open: true, step: step, submitting: false, error: null, trackingId: null };
+        focusElement('retry-confirm');
+      };
+      $scope.closeRetryDialog = function() {
+        if ($scope.retry.submitting) return;
+        $scope.retry = { open: false, step: null, submitting: false, error: null, trackingId: null };
+        focusTimers.push($timeout(function() {
+          var target = returnFocus && document.documentElement.contains(returnFocus) ? returnFocus : document.getElementById('quote-detail-heading');
+          if (target) target.focus();
+        }));
+      };
+      $scope.retryDialogKeydown = function(event) { trapDialogFocus(event, 'retry-dialog', $scope.closeRetryDialog); };
+      $scope.submitRetry = function() {
+        var step = $scope.retry.step;
+        if (!$scope.retry.open || $scope.retry.submitting || !$scope.retryEnabled || !$scope.isRetryable(step)) return;
+        $scope.retry.submitting = true;
+        $scope.retry.error = null;
+        QuoteService.retryStep($scope.quote.quoteRequestId, step.id).then(function() {
+          $scope.retryRequested[String(step.id)] = true;
+          $scope.retry.submitting = false;
+          $scope.closeRetryDialog();
+          notify('Retry requested for ' + $scope.stepLabel(step.stepName) + '.');
+          $scope.loadQuote();
+        }, function(err) {
+          $scope.retry.submitting = false;
+          $scope.retry.trackingId = extractTrackingId(err);
+          var status = err && err.status;
+          $scope.retry.error = status === 403 ? 'You are not allowed to retry this step.'
+            : status === 404 ? 'This step was not found. Reload the quote and try again.'
+            : status === 409 ? 'This step is no longer failed or is already being retried.'
+            : status === 501 ? 'Retry is not available yet.'
+            : status === 0 ? 'Cannot reach the Quote Management server. Check your connection and try again.'
+            : err && err.data && typeof err.data.message === 'string' ? err.data.message
+            : 'Unable to retry this step.';
+          if (status === 409) $scope.loadQuote();
+        });
       };
 
       $scope.canSubmitComplete = function() {
@@ -1388,7 +1447,7 @@ angular.module('quoteManagement')
         $scope.failureSummary = null;
         $scope.contract = { soa: null, msa: null };
         $scope.payloadFormatted = '';
-        $scope.pipeline = [];
+        $scope.journey = QuoteJourney.build([]);
         siteLookup = Object.create(null);
         itemLookup = Object.create(null);
         contactLookup = Object.create(null);
