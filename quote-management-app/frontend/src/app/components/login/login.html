@@ -3,17 +3,16 @@
     <div class="qm-login-header">
       <span class="qm-auth-symbol"><i class="bi bi-shield-check" aria-hidden="true"></i></span>
       <div>
-        <div class="qm-login-brand">Quote Management</div>
         <h1 id="signin-title">Sign in</h1>
+        <p class="qm-login-lead">Use your organization account to continue.</p>
       </div>
-      <span class="qm-login-header-mark" aria-hidden="true"><i class="bi bi-intersect"></i></span>
     </div>
     <div class="qm-login-body">
       <div class="alert alert-info" ng-if="sessionExpired" role="status">Your session has expired. Sign in to continue where you left off.</div>
-      <div class="qm-return-note" ng-if="returningToQuote"><i class="bi bi-link-45deg" aria-hidden="true"></i> Your quote will open after sign-in.</div>
+      <div class="qm-return-note" ng-if="returningToQuote"><i class="bi bi-link-45deg" aria-hidden="true"></i> The quote you opened will load after you sign in.</div>
       <button type="button" class="btn qm-login-btn qm-sso-btn w-100" ng-click="signIn()" ng-disabled="!ssoConfigured || signingIn || localSigningIn">
         <i class="bi" ng-class="signingIn ? 'bi-arrow-repeat qm-spin' : 'bi-microsoft'" aria-hidden="true"></i>
-        <span>{{signingIn ? 'Connecting to SSO...' : 'Continue with Comcast SSO'}}</span>
+        <span>{{signingIn ? 'Redirecting…' : 'Continue with Comcast SSO'}}</span>
         <i class="bi bi-arrow-up-right" aria-hidden="true" ng-if="!signingIn"></i>
       </button>
       <div class="alert alert-danger mt-3" ng-if="authError" role="alert">{{authError}}</div>
@@ -23,7 +22,7 @@
       </div>
 
       <div ng-if="localSupported">
-        <div class="qm-login-separator"><span>or use a local account</span></div>
+        <div class="qm-login-separator"><span>or</span></div>
         <form name="localLoginForm" ng-submit="signInLocal()" novalidate aria-label="Local development sign-in">
           <div class="mb-3">
             <label for="login-username" class="form-label">Username</label>
@@ -51,15 +50,15 @@
           <button type="submit" class="btn btn-primary qm-login-btn w-100"
                   ng-disabled="!localEnabled || localLoginForm.$invalid || signingIn || localSigningIn">
             <i class="bi bi-arrow-repeat qm-spin" aria-hidden="true" ng-if="localSigningIn"></i>
-            <span>{{localSigningIn ? 'Signing in...' : 'Sign in with local account'}}</span>
+            <span>{{localSigningIn ? 'Signing in…' : 'Sign in'}}</span>
             <i class="bi bi-arrow-right" aria-hidden="true" ng-if="!localSigningIn"></i>
           </button>
         </form>
-        <div class="qm-local-notice" ng-if="localEnabled"><i class="bi bi-code-square" aria-hidden="true"></i><span>Development only. API requests use the server's configured connection.</span></div>
-        <div class="qm-setup-notice mt-3" ng-if="!localEnabled && !localError" role="status">Local login is disabled. Start the development server with local login credentials configured.</div>
+        <div class="qm-local-notice" ng-if="localEnabled"><i class="bi bi-code-square" aria-hidden="true"></i><span>Local accounts are for development only.</span></div>
+        <div class="qm-setup-notice mt-3" ng-if="!localEnabled && !localError" role="status">Local sign-in is off. Set LOCAL_LOGIN_USERNAME and LOCAL_LOGIN_PASSWORD in server.properties to turn it on.</div>
       </div>
       <a class="qm-help-link" ng-if="supportUrl" ng-href="{{supportUrl}}" target="_blank" rel="noopener noreferrer">Need help signing in? <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
     </div>
-    <div class="qm-login-footer"><i class="bi bi-lock" aria-hidden="true"></i> Secure session <span aria-hidden="true">&middot;</span> CB Integration</div>
+    <div class="qm-login-footer"><i class="bi bi-shield-lock-fill" aria-hidden="true"></i> Orion Middleware · Secured with single sign-on</div>
   </section>
 </div>

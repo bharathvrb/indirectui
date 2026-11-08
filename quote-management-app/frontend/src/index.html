@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#2255d9">
+  <meta name="theme-color" content="#05080f">
   <base href="/">
   <title>Quote Management</title>
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
@@ -15,7 +15,7 @@
   <style>[ng-cloak] { display: none !important; }</style>
 </head>
 <body class="qm-app" ng-class="{'is-login': isLoginRoute}">
-  <div class="qm-boot" ng-if="!appReady" role="status"><div class="loading-spinner"></div>Preparing your workspace...</div>
+  <div class="qm-boot" ng-if="!appReady" role="status"><div class="loading-spinner"></div>Loading…</div>
   <noscript><div class="alert alert-warning">JavaScript is required to use Quote Management.</div></noscript>
   <a class="qm-skip-link" href="#main-content" onclick="document.getElementById('main-content').focus(); return false;">Skip to content</a>
   <header class="app-topbar" ng-cloak>
@@ -25,8 +25,6 @@
         <span class="app-brand-mark"><i class="bi bi-intersect" aria-hidden="true"></i></span>
         <span><strong>Quote<span class="app-brand-accent">Management</span></strong></span>
       </a>
-      <span class="qm-topbar-divider" ng-if="!isLoginRoute"></span>
-      <span class="qm-breadcrumb" ng-if="!isLoginRoute" ng-bind="pageTitle"></span>
     </div>
     <div class="qm-topbar-actions">
       <div class="qm-theme-picker">
@@ -45,9 +43,15 @@
     </div>
   </header>
   <nav id="workspace-nav" class="app-sidebar" ng-if="!isLoginRoute" ng-class="{'is-open': mobileMenuOpen}" aria-label="Workspace navigation" ng-cloak>
-    <span class="qm-nav-label">WORKSPACE</span>
-    <a href="#!/quotes" class="qm-nav-link" ng-class="{active: isActive('/quotes')}" ng-attr-aria-current="{{isActive('/quotes') ? 'page' : undefined}}"><i class="bi bi-grid-1x2" aria-hidden="true"></i><span>Quote requests</span><i class="bi bi-chevron-right qm-nav-arrow" aria-hidden="true"></i></a>
-    <a href="#!/support-tickets" class="qm-nav-link" ng-class="{active: isActive('/support-tickets')}" ng-attr-aria-current="{{isActive('/support-tickets') ? 'page' : undefined}}"><i class="bi bi-ticket-perforated" aria-hidden="true"></i><span>Ticket search</span><i class="bi bi-chevron-right qm-nav-arrow" aria-hidden="true"></i></a>
+    <div class="qm-sidebar-brand">
+      <a class="app-brand" href="#!/quotes" aria-label="Quote Management home">
+        <span class="app-brand-mark"><i class="bi bi-intersect" aria-hidden="true"></i></span>
+        <span><strong>Quote<span class="app-brand-accent">Management</span></strong><small>Orion Middleware</small></span>
+      </a>
+    </div>
+    <span class="qm-nav-label">MENU</span>
+    <a href="#!/quotes" class="qm-nav-link" ng-class="{active: isActive('/quotes')}" ng-attr-aria-current="{{isActive('/quotes') ? 'page' : undefined}}"><i class="bi bi-grid-1x2" aria-hidden="true"></i><span>Quotes</span><i class="bi bi-chevron-right qm-nav-arrow" aria-hidden="true"></i></a>
+    <a href="#!/support-tickets" class="qm-nav-link" ng-class="{active: isActive('/support-tickets')}" ng-attr-aria-current="{{isActive('/support-tickets') ? 'page' : undefined}}"><i class="bi bi-ticket-perforated" aria-hidden="true"></i><span>Sales Support Tickets</span><i class="bi bi-chevron-right qm-nav-arrow" aria-hidden="true"></i></a>
     <a ng-if="supportUrl" ng-href="{{supportUrl}}" class="qm-nav-link qm-support-link" target="_blank" rel="noopener noreferrer"><i class="bi bi-question-circle" aria-hidden="true"></i> Get support <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
   </nav>
   <main id="main-content" class="app-content" tabindex="-1" ng-cloak>
@@ -59,7 +63,6 @@
   <script src="vendor/angular-route/angular-route.min.js"></script>
   <script src="vendor/angular-sanitize/angular-sanitize.min.js"></script>
   <script src="vendor/angular-animate/angular-animate.min.js"></script>
-  <script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
   <script src="app/app.js"></script>
   <script src="app/services/auth.service.js"></script>
   <script src="app/services/services.js"></script>

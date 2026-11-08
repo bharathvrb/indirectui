@@ -1,8 +1,8 @@
 'use strict';
 
 angular.module('quoteManagement')
-  .controller('QuoteListCtrl', ['$scope', '$location', '$timeout', 'QuoteViewService',
-    function($scope, $location, $timeout, QuoteViewService) {
+  .controller('QuoteListCtrl', ['$scope', '$location', '$timeout', '$interval', 'QuoteViewService',
+    function($scope, $location, $timeout, $interval, QuoteViewService) {
       var view = QuoteViewService;
       var searchTimer;
       var lastQuery;
@@ -19,12 +19,30 @@ angular.module('quoteManagement')
       $scope.searchError = null;
       $scope.searchBy = 'auto';
       $scope.lookupOnly = !!(window.APP_CONFIG && window.APP_CONFIG.quoteDataLookupOnly);
+      var refreshSeconds = view.integer(window.APP_CONFIG && window.APP_CONFIG.autoRefreshSeconds, 60, 15);
+      var refreshTimer = null;
+      // Auto-refresh is off by default (UI-01); the interval is configurable in config.js.
+      $scope.autoRefresh = { enabled: false, seconds: refreshSeconds };
+      $scope.lastLoadedAt = null;
+      function stopAutoRefresh() {
+        if (refreshTimer) $interval.cancel(refreshTimer);
+        refreshTimer = null;
+      }
+      $scope.toggleAutoRefresh = function() {
+        stopAutoRefresh();
+        if (!$scope.autoRefresh.enabled) return;
+        refreshTimer = $interval(function() {
+          if (!$scope.loading && !searchTimer && lastQuery) $scope.refresh();
+        }, refreshSeconds * 1000);
+      };
       $scope.isExactLookup = function() { return !!view.lookupCriteria($scope.searchTerm, $scope.searchBy, $scope.lookupOnly); };
       $scope.lookupLabel = function() {
         var criteria = view.lookupCriteria($scope.searchTerm, $scope.searchBy, $scope.lookupOnly);
         if (!criteria) return '';
         return criteria.quoteRequestId ? 'quote request ID' : criteria.externalId ? 'external ID' : 'proposal ID';
       };
+
+      function capitalize(text) { return text.charAt(0).toUpperCase() + text.slice(1); }
 
       function rememberOptions(rows) {
         filterKeys.forEach(function(key) {
@@ -40,6 +58,7 @@ angular.module('quoteManagement')
 
       var loader = view.createLoader($scope, 'quotes', function(page) {
         rememberOptions(page.items);
+        $scope.lastLoadedAt = new Date();
         // Reflect a server-corrected page without requesting the same results again.
         if (lastQuery.page !== page.currentPage || lastQuery.size !== page.pageSize) {
           lastQuery = angular.extend({}, lastQuery, { page: page.currentPage, size: page.pageSize });
@@ -171,7 +190,7 @@ angular.module('quoteManagement')
         var chips = [];
         var labels = { state: 'State', designStatus: 'Design', category: 'Category', channelType: 'Channel' };
         if (view.text($scope.searchTerm)) chips.push({
-          key: 'search', label: ($scope.isExactLookup() ? $scope.lookupLabel() + ': ' : 'Search: ') + view.text($scope.searchTerm)
+          key: 'search', label: ($scope.isExactLookup() ? capitalize($scope.lookupLabel()) + ': ' : 'Search: ') + view.text($scope.searchTerm)
         });
         if ($scope.isExactLookup()) {
           if (!angular.equals(chips, filterChips)) filterChips = chips;
@@ -205,7 +224,10 @@ angular.module('quoteManagement')
         if (validate()) request(query);
         else loader.reset();
       });
-      $scope.$on('$destroy', cancelSearch);
+      $scope.$on('$destroy', function() {
+        cancelSearch();
+        stopAutoRefresh();
+      });
       readQuery();
       commit(true);
     }

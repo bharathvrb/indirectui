@@ -24,7 +24,7 @@ angular.module('quoteManagement')
         }
 
         function loginScopes() {
-            return config.loginScopes || ['openid', 'profile'].concat(config.apiScopes || []);
+            return config.loginScopes || ['openid', 'profile'];
         }
 
         function configured() {
@@ -47,19 +47,16 @@ angular.module('quoteManagement')
             $location.path('/login').search(query).replace();
         }
 
-        function acquireSilently(scopes, identityOnly) {
+        // The server verifies this ID token as proof of identity; it is never forwarded to QuoteData.
+        function acquireIdToken() {
             return $q.when(instance.acquireTokenSilent({
-                scopes: scopes,
+                scopes: loginScopes(),
                 account: instance.getActiveAccount()
             })).then(function(response) {
-                var token = identityOnly ? response.idToken : response.accessToken;
-                if (!token) {
-                    if (identityOnly) {
-                        return $q.reject({ status: 401, authRequired: true, message: 'Sign in again to verify your identity with the application server.' });
-                    }
-                    return $q.reject(new Error('SSO did not return an API access token.'));
+                if (!response.idToken) {
+                    return $q.reject({ status: 401, authRequired: true, message: 'Sign in again to verify your identity with the application server.' });
                 }
-                return token;
+                return response.idToken;
             }, function(error) {
                 if (($window.msal && error instanceof $window.msal.InteractionRequiredAuthError) ||
                     ['interaction_required', 'login_required', 'consent_required'].indexOf(error.errorCode) !== -1) {
@@ -119,27 +116,7 @@ angular.module('quoteManagement')
                 }
                 // Local callers use the server-validated HTTP-only cookie; SSO callers prove their identity.
                 if (mode === 'local') return $q.when(null);
-                return acquireSilently(loginScopes(), true);
-            },
-            acquireToken: function() {
-                if (!getUser()) {
-                    return $q.reject({ status: 401, authRequired: true, message: 'Please sign in to continue.' });
-                }
-                if (mode === 'local') {
-                    return $q.reject({
-                        status: 0,
-                        code: 'LOCAL_LOGIN_API_UNAVAILABLE',
-                        message: 'Local login opens the development workspace only. Sign out and use Comcast SSO with a configured QuoteData API scope to load backend data.'
-                    });
-                }
-                if (!validScopes(config.apiScopes)) {
-                    return $q.reject({
-                        status: 0,
-                        code: 'API_SCOPES_NOT_CONFIGURED',
-                        message: 'SSO sign-in is available, but QuoteData access needs its own API scope. Configure AUTH_CONFIG.apiScopes in config.js.'
-                    });
-                }
-                return acquireSilently(config.apiScopes, false);
+                return acquireIdToken();
             },
             logout: function() {
                 if (mode === 'local') {

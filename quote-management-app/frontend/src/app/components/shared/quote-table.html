@@ -1,10 +1,10 @@
 <section class="card qm-section-card qm-table-shell" aria-label="Quote results" ng-attr-aria-busy="{{$ctrl.loading}}">
   <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
-    <h2 class="h6 mb-0 qm-results-heading" tabindex="-1">Quote results</h2>
+    <h2 class="qm-card-title qm-results-heading" tabindex="-1"><i class="bi bi-table" aria-hidden="true"></i>Results</h2>
     <span class="small text-muted" role="status" aria-live="polite">
-      <span ng-if="$ctrl.loading">Loading quotes…</span>
+      <span ng-if="$ctrl.loading"><i class="bi bi-arrow-repeat qm-spin me-1" aria-hidden="true"></i>Loading…</span>
       <span ng-if="$ctrl.ready && !$ctrl.loading && !$ctrl.error">
-        {{$ctrl.firstRow()}}–{{$ctrl.lastRow()}} of {{$ctrl.totalElements | number}} matching quotes
+        {{$ctrl.firstRow()}}–{{$ctrl.lastRow()}} of {{$ctrl.totalElements | number}}
       </span>
     </span>
   </div>
@@ -14,12 +14,12 @@
         <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>{{$ctrl.error}}
         <div class="small mt-1">Tracking ID: <code>{{$ctrl.value($ctrl.trackingId)}}</code></div>
       </div>
-      <button type="button" class="btn btn-outline-danger btn-sm" ng-click="$ctrl.onRetry()">Retry loading quotes</button>
+      <button type="button" class="btn btn-outline-danger btn-sm" ng-click="$ctrl.onRetry()">Try again</button>
     </div>
   </div>
   <div class="qm-empty-state py-5 px-3" ng-if="!$ctrl.loading && !$ctrl.error && !$ctrl.ready">
     <i class="bi bi-search" aria-hidden="true"></i>
-    <p class="mb-0 mt-2">{{$ctrl.idleMessage || 'Choose search criteria to find quotes.'}}</p>
+    <p class="mb-0 mt-2">{{$ctrl.idleMessage || 'Enter search criteria to see results.'}}</p>
   </div>
   <div class="table-responsive" tabindex="0" role="region" aria-label="Quote results table; scroll horizontally for all columns"
        ng-if="$ctrl.loading || ($ctrl.ready && !$ctrl.error)">
@@ -41,7 +41,7 @@
       </thead>
       <tbody ng-if="$ctrl.loading" aria-hidden="true">
         <tr ng-repeat="n in [1,2,3,4,5,6] track by $index">
-          <td colspan="10" class="py-3"><div class="qm-skeleton-line"></div></td>
+          <td colspan="10" class="py-3"><div class="qm-skeleton-line" ng-style="{width: (100 - ($index % 3) * 18) + '%'}"></div></td>
         </tr>
       </tbody>
       <tbody ng-if="!$ctrl.loading && $ctrl.ready">
@@ -50,7 +50,7 @@
             <div class="qm-empty-state">
               <i class="bi bi-inbox" aria-hidden="true"></i>
               <div class="fw-semibold mt-2">{{$ctrl.emptyMessage || 'No records found — Quotes'}}</div>
-              <div class="small text-muted mt-1">Try another search or clear the filters.</div>
+              <div class="small text-muted mt-1">Check the value or clear the filters.</div>
             </div>
           </td>
         </tr>
@@ -58,17 +58,17 @@
           <td>
             <a ng-if="row.quoteRequestId != null && row.quoteRequestId !== ''"
                ng-href="{{$ctrl.quoteHref(row.quoteRequestId)}}" class="qm-link-button"
-               ng-attr-aria-label="Open quote {{row.quoteRequestId}}"><code>{{row.quoteRequestId}}</code></a>
+               ng-attr-aria-label="Open quote {{row.quoteRequestId}}" title="{{row.quoteRequestId}}"><code>{{row.quoteRequestId}}</code></a>
             <span ng-if="row.quoteRequestId == null || row.quoteRequestId === ''">—</span>
           </td>
-          <td><code>{{$ctrl.value(row.externalId)}}</code></td>
+          <td><code class="qm-id-muted">{{$ctrl.value(row.externalId)}}</code></td>
           <td>{{$ctrl.value(row.category)}}</td>
           <td><span class="badge" ng-class="$ctrl.stateClass(row.state)">{{$ctrl.stateLabel(row.state)}}</span></td>
           <td>{{$ctrl.value(row.designStatus)}}</td>
-          <td>{{$ctrl.value(row.customerName)}}</td>
+          <td class="qm-customer-cell">{{$ctrl.value(row.customerName)}}</td>
           <td>{{$ctrl.value(row.channelType)}}</td>
-          <td>{{row.createdAt ? (row.createdAt | date:'dd MMM yyyy HH:mm') : '—'}}</td>
-          <td>{{row.updatedAt ? (row.updatedAt | date:'dd MMM yyyy HH:mm') : '—'}}</td>
+          <td class="qm-date-cell">{{row.createdAt ? (row.createdAt | date:'dd MMM yyyy, HH:mm') : '—'}}</td>
+          <td class="qm-date-cell">{{row.updatedAt ? (row.updatedAt | date:'dd MMM yyyy, HH:mm') : '—'}}</td>
           <td>{{$ctrl.value(row.supportTicketNumber)}}</td>
         </tr>
       </tbody>

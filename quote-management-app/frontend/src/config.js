@@ -1,10 +1,12 @@
 // Public deployment settings only. Never put client secrets or access tokens here.
 window.APP_CONFIG = Object.assign({
+    // Same-origin server proxy; it holds the QuoteData service credentials (see server.properties).
     apiBaseUrl: '/api',
-    apiAuthMode: 'service-proxy',
     quoteDataLookupOnly: true,
     contractDownloadUrl: '',
     supportUrl: '',
+    // Quote list auto-refresh interval (seconds, minimum 15). The toggle is off by default.
+    autoRefreshSeconds: 60,
     features: { retryEnabled: false }
 }, window.APP_CONFIG || {});
 
@@ -14,8 +16,6 @@ window.AUTH_CONFIG = Object.assign({
     tenantId: '906aefe9-76a7-4f65-b82d-5ec20775d5aa',
     loginScopes: ['openid', 'profile', 'email', 'User.Read'],
     loginPrompt: 'select_account',
-    // Used only in direct API mode; service-proxy mode obtains its API token on the server.
-    apiScopes: [],
     redirectUri: window.location.origin + '/'
 }, window.AUTH_CONFIG || {});
 

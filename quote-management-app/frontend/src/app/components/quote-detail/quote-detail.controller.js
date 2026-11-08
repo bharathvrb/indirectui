@@ -11,6 +11,7 @@ angular.module('quoteManagement')
       var itemLookup = Object.create(null);
       var contactLookup = Object.create(null);
       var focusTimers = [];
+      var copyTimer = null;
       $scope.loading = true;
       $scope.error = null;
       $scope.trackingId = null;
@@ -54,12 +55,14 @@ angular.module('quoteManagement')
       $scope.contractTrackingId = null;
       $scope.completionNotice = '';
       $scope.tabs = [
-        { id: 'customer', label: 'Customer' }, { id: 'sites', label: 'Sites' },
-        { id: 'products', label: 'Products' }, { id: 'promotions', label: 'Promotions' },
-        { id: 'processing', label: 'Processing' }, { id: 'errors', label: 'Errors' },
-        { id: 'events', label: 'Events' }, { id: 'payload', label: 'Payload' },
-        { id: 'contract', label: 'Contracts' }
+        { id: 'customer', label: 'Customer', icon: 'bi-building' }, { id: 'sites', label: 'Sites', icon: 'bi-geo-alt' },
+        { id: 'products', label: 'Products', icon: 'bi-box-seam' }, { id: 'promotions', label: 'Promotions', icon: 'bi-tags' },
+        { id: 'processing', label: 'Processing', icon: 'bi-diagram-3' }, { id: 'errors', label: 'Errors', icon: 'bi-bug' },
+        { id: 'events', label: 'Events', icon: 'bi-broadcast' }, { id: 'payload', label: 'Payload', icon: 'bi-braces' },
+        { id: 'contract', label: 'Contracts', icon: 'bi-file-earmark-text' }
       ];
+      $scope.pipeline = [];
+      $scope.pipelineProgress = { done: 0, total: 0, percent: 0 };
       $scope.customerFields = [
         ['customerName', 'Customer Name'], ['tradingName', 'Trading Name'], ['organizationType', 'Organization Type'],
         ['channelType', 'Channel Type'], ['customerType', 'Customer Type'], ['customerSubType', 'Customer Sub-Type'],
@@ -853,7 +856,40 @@ angular.module('quoteManagement')
         };
       }
 
+      // Ordered view of step executions for the overview pipeline (the Processing tab keeps failures first).
+      function hydratePipeline() {
+        $scope.pipeline = $scope.processingSteps.slice().sort(function(a, b) {
+          var ao = toNumber(a.stepOrder, null), bo = toNumber(b.stepOrder, null);
+          if (ao !== null || bo !== null) {
+            if (ao === null) return 1;
+            if (bo === null) return -1;
+            if (ao !== bo) return ao - bo;
+          }
+          return toNumber(a.stepDefinitionId, Infinity) - toNumber(b.stepDefinitionId, Infinity) ||
+            toNumber(a.id, Infinity) - toNumber(b.id, Infinity);
+        });
+        var done = $scope.pipeline.filter(function(step) { return step.stepStatus === 'SUCCESS'; }).length;
+        $scope.pipelineProgress = {
+          done: done,
+          total: $scope.pipeline.length,
+          percent: $scope.pipeline.length ? Math.round(done * 100 / $scope.pipeline.length) : 0
+        };
+      }
+      $scope.pipelineTone = function(status) {
+        var value = normalizeStepStatus(status);
+        return value === 'SUCCESS' ? 'is-success' : value === 'FAILURE' ? 'is-failure' : value === 'IN_PROGRESS' ? 'is-progress' : 'is-pending';
+      };
+      $scope.pipelineIcon = function(status) {
+        var value = normalizeStepStatus(status);
+        return value === 'SUCCESS' ? 'bi-check-lg' : value === 'FAILURE' ? 'bi-x-lg' : value === 'IN_PROGRESS' ? 'bi-arrow-repeat' : 'bi-circle';
+      };
+      $scope.humanize = function(value) {
+        return value === null || value === undefined || value === '' ? '—' :
+          String(value).replace(/_/g, ' ').toLowerCase().replace(/(^|\s)\S/g, function(c) { return c.toUpperCase(); });
+      };
+
       function hydrateDetailStats() {
+        hydratePipeline();
         var productCount = 0;
         asArray($scope.sites).forEach(function(site) {
           productCount += countProducts(site.productItems);
@@ -1014,8 +1050,13 @@ angular.module('quoteManagement')
       $scope.copyValue = function(value) {
         if (!$scope.canCopy(value)) return;
         $scope.copyFeedback = '';
-        function copied() { $scope.copyFeedback = 'Copied to clipboard.'; }
-        function failed() { $scope.copyFeedback = 'Copy unavailable. Select the text and copy it manually.'; }
+        function announce(message) {
+          $scope.copyFeedback = message;
+          if (copyTimer) $timeout.cancel(copyTimer);
+          copyTimer = $timeout(function() { $scope.copyFeedback = ''; }, 2500);
+        }
+        function copied() { announce('Copied to clipboard.'); }
+        function failed() { announce('Copy unavailable. Select the text and copy it manually.'); }
         if ($window.navigator.clipboard && $window.navigator.clipboard.writeText) {
           try {
             return $q.when($window.navigator.clipboard.writeText(String(value))).then(copied, failed);
@@ -1347,6 +1388,7 @@ angular.module('quoteManagement')
         $scope.failureSummary = null;
         $scope.contract = { soa: null, msa: null };
         $scope.payloadFormatted = '';
+        $scope.pipeline = [];
         siteLookup = Object.create(null);
         itemLookup = Object.create(null);
         contactLookup = Object.create(null);
@@ -1375,12 +1417,8 @@ angular.module('quoteManagement')
             $scope.error = 'Quote not found';
           } else if (err.status === 410) {
             $scope.error = 'Quote archived';
-          } else if (err.code === 'API_SCOPES_NOT_CONFIGURED' || err.code === 'LOCAL_LOGIN_API_UNAVAILABLE') {
-            $scope.error = err.message;
-          } else if (err.data &&
-              ['SERVICE_AUTH_NOT_CONFIGURED', 'SERVICE_TOKEN_FAILED', 'UPSTREAM_UNAUTHORIZED',
-                'SSO_AUTH_NOT_CONFIGURED', 'UPSTREAM_TIMEOUT', 'UPSTREAM_UNAVAILABLE'].indexOf(err.data.code) !== -1) {
-            $scope.error = err.data.message;
+          } else if (err.data && typeof err.data.code === 'string' && typeof err.data.message === 'string') {
+            $scope.error = 'Unable to load quote details. ' + err.data.message;
           } else {
             $scope.error = 'Unable to load quote details.';
           }
@@ -1394,6 +1432,7 @@ angular.module('quoteManagement')
       $scope.$on('$destroy', function() {
         requestGeneration++;
         focusTimers.forEach(function(timer) { $timeout.cancel(timer); });
+        if (copyTimer) $timeout.cancel(copyTimer);
       });
       $scope.loadQuote();
     }
