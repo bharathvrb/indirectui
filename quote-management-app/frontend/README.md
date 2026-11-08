@@ -16,7 +16,7 @@ Always serve `dist/`, not `src/`: vendor libraries (Angular, Bootstrap, icons, M
 
 ## Server settings (`server.properties`)
 
-`npm start` reads `server.properties` next to `server.js` and loads each `KEY=VALUE` line as an environment variable. Real environment variables win, and `QM_PROPERTIES_FILE` can point to another file. Copy `server.properties.example` to start. The file is git-ignored because it holds the client secret.
+`npm start` reads `server.properties` next to `server.js` and loads each `KEY=VALUE` line as an environment variable. Real environment variables win, and `QM_PROPERTIES_FILE` can point to another file. The committed file contains placeholders written as `<...>`; the server ignores those, so an unfilled secret shows up as `503 SERVICE_AUTH_NOT_CONFIGURED`, and an unfilled password turns local sign-in off with a warning. After filling in real values, run `git update-index --skip-worktree server.properties` so git ignores your local edits and the secret is never committed. (`git update-index --no-skip-worktree server.properties` undoes it.)
 
 | Key | Meaning |
 | --- | --- |

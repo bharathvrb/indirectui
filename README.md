@@ -16,7 +16,8 @@ Requirements: Node.js 22 or newer, and a machine on the Comcast network (QuoteDa
 ```bash
 cd quote-management-app/frontend
 npm ci
-cp server.properties.example server.properties   # then fill in the <...> values
+# edit server.properties: fill in the <...> values (client secret, local password)
+git update-index --skip-worktree server.properties   # keep your secret out of commits
 npm start
 ```
 
@@ -28,7 +29,7 @@ Open **http://127.0.0.1:8081/** and sign in with SSO, or with the local login fr
 
 | File | Holds |
 | --- | --- |
-| `frontend/server.properties` | Server secrets and endpoints: QuoteData service account, token/QuoteData URLs, SSO verification IDs, local login. Git-ignored. |
+| `frontend/server.properties` | Server settings: QuoteData service account, token/QuoteData URLs, SSO verification IDs, local login. Committed with placeholders; never commit the real secret. |
 | `frontend/src/config.js` | Public browser settings: SSO client/tenant, list mode, auto-refresh interval, optional support/contract URLs. Rebuild (`npm start` does it) after changes. |
 
 See [frontend/README.md](quote-management-app/frontend/README.md) for every setting, the proxy contract, troubleshooting and tests.
