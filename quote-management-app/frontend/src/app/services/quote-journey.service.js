@@ -4,43 +4,18 @@
 // the current step and durations. Steps keep their actual OMW names.
 angular.module('quoteManagement')
   .factory('QuoteJourney', [function() {
-    // Known OMW steps in flow order, each with a one-line description. Unknown steps
-    // are still shown, after the known ones.
-    var CATALOG = [
-      ['ADDRESS_VALIDATION', 'Validate the customer and service addresses'],
-      ['DYNAMICS_ACCOUNT_OPPORTUNITY', 'Create the Dynamics account and opportunity'],
-      ['CREATE_CONTACT', 'Create the customer contacts in Dynamics'],
-      ['CREATE_CUSTOMER', 'Create the customer in Amdocs'],
-      ['CREATE_SITE', 'Create the service sites and addresses'],
-      ['CREATE_PROPOSAL', 'Create the SQO proposal'],
-      ['CREATE_AMENDMENT_PROPOSAL', 'Create the SQO amendment proposal'],
-      ['SEARCH_PRODUCT_OFFERING_AGREEMENT_ITEMS', 'Find the existing product offering agreement items'],
-      ['REMOVE_PRODUCT_OFFERING', 'Remove the products being disconnected'],
-      ['ADD_SITE', 'Add the sites to the proposal'],
-      ['ASSIGN_OFFERS', 'Assign product offers to each site'],
-      ['MODIFY_PRODUCT_CONFIGURATION', 'Apply product configuration and characteristics'],
-      ['MODIFY_TERM', 'Apply the requested contract terms'],
-      ['QUALIFY_APPLY_PROMOTION', 'Qualify and apply promotions'],
-      ['ADD_TRANSACTIONAL_INFORMATION', 'Add transactional information to the proposal'],
-      ['QUOTE_ALIGNMENT', 'Align the quote with the proposal'],
-      ['QUOTE_AGGREGATOR', 'Aggregate the quote results'],
-      ['FINALIZE', 'Finalize the proposal'],
-      ['PREPARE_FOR_VALIDATION', 'Prepare the proposal for validation'],
-      ['PROPOSAL_VALIDATION', 'Run proposal validation'],
-      ['RETRIEVE_VALIDATION_REQUEST', 'Retrieve the validation request'],
-      ['RETRIEVE_VALIDATION_RESULTS', 'Retrieve the validation results'],
-      ['RETRIEVE_APPROVAL_RULES', 'Retrieve the approval rules'],
-      ['INITIATE_INTERNAL_APPROVAL', 'Start the internal approval'],
-      ['INTERNAL_APPROVAL', 'Wait for internal approval'],
-      ['GENERATE_CONTRACT', 'Generate the SOA and MSA documents'],
-      ['CONTRACT_GENERATION', 'Generate the SOA and MSA documents'],
-      ['RETRIEVE_DESIGN_STATUS', 'Retrieve the design status'],
-      ['RETRIEVE_SURVEY_RESULTS', 'Retrieve the site survey results']
+    // Known OMW steps in flow order. Unknown steps are still shown, after the known ones.
+    var FLOW = [
+      'ADDRESS_VALIDATION', 'DYNAMICS_ACCOUNT_OPPORTUNITY', 'CREATE_CONTACT', 'CREATE_CUSTOMER', 'CREATE_SITE',
+      'CREATE_PROPOSAL', 'CREATE_AMENDMENT_PROPOSAL', 'SEARCH_PRODUCT_OFFERING_AGREEMENT_ITEMS', 'REMOVE_PRODUCT_OFFERING',
+      'ADD_SITE', 'ASSIGN_OFFERS', 'MODIFY_PRODUCT_CONFIGURATION', 'MODIFY_TERM', 'QUALIFY_APPLY_PROMOTION',
+      'ADD_TRANSACTIONAL_INFORMATION', 'QUOTE_ALIGNMENT', 'QUOTE_AGGREGATOR', 'FINALIZE', 'PREPARE_FOR_VALIDATION',
+      'PROPOSAL_VALIDATION', 'RETRIEVE_VALIDATION_REQUEST', 'RETRIEVE_VALIDATION_RESULTS', 'RETRIEVE_APPROVAL_RULES',
+      'INITIATE_INTERNAL_APPROVAL', 'INTERNAL_APPROVAL', 'GENERATE_CONTRACT', 'CONTRACT_GENERATION',
+      'RETRIEVE_DESIGN_STATUS', 'RETRIEVE_SURVEY_RESULTS'
     ];
     var INDEX = Object.create(null);
-    CATALOG.forEach(function(entry, index) {
-      INDEX[entry[0]] = { index: index, description: entry[1] };
-    });
+    FLOW.forEach(function(name, index) { INDEX[name] = index; });
 
     var TONES = {
       SUCCESS: { tone: 'success', label: 'Completed', icon: 'bi-check-lg' },
@@ -65,15 +40,14 @@ angular.module('quoteManagement')
       return text.replace(/_/g, ' ').toLowerCase().replace(/^\S/, function(c) { return c.toUpperCase(); });
     }
 
-    // label is the step's actual name; description is a short plain-English hint (null for unknown steps).
+    // label is the step's actual name; index is its place in the standard flow (Infinity if unknown).
     function stepInfo(name) {
       var raw = String(name === null || name === undefined ? '' : name).trim();
       var known = INDEX[raw.toUpperCase()];
       return {
         key: raw.toUpperCase(),
         label: raw || 'Unnamed step',
-        description: known ? known.description : null,
-        index: known ? known.index : Infinity
+        index: known === undefined ? Infinity : known
       };
     }
 
@@ -124,7 +98,7 @@ angular.module('quoteManagement')
         var status = statusInfo(step.stepStatus);
         var started = time(step.startedAt), completed = time(step.completedAt);
         return angular.extend({}, step, {
-          info: info, label: info.label, description: info.description,
+          info: info, label: info.label,
           // Name split after each underscore so long names wrap between words, never inside one.
           parts: info.label.match(/[^_]+_*|_+/g) || [info.label],
           status: normalizeStatus(step.stepStatus), tone: status.tone, statusLabel: status.label, icon: status.icon,

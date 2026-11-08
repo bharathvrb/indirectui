@@ -94,7 +94,7 @@ describe('Quote journey and step retry', function() {
       var numbers = Array.prototype.map.call(page.querySelectorAll('.qm-step-no'), function(n) { return n.textContent.trim(); });
       expect(numbers).toEqual(['01', '02', '03', '04', '05']);
       expect(page.querySelector('.qm-step.is-failure .qm-step-meta').textContent).toContain('attempt 3/3');
-      expect(page.querySelector('.qm-step.is-failure .qm-step-desc').textContent).toBe('Create the SQO proposal');
+      expect(page.querySelectorAll('.qm-step-desc, .qm-spotlight-desc').length).toBe(0);
       expect(page.querySelector('.qm-step.is-success .qm-step-meta').textContent).toContain('4 s');
       expect(page.querySelectorAll('.qm-step.is-current').length).toBe(1);
       expect(page.querySelector('.qm-journey-counts').textContent.replace(/\s+/g, ' ')).toContain('2 done 1 failed 2 waiting');

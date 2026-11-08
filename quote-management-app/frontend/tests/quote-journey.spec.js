@@ -11,39 +11,26 @@ describe('Quote journey model', function() {
     return angular.extend({ id: name, stepName: name, stepStatus: status }, extra || {});
   }
 
-  it('keeps the actual step name and adds a plain-English description for known steps', function() {
-    expect(journey.stepInfo('ADDRESS_VALIDATION')).toEqual(jasmine.objectContaining({
-      label: 'ADDRESS_VALIDATION', description: 'Validate the customer and service addresses'
-    }));
+  it('keeps the actual step name, trimmed and unchanged, with no description added', function() {
+    expect(journey.stepInfo('ADDRESS_VALIDATION')).toEqual({ key: 'ADDRESS_VALIDATION', label: 'ADDRESS_VALIDATION', index: 0 });
     expect(journey.stepInfo(' create_contact ').label).toBe('create_contact');
-    expect(journey.stepInfo(' create_contact ').description).toBe('Create the customer contacts in Dynamics');
-    expect(journey.stepInfo('GENERATE_CONTRACT').description).toBe('Generate the SOA and MSA documents');
-    expect(journey.stepInfo('CONTRACT_GENERATION').description).toBe('Generate the SOA and MSA documents');
-  });
-
-  it('splits long step names after each underscore so they wrap between words', function() {
-    var built = journey.build([step('DYNAMICS_ACCOUNT_OPPORTUNITY', 'PENDING'), step('FINALIZE', 'PENDING'), step('', 'PENDING')]);
-    var byName = {};
-    built.steps.forEach(function(s) { byName[s.stepName] = s.parts; });
-    expect(byName.DYNAMICS_ACCOUNT_OPPORTUNITY).toEqual(['DYNAMICS_', 'ACCOUNT_', 'OPPORTUNITY']);
-    expect(byName.DYNAMICS_ACCOUNT_OPPORTUNITY.join('')).toBe('DYNAMICS_ACCOUNT_OPPORTUNITY');
-    expect(byName.FINALIZE).toEqual(['FINALIZE']);
-    expect(byName['']).toEqual(['Unnamed step']);
+    expect(journey.stepInfo(' create_contact ').index).toBe(2);
+    expect(journey.stepInfo('GENERATE_CONTRACT').index).toBeLessThan(journey.stepInfo('RETRIEVE_DESIGN_STATUS').index);
+    expect(journey.stepInfo('CONTRACT_GENERATION').index).not.toBe(Infinity);
+    expect(journey.stepInfo('FINALIZE').description).toBeUndefined();
   });
 
   it('knows every step of the standard quote flow', function() {
     ['ADDRESS_VALIDATION', 'DYNAMICS_ACCOUNT_OPPORTUNITY', 'CREATE_CONTACT', 'CREATE_CUSTOMER', 'CREATE_SITE', 'CREATE_PROPOSAL', 'ADD_SITE',
       'ASSIGN_OFFERS', 'MODIFY_PRODUCT_CONFIGURATION', 'MODIFY_TERM', 'QUALIFY_APPLY_PROMOTION', 'FINALIZE', 'PROPOSAL_VALIDATION',
       'RETRIEVE_APPROVAL_RULES', 'INTERNAL_APPROVAL', 'GENERATE_CONTRACT'].forEach(function(name) {
-      expect(journey.stepInfo(name).description).not.toBeNull();
       expect(journey.stepInfo(name).index).not.toBe(Infinity);
     });
   });
 
-  it('keeps unknown steps visible under their own name without a description', function() {
+  it('keeps unknown steps visible under their own name', function() {
     var info = journey.stepInfo('SYNC_BILLING_ACCOUNT');
     expect(info.label).toBe('SYNC_BILLING_ACCOUNT');
-    expect(info.description).toBeNull();
     expect(info.index).toBe(Infinity);
     expect(journey.stepInfo(null).label).toBe('Unnamed step');
     expect(journey.stepInfo('  ').label).toBe('Unnamed step');

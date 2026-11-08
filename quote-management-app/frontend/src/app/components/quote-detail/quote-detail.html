@@ -76,7 +76,6 @@
       <span class="qm-spotlight-icon" aria-hidden="true"><i class="bi bi-x-octagon-fill"></i></span>
       <div class="qm-spotlight-body">
         <h3 id="spotlight-title">{{journey.spotlight.label}} failed</h3>
-        <p class="qm-spotlight-desc" ng-if="journey.spotlight.description">{{journey.spotlight.description}}</p>
         <p class="qm-spotlight-error" ng-if="journey.spotlight.error">
           <code>{{displayValue(journey.spotlight.error.errorCode)}}</code>
           <span>{{displayValue(journey.spotlight.error.errorMessage)}}</span>
@@ -103,8 +102,7 @@
           ng-style="{'animation-delay': ($index * 30) + 'ms'}">
         <span class="qm-step-icon" aria-hidden="true"><i class="bi {{step.icon}}"></i></span>
         <div class="qm-step-body">
-          <span class="qm-step-name" title="{{step.description || step.stepName}}"><span ng-repeat="part in step.parts track by $index">{{part}}<wbr></span></span>
-          <span class="qm-step-desc" ng-if="step.description">{{step.description}}</span>
+          <span class="qm-step-name" title="{{step.stepName}}"><span ng-repeat="part in step.parts track by $index">{{part}}<wbr></span></span>
           <span class="qm-step-meta">
             {{step.statusLabel}}<span ng-if="step.duration"> · {{step.duration}}</span><span ng-if="step.tone === 'failure' || step.attemptCount > 1"> · attempt {{displayValue(step.attemptCount)}}/{{displayValue(step.maxRetries)}}</span><span ng-if="step.scope && step.scope !== 'QUOTE'"> · {{humanize(step.scope)}}</span>
           </span>
