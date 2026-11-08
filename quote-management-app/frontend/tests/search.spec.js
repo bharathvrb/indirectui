@@ -260,6 +260,100 @@ describe('Unified quote search workspace', function() {
     });
   });
 
+  describe('state mix and quick state filters', function() {
+    var rows = [
+      { quoteRequestId: 'A', state: 'FAILED' }, { quoteRequestId: 'B', state: 'FAILED' }, { quoteRequestId: 'C', state: 'IN_PROGRESS' },
+      { quoteRequestId: 'D', state: 'COMPLETED' }, { quoteRequestId: 'E', state: 'PENDING_APPROVAL' }, { quoteRequestId: 'F', state: 'RECEIVED' }
+    ];
+
+    it('summarizes the share of each state on the page and keeps the same array until counts change', function() {
+      start();
+      expect(scope.stateMix()).toEqual([]);
+      resolve(0, rows);
+      var mix = scope.stateMix();
+      expect(mix.map(function(part) { return [part.key, part.count, part.percent]; })).toEqual([
+        ['failed', 2, 33.3], ['inProgress', 1, 16.7], ['pendingApproval', 1, 16.7], ['completed', 1, 16.7], ['other', 1, 16.7]
+      ]);
+      expect(mix[0].label).toBe('Failed');
+      expect(scope.stateMix()).toBe(mix);
+    });
+
+    it('omits states with no quotes and clears when there are no results', function() {
+      start();
+      resolve(0, [{ quoteRequestId: 'A', state: 'FAILED' }, { quoteRequestId: 'B', state: 'FAILED' }]);
+      expect(scope.stateMix().map(function(part) { return part.key; })).toEqual(['failed']);
+      scope.refresh();
+      resolve(1, []);
+      expect(scope.stateMix()).toEqual([]);
+    });
+
+    it('lists the quick states in life-cycle order and filters by the chosen state', function() {
+      start();
+      resolve(0, rows);
+      expect(scope.quickStates).toEqual(['RECEIVED', 'IN_PROGRESS', 'PENDING_APPROVAL', 'COMPLETED', 'FAILED']);
+      scope.quickState('FAILED');
+      expect(requests.length).toBe(2);
+      expect(requests[1].params.state).toBe('FAILED');
+      expect(scope.filters.state).toBe('FAILED');
+      scope.quickState('');
+      expect(requests.length).toBe(3);
+      expect(requests[2].params.state).toBeUndefined();
+    });
+
+    it('renders the pills, highlights the active one and sends one request when a pill is clicked', function() {
+      start();
+      resolve(0, rows);
+      element = compile('<div>' + templates[templatePaths[1]] + '</div>')(scope);
+      root.$digest();
+      var pills = element[0].querySelectorAll('.qm-quick-pill');
+      expect(Array.prototype.map.call(pills, function(pill) { return pill.textContent.trim(); }))
+        .toEqual(['All', 'Received', 'In progress', 'Pending approval', 'Completed', 'Failed']);
+      expect(pills[0].classList.contains('active')).toBe(true);
+      angular.element(pills[5]).triggerHandler('click');
+      root.$digest();
+      expect(requests.length).toBe(2);
+      expect(requests[1].params.state).toBe('FAILED');
+      expect(pills[5].classList.contains('active')).toBe(true);
+      expect(pills[5].getAttribute('aria-pressed')).toBe('true');
+      expect(pills[0].getAttribute('aria-pressed')).toBe('false');
+      expect(element[0].querySelector('#quote-state').selectedOptions[0].textContent).toBe('Failed');
+    });
+
+    it('shows the mix bar only for several quotes in list mode', function() {
+      start();
+      resolve(0, rows);
+      element = compile('<div>' + templates[templatePaths[1]] + '</div>')(scope);
+      root.$digest();
+      expect(element[0].querySelectorAll('.qm-mix-bar span').length).toBe(5);
+      expect(element[0].querySelector('.qm-mix-legend').textContent.replace(/\s+/g, ' ')).toContain('Failed 2');
+      scope.refresh();
+      resolve(1, [{ quoteRequestId: 'A', state: 'FAILED' }]);
+      expect(element[0].querySelector('.qm-mix')).toBeNull();
+    });
+
+    it('disables the pills during an exact lookup', function() {
+      start('QuoteListCtrl', '/quotes?search=EXAMPLE-ID&searchBy=quoteRequestId');
+      requests[0].deferred.resolve({ data: { quoteRequestId: 'EXAMPLE-ID', state: 'FAILED' } });
+      root.$digest();
+      element = compile('<div>' + templates[templatePaths[1]] + '</div>')(scope);
+      root.$digest();
+      Array.prototype.forEach.call(element[0].querySelectorAll('.qm-quick-pill'), function(pill) { expect(pill.disabled).toBe(true); });
+    });
+  });
+
+  it('tones each table row by quote state', function() {
+    start();
+    resolve(0, [{ quoteRequestId: 'A', state: 'FAILED' }, { quoteRequestId: 'B', state: 'IN_PROGRESS' },
+      { quoteRequestId: 'C', state: 'PENDING_APPROVAL' }, { quoteRequestId: 'D', state: 'COMPLETED' },
+      { quoteRequestId: 'E', state: 'RECEIVED' }, { quoteRequestId: 'F', state: null }]);
+    var rowsOut = renderTable().querySelectorAll('tbody tr.qm-row-hover');
+    expect(Array.prototype.map.call(rowsOut, function(row) {
+      return Array.prototype.filter.call(row.classList, function(name) { return /^is-/.test(name); })[0];
+    })).toEqual(['is-failed', 'is-progress', 'is-approval', 'is-done', 'is-received', 'is-none']);
+    var component = componentController('quoteTable', { $element: element }, {});
+    expect(['inProgress', 'Pending Approval', 'unknown'].map(component.rowTone)).toEqual(['progress', 'approval', 'none']);
+  });
+
   it('moves focus to the results heading after a page change, then cleans up its timer', function() {
     start('QuoteListCtrl', '/quotes?page=0');
     resolve(0, [{ quoteRequestId: 'Q-1' }], { totalElements: 60, totalPages: 3 });

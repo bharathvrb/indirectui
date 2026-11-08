@@ -1,4 +1,23 @@
 <div class="qm-auth-page">
+  <div class="qm-auth-art">
+    <div class="qm-auth-brand">
+      <span class="app-brand-mark"><i class="bi bi-intersect" aria-hidden="true"></i></span>
+      <span class="qm-auth-brand-name">Quote<span>Management</span></span>
+    </div>
+    <svg class="qm-flow" viewBox="0 0 560 320" fill="none" aria-hidden="true" focusable="false">
+      <path class="qm-flow-rail" d="M20 230 C 110 230, 110 100, 200 100 S 290 230, 380 230 S 470 100, 540 100"/>
+      <path class="qm-flow-line" d="M20 230 C 110 230, 110 100, 200 100 S 290 230, 380 230 S 470 100, 540 100"/>
+      <g class="qm-flow-nodes">
+        <circle class="is-done" cx="20" cy="230" r="10"/>
+        <circle class="is-done" cx="200" cy="100" r="10"/>
+        <circle class="is-done" cx="380" cy="230" r="10"/>
+        <circle class="is-next" cx="540" cy="100" r="10"/>
+      </g>
+      <g class="qm-flow-checks">
+        <path d="m15.5 230 3.2 3.2 6-6.4"/><path d="m195.5 100 3.2 3.2 6-6.4"/><path d="m375.5 230 3.2 3.2 6-6.4"/>
+      </g>
+    </svg>
+  </div>
   <section class="qm-auth-card" aria-labelledby="signin-title">
     <div class="qm-login-header">
       <span class="qm-auth-symbol"><i class="bi bi-shield-check" aria-hidden="true"></i></span>
@@ -23,7 +42,7 @@
 
       <div ng-if="localSupported">
         <div class="qm-login-separator"><span>or</span></div>
-        <form name="localLoginForm" ng-submit="signInLocal()" novalidate aria-label="Local development sign-in">
+        <form name="localLoginForm" ng-submit="signInLocal()" novalidate aria-label="Sign in with username and password">
           <div class="mb-3">
             <label for="login-username" class="form-label">Username</label>
             <div class="qm-input-wrap">
@@ -54,8 +73,8 @@
             <i class="bi bi-arrow-right" aria-hidden="true" ng-if="!localSigningIn"></i>
           </button>
         </form>
-        <div class="qm-local-notice" ng-if="localEnabled"><i class="bi bi-code-square" aria-hidden="true"></i><span>Local accounts are for development only.</span></div>
-        <div class="qm-setup-notice mt-3" ng-if="!localEnabled && !localError" role="status">Local sign-in is off. Set LOCAL_LOGIN_USERNAME and LOCAL_LOGIN_PASSWORD in server.properties to turn it on.</div>
+        <div class="qm-local-notice" ng-if="localEnabled"><i class="bi bi-code-square" aria-hidden="true"></i><span>Use the username and password provided by your administrator.</span></div>
+        <div class="qm-setup-notice mt-3" ng-if="!localEnabled && !localError" role="status">Username and password sign-in is not set up on this server.</div>
       </div>
       <a class="qm-help-link" ng-if="supportUrl" ng-href="{{supportUrl}}" target="_blank" rel="noopener noreferrer">Need help signing in? <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
     </div>

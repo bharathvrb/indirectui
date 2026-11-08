@@ -125,8 +125,15 @@ function assertAuthResponse(response, status) {
     assert.equal(response.headers['access-control-allow-origin'], undefined);
 }
 
-test('local login is optional, production-disabled, and logout remains idempotent', async t => {
-    for (const environment of [{}, { ...enabledEnvironment, NODE_ENV: 'production' }]) {
+test('username/password sign-in also works when NODE_ENV=production', async t => {
+    const app = await start(t, { environment: { ...enabledEnvironment, NODE_ENV: 'production' } });
+    const session = await request(app, '/auth/local/session');
+    assert.equal(session.body.enabled, true);
+    assertAuthResponse(await signIn(app), 200);
+});
+
+test('local login is optional and logout remains idempotent', async t => {
+    for (const environment of [{}]) {
         const app = await start(t, { environment });
         const session = await request(app, '/auth/local/session');
         assertAuthResponse(session, 200);
@@ -423,5 +430,78 @@ test('successful login and logout retire scoped legacy cookies and invalidate al
     logout.headers['set-cookie'].forEach(value => assert.match(value, /; Max-Age=0;/));
     for (const cookie of [migratedCookie, anotherCookie]) {
         assert.deepEqual((await request(app, '/auth/local/session', { headers: { cookie } })).body, signedOut);
+    }
+});
+
+
+function middlewareCall(middleware, req) {
+    const headers = {};
+    let payload;
+    const response = {
+        setHeader: (name, value) => { headers[name.toLowerCase()] = value; },
+        end: value => { payload = value ? JSON.parse(value) : null; }
+    };
+    middleware(req, response);
+    return { status: response.statusCode, headers, payload };
+}
+
+function withPublicOrigin(t, value) {
+    const previous = process.env.QM_PUBLIC_ORIGIN;
+    process.env.QM_PUBLIC_ORIGIN = value;
+    t.after(() => {
+        if (previous === undefined) {
+            delete process.env.QM_PUBLIC_ORIGIN;
+        } else {
+            process.env.QM_PUBLIC_ORIGIN = previous;
+        }
+    });
+}
+
+test('with QM_PUBLIC_ORIGIN, browsers on other machines can use the app from that origin only', t => {
+    withPublicOrigin(t, 'https://quotes.example.test');
+    const middleware = configured(createLocalAuth, enabledEnvironment);
+    const remote = { remoteAddress: '192.0.2.10', localPort: 8081 };
+    const ok = middlewareCall(middleware, {
+        url: '/auth/local/logout', method: 'POST', socket: remote,
+        headers: { host: 'quotes.example.test', origin: 'https://quotes.example.test' }
+    });
+    assert.equal(ok.status, 200);
+    ok.headers['set-cookie'].forEach(value => assert.match(value, /; Secure$/));
+    assert.equal(middlewareCall(middleware, {
+        url: '/auth/local/session', method: 'GET', socket: remote, headers: { host: 'QUOTES.example.test' }
+    }).status, 200);
+    for (const headers of [
+        { host: 'quotes.example.test', origin: 'https://attacker.invalid' },
+        { host: 'quotes.example.test', origin: 'http://quotes.example.test' },
+        { host: 'quotes.example.test' },
+        { host: 'other.example.test', origin: 'https://other.example.test' },
+        { host: 'quotes.example.test', origin: 'https://quotes.example.test', 'sec-fetch-site': 'cross-site' }
+    ]) {
+        assert.equal(middlewareCall(middleware, { url: '/auth/local/logout', method: 'POST', socket: remote, headers }).status, 403);
+    }
+    // Local development access keeps working alongside the public origin.
+    assert.equal(middlewareCall(middleware, {
+        url: '/auth/local/session', method: 'GET', socket: { remoteAddress: '127.0.0.1', localPort: 8081 },
+        headers: { host: '127.0.0.1:8081' }
+    }).status, 200);
+});
+
+test('an http public origin does not mark cookies Secure, and invalid public origins are ignored', t => {
+    withPublicOrigin(t, 'http://quotes.example.test:8081');
+    const middleware = configured(createLocalAuth, enabledEnvironment);
+    const result = middlewareCall(middleware, {
+        url: '/auth/local/logout', method: 'POST', socket: { remoteAddress: '192.0.2.10', localPort: 8081 },
+        headers: { host: 'quotes.example.test:8081', origin: 'http://quotes.example.test:8081' }
+    });
+    assert.equal(result.status, 200);
+    result.headers['set-cookie'].forEach(value => assert.doesNotMatch(value, /Secure/));
+    for (const invalid of ['quotes.example.test', 'ftp://quotes.example.test', 'https://quotes.example.test/app',
+        'https://user:pw@quotes.example.test', 'https://quotes.example.test/?a=1']) {
+        process.env.QM_PUBLIC_ORIGIN = invalid;
+        assert.equal(createLocalAuth.publicOrigin(), null, invalid);
+        assert.equal(middlewareCall(middleware, {
+            url: '/auth/local/session', method: 'GET', socket: { remoteAddress: '192.0.2.10', localPort: 8081 },
+            headers: { host: 'quotes.example.test' }
+        }).status, 403, invalid);
     }
 });

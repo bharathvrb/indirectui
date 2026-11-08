@@ -58,6 +58,10 @@
         </div>
       </div>
     </div>
+    <div class="qm-mix" ng-if="dataReady && !loading && !error && !lookupOnly && quotes.length > 1" role="img" aria-label="State mix of the quotes on this page">
+      <div class="qm-mix-bar"><span ng-repeat="part in stateMix() track by part.key" ng-class="'is-' + part.key" ng-style="{width: part.percent + '%'}" title="{{part.label}}: {{part.count}}"></span></div>
+      <ul class="qm-mix-legend"><li ng-repeat="part in stateMix() track by part.key" ng-class="'is-' + part.key"><i aria-hidden="true"></i>{{part.label}} <b>{{part.count}}</b></li></ul>
+    </div>
     <p class="qm-meta-line mb-0" ng-if="dataReady && !loading && !error">
       {{kpis.pendingApproval}} pending approval · {{kpis.ticketLinked}} with a support ticket
       <span ng-if="lastLoadedAt"> · Updated {{lastLoadedAt | date:'HH:mm:ss'}}</span>
@@ -98,6 +102,11 @@
           <div id="quote-search-feedback" class="small text-danger mt-1" role="alert" ng-if="searchError">{{searchError}}</div>
           <div class="small text-primary mt-2" role="status" ng-if="isExactLookup() && !lookupOnly">Exact {{lookupLabel()}} match. List filters are paused until you clear the search.</div>
         </div>
+      </div>
+      <div class="qm-quick" ng-if="!lookupOnly" role="group" aria-label="Quick state filter">
+        <button type="button" class="qm-quick-pill" ng-class="{active: !filters.state}" ng-click="quickState('')" ng-disabled="isExactLookup()" ng-attr-aria-pressed="{{!filters.state}}">All</button>
+        <button type="button" class="qm-quick-pill" ng-repeat="state in quickStates" ng-class="['is-' + state.toLowerCase(), {active: filters.state === state}]"
+                ng-click="quickState(state)" ng-disabled="isExactLookup()" ng-attr-aria-pressed="{{filters.state === state}}"><i aria-hidden="true"></i>{{getStateLabel(state)}}</button>
       </div>
       <div class="row g-3 qm-filter-grid" ng-if="!lookupOnly">
         <div class="col-6 col-lg-3">

@@ -79,8 +79,18 @@ if (require.main === module) {
         console.error('Could not start the frontend server: ' + error.message);
         process.exitCode = 1;
     });
-    server.listen(8081, '127.0.0.1', function() {
-        console.log('QuoteData workspace: http://127.0.0.1:8081/ (Ctrl+C to stop)');
+    const host = process.env.QM_HOST || '127.0.0.1';
+    const port = Number(process.env.QM_PORT || 8081);
+    const external = createLocalAuth.publicOrigin();
+    if (process.env.QM_PUBLIC_ORIGIN && !external) {
+        console.warn('QM_PUBLIC_ORIGIN must be an origin such as https://quotes.example.com; it is ignored.');
+    }
+    if (!['127.0.0.1', 'localhost', '::1'].includes(host) && !external) {
+        console.warn('QM_HOST=' + host + ' without QM_PUBLIC_ORIGIN: browsers on other machines will be refused.');
+    }
+    server.listen(port, host, function() {
+        console.log('Quote Management: ' + (external ? external.origin : 'http://127.0.0.1:' + port) +
+            '/ (listening on ' + host + ':' + port + ', Ctrl+C to stop)');
     });
 }
 

@@ -17,7 +17,6 @@
     }
 
     function initializeLocalSession() {
-        if (['localhost', '127.0.0.1', '[::1]'].indexOf(window.location.hostname) === -1) return Promise.resolve();
         var abort = new window.AbortController();
         var timeout = window.setTimeout(function() { abort.abort(); }, 5000);
         return window.fetch('/auth/local/session', { credentials: 'same-origin', cache: 'no-store', signal: abort.signal }).then(function(response) {

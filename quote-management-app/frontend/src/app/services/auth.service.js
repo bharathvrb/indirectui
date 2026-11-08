@@ -73,7 +73,8 @@ angular.module('quoteManagement')
             isSsoConfigured: configured,
             getInitializationError: function() { return $window.__authError; },
             isLocalLoginSupported: function() {
-                return ['localhost', '127.0.0.1', '[::1]'].indexOf($window.location.hostname) !== -1;
+                // Username/password sign-in is offered everywhere; the server decides whether it is configured.
+                return true;
             },
             isLocalLoginEnabled: function() { return localSession.enabled === true; },
             getLocalInitializationError: function() { return $window.__localAuthError; },

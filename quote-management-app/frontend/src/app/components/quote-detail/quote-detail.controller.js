@@ -12,6 +12,7 @@ angular.module('quoteManagement')
       var contactLookup = Object.create(null);
       var focusTimers = [];
       var copyTimer = null;
+      var copiedTimer = null;
       $scope.loading = true;
       $scope.error = null;
       $scope.trackingId = null;
@@ -62,6 +63,8 @@ angular.module('quoteManagement')
         { id: 'contract', label: 'Contracts', icon: 'bi-file-earmark-text' }
       ];
       $scope.journey = QuoteJourney.build([]);
+      $scope.ui = { compact: false };
+      $scope.copiedValue = '';
       // Step retry (UI-11): visible everywhere a step failed; enabled only by features.retryEnabled.
       $scope.retryEnabled = !!($window.APP_CONFIG && $window.APP_CONFIG.features && $window.APP_CONFIG.features.retryEnabled === true);
       $scope.retry = { open: false, step: null, submitting: false, error: null, trackingId: null };
@@ -1048,7 +1051,12 @@ angular.module('quoteManagement')
       $scope.copyValue = function(value) {
         if (!$scope.canCopy(value)) return;
         $scope.copyFeedback = '';
-        function copied() { notify('Copied to clipboard.'); }
+        function copied() {
+          notify('Copied to clipboard.');
+          $scope.copiedValue = String(value);
+          if (copiedTimer) $timeout.cancel(copiedTimer);
+          copiedTimer = $timeout(function() { $scope.copiedValue = ''; }, 1800);
+        }
         function failed() { notify('Copy unavailable. Select the text and copy it manually.'); }
         if ($window.navigator.clipboard && $window.navigator.clipboard.writeText) {
           try {
@@ -1073,6 +1081,10 @@ angular.module('quoteManagement')
           document.body.removeChild(textarea);
           if (previousFocus && previousFocus.focus) previousFocus.focus();
         }
+      };
+
+      $scope.isCopied = function(value) {
+        return $scope.copiedValue !== '' && $scope.copiedValue === String(value);
       };
 
       $scope.canCopy = function(value) {
@@ -1492,6 +1504,7 @@ angular.module('quoteManagement')
         requestGeneration++;
         focusTimers.forEach(function(timer) { $timeout.cancel(timer); });
         if (copyTimer) $timeout.cancel(copyTimer);
+        if (copiedTimer) $timeout.cancel(copiedTimer);
       });
       $scope.loadQuote();
     }

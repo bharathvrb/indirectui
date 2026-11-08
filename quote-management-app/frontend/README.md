@@ -7,7 +7,7 @@ AngularJS + Bootstrap workspace for OMW indirect quote requests, served by a Nod
 | Command | What it does |
 | --- | --- |
 | `npm ci` | Install dependencies (Node.js 22+). |
-| `npm start` | Build into `dist/`, load `server.properties`, serve on http://127.0.0.1:8081/. |
+| `npm start` | Build into `dist/`, load `server.properties`, serve on http://127.0.0.1:8081/ (or the configured `QM_HOST`/`QM_PORT`). |
 | `npm run dev` | Rebuild on every change under `src/` (run alongside `npm start`, then refresh the browser). |
 | `npm test` | Karma/Jasmine UI specs in headless Chrome. Set `CHROME_BIN` if Chrome/Edge is not auto-detected. |
 | `npm run test:server` | Node tests for the server, login, proxy, properties loader and page routing (synthetic data; no network calls). |
@@ -27,7 +27,9 @@ Always serve `dist/`, not `src/`: vendor libraries (Angular, Bootstrap, icons, M
 | `QUOTEDATA_RETRY_ENABLED` | `true` forwards step retries to QuoteData (see Step retry). Anything else answers `501 RETRY_NOT_AVAILABLE`. |
 | `QUOTEDATA_ALLOW_HTTP` | Set `true` only if the QuoteData host serves plain HTTP; then use an `http://` base URL. The token URL stays HTTPS-only. |
 | `SSO_CLIENT_ID`, `SSO_TENANT_ID` | Used to verify SSO users' ID tokens. Must match `AUTH_CONFIG` in `src/config.js`. Without them SSO users get `503 SSO_AUTH_NOT_CONFIGURED`. |
-| `LOCAL_LOGIN_USERNAME`, `LOCAL_LOGIN_PASSWORD` | Optional local development login (both or neither). Ignored when `NODE_ENV=production`. |
+| `LOCAL_LOGIN_USERNAME`, `LOCAL_LOGIN_PASSWORD` | Username/password sign-in, available in every environment including `NODE_ENV=production` (set both, or neither to turn it off). |
+| `QM_HOST`, `QM_PORT` | Listening address, default `127.0.0.1` and `8081`. Use `0.0.0.0` to accept other machines. |
+| `QM_PUBLIC_ORIGIN` | The address users open, e.g. `https://quotes.example.com` (scheme, host and optional port; no path). Required for browsers on other machines; requests must come from this origin, and an `https` origin makes cookies Secure. |
 
 Restart the server after changing settings.
 
@@ -60,7 +62,7 @@ Users confirm each retry in a dialog. The page then reloads the quote, and that 
 ## Sign-in
 
 - **SSO:** MSAL authorization code + PKCE. The browser sends its SSO **ID token** to the local server, which verifies signature, issuer, tenant, audience and expiry. That token is never forwarded to QuoteData.
-- **Local login:** username/password from `server.properties`, giving a one-hour HttpOnly session cookie. Development only; loopback clients only.
+- **Username and password:** from `server.properties`, giving a one-hour HttpOnly, SameSite=Strict session cookie. Works in development and production, on this machine and (with `QM_PUBLIC_ORIGIN`) from other machines. Five failed attempts per client address in five minutes are blocked for a while; behind a reverse proxy every user shares the proxy's address for this limit.
 - Opening a case link such as `/quotes/<quoteRequestId>` without a session goes to sign-in and returns to the same quote afterwards.
 
 ## QuoteData proxy
@@ -93,7 +95,18 @@ Provider error bodies and secrets are never sent to the browser; the UI shows th
 - **TLS errors to internal hosts:** start Node with the system certificate store: `NODE_OPTIONS="--use-system-ca" npm start`. Never disable certificate checks.
 - **Outbound HTTP proxy:** the server connects directly to the token and QuoteData hosts and does not use `HTTPS_PROXY`. Run it on a network where both hosts are directly reachable.
 - **`AADSTS50011` on SSO sign-in:** `http://127.0.0.1:8081/` is not a registered redirect URI for the SSO app registration. Use the local login meanwhile.
-- **Use `127.0.0.1` or `localhost` consistently**; session cookies are per host.
+- **Use one address consistently** (`127.0.0.1`, `localhost` or your `QM_PUBLIC_ORIGIN`); session cookies are per host.
+- **"Local authentication request is not allowed" from another machine:** set `QM_HOST=0.0.0.0` and `QM_PUBLIC_ORIGIN` to exactly the address in the browser bar, then restart.
+
+## Design system
+
+The look lives in `src/assets/css/app.css`: blue, white and black, defined as tokens (`:root` for light, `[data-theme="dark"]` for dark). Fonts are self-hosted (Manrope for headings, Inter for text, JetBrains Mono for IDs) and copied to `dist/vendor/fonts` by the build, so the app needs no internet access.
+
+- **Navigation:** a black rail that collapses to icons with the button at the top left (the choice is remembered per browser) and slides in on phones.
+- **Quotes:** summary tiles, a state-mix bar for the current page, quick state filters, search with filters, and rows marked by state.
+- **Quote detail:** header with key facts, processing journey, copyable system IDs, and a sticky tab bar that shows the quote's ID and state once the header scrolls away.
+- **Motion:** short entrance, hover and state animations. They all turn off when the operating system asks for reduced motion.
+- **Accessibility:** text meets WCAG AA contrast in both themes, controls have visible focus rings and keyboard support, and status is never shown by colour alone.
 
 ## Requirement coverage
 

@@ -102,6 +102,7 @@ describe('Local development sign-in', function() {
 
     it('uses the HTTP-only session cookie for proxy requests without fabricating a bearer token', function() {
         initialize(session());
+        expect(auth.isLocalLoginSupported()).toBe(true); // offered on every host, not only localhost
         var result;
         angular.mock.inject(function(AuthInterceptor) {
             AuthInterceptor.request({
