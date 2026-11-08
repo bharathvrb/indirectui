@@ -2,7 +2,7 @@
   <nav aria-label="Breadcrumb" class="qm-breadcrumb mb-3"><a href="#!/quotes"><i class="bi bi-grid-1x2 me-1" aria-hidden="true"></i>Quotes</a><span aria-hidden="true" class="mx-2">/</span><span aria-current="page">{{displayValue(quote.externalId || quote.quoteRequestId)}}</span></nav>
   <div class="alert alert-success d-flex align-items-center gap-2" role="status" ng-if="completionNotice"><i class="bi bi-check-circle-fill" aria-hidden="true"></i>{{completionNotice}}</div>
 
-  <section class="qm-detail-hero mb-4" aria-labelledby="quote-detail-heading">
+  <section class="qm-detail-hero mb-4" aria-labelledby="quote-detail-heading" qm-hero-watch="ui.compact">
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-2">
       <span class="qm-kicker mb-0">{{displayValue(quote.category)}}</span>
       <div class="d-flex flex-wrap gap-2">
@@ -21,7 +21,7 @@
     </div>
     <div class="d-flex flex-wrap gap-2 align-items-center">
       <span class="qm-id-chip"><code>{{displayValue(quote.quoteRequestId)}}</code>
-        <button type="button" ng-click="copyValue(quote.quoteRequestId)" ng-disabled="!canCopy(quote.quoteRequestId)" aria-label="Copy quote request ID" title="Copy quote request ID"><i class="bi bi-copy" aria-hidden="true"></i></button>
+        <button type="button" ng-click="copyValue(quote.quoteRequestId)" ng-disabled="!canCopy(quote.quoteRequestId)" aria-label="Copy quote request ID" title="Copy quote request ID"><i class="bi" ng-class="isCopied(quote.quoteRequestId) ? 'bi-check2' : 'bi-copy'" aria-hidden="true"></i></button>
       </span>
       <span class="badge bg-light border" ng-if="quote.designSubStatus">Design sub-status: {{quote.designSubStatus}}</span>
     </div>
@@ -128,7 +128,7 @@
     </div>
     <div class="card-body">
       <div class="qm-id-grid">
-        <div class="qm-id-cell" ng-repeat="idRow in idRows track by idRow.label" ng-class="{'is-empty': !canCopy(displayValue(idRow.value))}">
+        <div class="qm-id-cell" ng-repeat="idRow in idRows track by idRow.label" ng-class="{'is-empty': !canCopy(displayValue(idRow.value)), 'is-copied': isCopied(idRow.value)}">
           <div class="min-w-0">
             <div class="qm-id-label">{{idRow.label}}</div>
             <code>{{displayValue(idRow.value)}}</code>
@@ -136,7 +136,7 @@
           <button class="btn btn-sm btn-outline-secondary qm-copy-btn"
                   ng-disabled="!canCopy(displayValue(idRow.value))"
                   ng-click="copyValue(idRow.value)" aria-label="Copy {{idRow.label}}" title="Copy {{idRow.label}}">
-            <i class="bi bi-copy"></i>
+            <i class="bi" ng-class="isCopied(idRow.value) ? 'bi-check2' : 'bi-copy'"></i>
           </button>
         </div>
       </div>
@@ -152,6 +152,7 @@
   <div class="qm-toast" role="status" aria-live="polite" ng-if="copyFeedback"><i class="bi bi-clipboard-check" aria-hidden="true"></i>{{copyFeedback}}</div>
   <div class="alert alert-info" role="status" ng-if="navigationNotice">{{navigationNotice}}</div>
   <div class="nav nav-tabs qm-tabset" role="tablist" aria-label="Quote detail sections">
+    <span class="qm-tab-context" ng-if="ui.compact" aria-hidden="true"><b>{{displayValue(quote.externalId || quote.quoteRequestId)}}</b><span class="badge qm-status {{getStateBadgeClass(quote.state)}}">{{getStateLabel(quote.state)}}</span></span>
     <button ng-repeat="tab in tabs" type="button" class="nav-link" role="tab"
             id="detail-tab-{{tab.id}}" aria-controls="detail-panel-{{tab.id}}" aria-selected="{{activeTab === tab.id}}"
             tabindex="{{activeTab === tab.id ? 0 : -1}}" ng-class="{active: activeTab === tab.id}"

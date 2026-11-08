@@ -98,6 +98,16 @@ Provider error bodies and secrets are never sent to the browser; the UI shows th
 - **Use one address consistently** (`127.0.0.1`, `localhost` or your `QM_PUBLIC_ORIGIN`); session cookies are per host.
 - **"Local authentication request is not allowed" from another machine:** set `QM_HOST=0.0.0.0` and `QM_PUBLIC_ORIGIN` to exactly the address in the browser bar, then restart.
 
+## Design system
+
+The look lives in `src/assets/css/app.css`: blue, white and black, defined as tokens (`:root` for light, `[data-theme="dark"]` for dark). Fonts are self-hosted (Manrope for headings, Inter for text, JetBrains Mono for IDs) and copied to `dist/vendor/fonts` by the build, so the app needs no internet access.
+
+- **Navigation:** a black rail that collapses to icons with the button at the top left (the choice is remembered per browser) and slides in on phones.
+- **Quotes:** summary tiles, a state-mix bar for the current page, quick state filters, search with filters, and rows marked by state.
+- **Quote detail:** header with key facts, processing journey, copyable system IDs, and a sticky tab bar that shows the quote's ID and state once the header scrolls away.
+- **Motion:** short entrance, hover and state animations. They all turn off when the operating system asks for reduced motion.
+- **Accessibility:** text meets WCAG AA contrast in both themes, controls have visible focus rings and keyboard support, and status is never shown by colour alone.
+
 ## Requirement coverage
 
 | Requirement | Where |

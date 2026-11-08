@@ -42,6 +42,32 @@ angular.module('quoteManagement')
         return criteria.quoteRequestId ? 'quote request ID' : criteria.externalId ? 'external ID' : 'proposal ID';
       };
 
+      var mixCache = [];
+      var mixMeta = [
+        ['failed', 'Failed'], ['inProgress', 'In progress'], ['pendingApproval', 'Pending approval'],
+        ['completed', 'Completed'], ['other', 'Received']
+      ];
+      // Share of each state among the quotes on this page. The same array is returned until the counts change.
+      $scope.stateMix = function() {
+        var kpis = $scope.kpis, total = ($scope.quotes || []).length;
+        if (!kpis || !total) return mixCache.length ? (mixCache = []) : mixCache;
+        var counts = {
+          failed: kpis.failed, inProgress: kpis.inProgress, pendingApproval: kpis.pendingApproval, completed: kpis.completed
+        };
+        counts.other = Math.max(0, total - counts.failed - counts.inProgress - counts.pendingApproval - counts.completed);
+        var parts = mixMeta.filter(function(meta) { return counts[meta[0]] > 0; }).map(function(meta) {
+          return { key: meta[0], label: meta[1], count: counts[meta[0]], percent: Math.round(counts[meta[0]] * 1000 / total) / 10 };
+        });
+        if (!angular.equals(parts, mixCache)) mixCache = parts;
+        return mixCache;
+      };
+      // Quick filters follow the quote's life cycle, unlike the alphabetical State menu.
+      $scope.quickStates = ['RECEIVED', 'IN_PROGRESS', 'PENDING_APPROVAL', 'COMPLETED', 'FAILED'];
+      $scope.quickState = function(state) {
+        $scope.filters.state = state || '';
+        $scope.applyFilters();
+      };
+
       function capitalize(text) { return text.charAt(0).toUpperCase() + text.slice(1); }
 
       function rememberOptions(rows) {

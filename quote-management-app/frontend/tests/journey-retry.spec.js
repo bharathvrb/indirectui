@@ -23,6 +23,7 @@ describe('Quote journey and step retry', function() {
   function fixture(state) {
     return {
       quoteRequestId: 'PARTNER-QUOTE-1-SYNTHETIC', externalId: 'EXT-SYNTHETIC', state: state || 'FAILED',
+      dynamicsAccountId: 'ACC-SYNTHETIC',
       supportTicketNumber: 'SUP-SYNTHETIC', sites: [], contacts: [],
       stepExecutions: [
         { id: 1, stepName: 'ADDRESS_VALIDATION', stepStatus: 'SUCCESS', attemptCount: 1, maxRetries: 3,
@@ -125,6 +126,38 @@ describe('Quote journey and step retry', function() {
       angular.element(page.querySelector('#spotlight-errors')).triggerHandler('click');
       root.$digest();
       expect(scope.activeTab).toBe('errors');
+    });
+  });
+
+  describe('copy confirmation and context chip', function() {
+    it('confirms a copied ID with a check mark for a moment', function() {
+      var page = start();
+      if (!(navigator.clipboard && navigator.clipboard.writeText)) { pending('Clipboard API unavailable in this browser.'); }
+      spyOn(navigator.clipboard, 'writeText').and.returnValue(q.resolve());
+      var cell = page.querySelector('.qm-id-cell:not(.is-empty)');
+      var value = cell.querySelector('code').textContent;
+      angular.element(cell.querySelector('.qm-copy-btn')).triggerHandler('click');
+      root.$digest();
+      expect(scope.isCopied(value)).toBe(true);
+      expect(cell.classList.contains('is-copied')).toBe(true);
+      expect(cell.querySelector('.bi-check2')).not.toBeNull();
+      timeout.flush(1800);
+      expect(scope.isCopied(value)).toBe(false);
+      expect(cell.classList.contains('is-copied')).toBe(false);
+      expect(scope.isCopied('')).toBe(false);
+    });
+
+    it('shows the quote identity in the tab bar only once the header has scrolled away', function() {
+      var page = start();
+      expect(page.querySelector('.qm-tab-context')).toBeNull();
+      scope.ui.compact = true;
+      root.$digest();
+      var chip = page.querySelector('.qm-tab-context');
+      expect(chip.textContent).toContain('EXT-SYNTHETIC');
+      expect(chip.textContent).toContain('Failed');
+      scope.ui.compact = false;
+      root.$digest();
+      expect(page.querySelector('.qm-tab-context')).toBeNull();
     });
   });
 

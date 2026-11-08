@@ -3,6 +3,7 @@ describe('Application shell', function() {
   var root, location, q, timeout, auth, user;
 
   beforeEach(function() {
+    try { localStorage.removeItem('omw-sidebar'); } catch (error) { /* storage unavailable */ }
     user = { name: 'Synthetic operator', username: 'synthetic', authType: 'local' };
     angular.mock.module('quoteManagement', function($provide) {
       $provide.factory('AuthService', ['$q', function($q) {
@@ -84,5 +85,58 @@ describe('Application shell', function() {
     expect(auth.requireLogin).toHaveBeenCalled();
     expect(root.currentUser).toBeNull();
     expect(root.isLoginRoute).toBe(true);
+  });
+
+  it('collapses and expands the desktop sidebar and remembers the choice', function() {
+    expect(root.sidebarCollapsed).toBe(false);
+    root.toggleSidebar();
+    expect(root.sidebarCollapsed).toBe(true);
+    expect(localStorage.getItem('omw-sidebar')).toBe('collapsed');
+    root.toggleSidebar();
+    expect(root.sidebarCollapsed).toBe(false);
+    expect(localStorage.getItem('omw-sidebar')).toBe('expanded');
+  });
+
+  it('still toggles when browser storage is unavailable', function() {
+    spyOn(Storage.prototype, 'setItem').and.throwError('blocked');
+    root.toggleSidebar();
+    expect(root.sidebarCollapsed).toBe(true);
+  });
+});
+
+describe('Application shell sidebar memory', function() {
+  'use strict';
+  afterEach(function() { try { localStorage.removeItem('omw-sidebar'); } catch (error) { /* storage unavailable */ } });
+
+  function boot() {
+    angular.mock.module('quoteManagement', function($provide) {
+      $provide.value('AuthService', {
+        getUser: function() { return null; }, isAuthenticated: function() { return false; },
+        getReturnUrl: function() { return '/quotes'; }, requireLogin: angular.noop
+      });
+    });
+    var root;
+    angular.mock.inject(function($rootScope, $templateCache) {
+      root = $rootScope;
+      ['login/login', 'quote-list/quote-list', 'quote-detail/quote-detail', 'support-tickets/support-tickets'].forEach(function(path) {
+        $templateCache.put('app/components/' + path + '.html', '<div></div>');
+      });
+    });
+    return root;
+  }
+
+  it('starts collapsed when the saved choice was collapsed', function() {
+    localStorage.setItem('omw-sidebar', 'collapsed');
+    expect(boot().sidebarCollapsed).toBe(true);
+  });
+
+  it('starts expanded for an unknown saved value or when reading storage fails', function() {
+    localStorage.setItem('omw-sidebar', 'sideways');
+    expect(boot().sidebarCollapsed).toBe(false);
+  });
+
+  it('starts expanded when reading storage throws', function() {
+    spyOn(Storage.prototype, 'getItem').and.throwError('blocked');
+    expect(boot().sidebarCollapsed).toBe(false);
   });
 });

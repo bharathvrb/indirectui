@@ -68,6 +68,15 @@ angular.module('quoteManagement', ['ngRoute', 'ngSanitize', 'ngAnimate'])
         $rootScope.toggleNavigation = function() {
             $rootScope.mobileMenuOpen = !$rootScope.mobileMenuOpen;
         };
+        // Desktop sidebar: expanded or icon-only. The choice is remembered per browser.
+        function readSidebar() {
+            try { return window.localStorage.getItem('omw-sidebar') === 'collapsed'; } catch (error) { return false; }
+        }
+        $rootScope.sidebarCollapsed = readSidebar();
+        $rootScope.toggleSidebar = function() {
+            $rootScope.sidebarCollapsed = !$rootScope.sidebarCollapsed;
+            try { window.localStorage.setItem('omw-sidebar', $rootScope.sidebarCollapsed ? 'collapsed' : 'expanded'); } catch (error) { /* storage unavailable */ }
+        };
         $rootScope.supportUrl = window.APP_CONFIG && /^https:\/\//.test(window.APP_CONFIG.supportUrl || '')
             ? window.APP_CONFIG.supportUrl : null;
 
