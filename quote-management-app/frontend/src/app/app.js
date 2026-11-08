@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('quoteManagement', ['ngRoute', 'ngSanitize', 'ngAnimate'])
+angular.module('quoteManagement', ['ngRoute'])
     .constant('API_BASE_URL', (window.APP_CONFIG && window.APP_CONFIG.apiBaseUrl) || '')
     .config(['$routeProvider', '$httpProvider', function($routeProvider, $httpProvider) {
         $routeProvider
@@ -60,10 +60,15 @@ angular.module('quoteManagement', ['ngRoute', 'ngSanitize', 'ngAnimate'])
     }])
     .run(['$rootScope', '$location', '$timeout', 'AuthService', function($rootScope, $location, $timeout, AuthService) {
         $rootScope.appReady = true;
-        $rootScope.appName = 'Quote Management';
         $rootScope.themePreference = window.QuoteTheme ? window.QuoteTheme.getPreference() : 'light';
         $rootScope.setTheme = function() {
             window.QuoteTheme.setPreference($rootScope.themePreference);
+        };
+        // Skip link: hash links would change the route, so move focus directly.
+        $rootScope.skipToContent = function($event) {
+            $event.preventDefault();
+            var main = document.getElementById('main-content');
+            if (main) main.focus();
         };
         $rootScope.toggleNavigation = function() {
             $rootScope.mobileMenuOpen = !$rootScope.mobileMenuOpen;

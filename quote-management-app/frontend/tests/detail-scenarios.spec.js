@@ -156,7 +156,7 @@ describe('Quote detail scenarios', function() {
       expect([true, 'Y', 1, 'no', 0, null, '', 'maybe'].map(scope.booleanLabel)).toEqual(['Yes', 'Yes', 'Yes', 'No', 'No', '—', '—', 'Yes']);
       expect(scope.humanize('QUOTE_ITEM')).toBe('Quote item');
       expect(scope.humanize(null)).toBe('—');
-      expect(scope.stepLabel('ASSIGN_OFFERS')).toBe('Assign offers');
+      expect(scope.stepLabel('ASSIGN_OFFERS')).toBe('ASSIGN_OFFERS');
     });
   });
 

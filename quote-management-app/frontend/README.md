@@ -13,7 +13,7 @@ AngularJS + Bootstrap workspace for OMW indirect quote requests, served by a Nod
 | `npm run test:server` | Node tests for the server, login, proxy, properties loader and page routing (synthetic data; no network calls). |
 | `npm run test:coverage` | Both suites with coverage: HTML report in `coverage/ui/html`, server summary in the console. |
 
-Always serve `dist/`, not `src/`: vendor libraries (Angular, Bootstrap, icons, MSAL) are copied into `dist/vendor` at build time.
+Always serve `dist/`, not `src/`: vendor libraries (Angular, Bootstrap, icons, MSAL) are copied into `dist/vendor` at build time. `server.js` serves `dist/` itself (`static-files.js`); there is no separate web server dependency.
 
 ## Server settings (`server.properties`)
 
@@ -49,7 +49,7 @@ Restart the server after changing settings.
 
 ## Processing journey and step retry
 
-The quote detail page shows the processing steps (`stepExecutions`) as a journey grouped into phases: Customer setup, Proposal, Validation & approval, Contract & design, and Other steps for names it doesn't know. Each step shows a plain-English name, status, duration and attempts. The mapping from OMW step names to labels and phases is in `src/app/services/quote-journey.service.js`; add new step names there. When the quote has failed, the failure summary (latest failed step, stage, error code and message) sits at the top of the journey.
+The quote detail page lists the processing steps (`stepExecutions`) as one numbered sequence under their actual names (`ADDRESS_VALIDATION`, `CREATE_CONTACT`, `GENERATE_CONTRACT`, and so on), in the order of the OMW flow, with no grouping. Each step shows only its name, number and status (plus the site or item it applies to, when it has one). Attempt counts and timings stay in the Processing tab. The order is the `FLOW` list in `src/app/services/quote-journey.service.js`; add new step names there. Steps it doesn't know still appear, after the known ones. When the quote has failed, the failure summary (latest failed step, its position such as "Step 6 of 16", error code and message) sits at the top of the list.
 
 Retry appears on the failure summary, on failed rows in the Processing tab and on every row in the Errors tab. To turn it on when the backend API exists:
 
@@ -98,13 +98,33 @@ Provider error bodies and secrets are never sent to the browser; the UI shows th
 - **Use one address consistently** (`127.0.0.1`, `localhost` or your `QM_PUBLIC_ORIGIN`); session cookies are per host.
 - **"Local authentication request is not allowed" from another machine:** set `QM_HOST=0.0.0.0` and `QM_PUBLIC_ORIGIN` to exactly the address in the browser bar, then restart.
 
+## Production deployment
+
+1. On a build machine: `npm ci && npm run build` (Node.js 22+).
+2. Copy `server.js`, `static-files.js`, `local-auth.js`, `quote-data-proxy.js`, `sso-identity.js`, `package.json`, `package-lock.json`, `server.properties` and `dist/` to the server, then run `npm ci --omit=dev` there (installs only the runtime packages, including `jose`).
+3. Fill in `server.properties` (or set real environment variables) and start with `NODE_ENV=production node server.js` under a process manager (systemd, pm2, a container). `npm start` also works but rebuilds first and needs the dev dependencies.
+4. Set `QM_HOST=0.0.0.0` and `QM_PUBLIC_ORIGIN` to the address users open. Put TLS in front (reverse proxy or load balancer) and use an `https://` origin so cookies are Secure and the server sends `Strict-Transport-Security`.
+5. Point the health check at `GET /healthz` (answers `{"status":"ok"}` without signing in and reveals nothing else). `SIGINT`/`SIGTERM` finish in-flight requests before the process exits.
+6. To show the Retry button, set **both** `QUOTEDATA_RETRY_ENABLED=true` in `server.properties` and `features.retryEnabled: true` in `dist/config.js` (it is copied from `src/config.js`).
+
+Every response carries `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, a `Permissions-Policy`, and Cross-Origin-Opener/Resource-Policy headers. The default Content-Security-Policy (`DEFAULT_CSP` in `server.js`) allows scripts, styles, fonts and images from the app only, plus Microsoft sign-in for SSO; no inline or `eval` scripts are used. If a new feature needs another origin, set `QM_CSP` to a full replacement policy, or `QM_CSP=off` while diagnosing a blocked request.
+
+Logs go to stdout: one line per QuoteData call with its tracking ID, route and query, status and duration, never tokens, cookies or request bodies.
+
+### Known risks
+
+- **AngularJS 1.x is end-of-life.** `npm audit --omit=dev` reports one high-severity advisory (ReDoS in `angular`) that has no fix. The app does not use `$resource` or `input type=url`, calls `angular.copy` only on small search-query objects, renders text only (no `ng-bind-html`), and runs under the strict CSP above. Plan a migration to a supported framework; until then keep the app behind your corporate sign-in.
+- **Retry and Mark completed endpoints are assumed contracts** (see QuoteData proxy). Confirm them with the QuoteData owner before enabling Retry.
+- **Login attempt limiting is per client address**; behind a reverse proxy all users share the proxy's address.
+
 ## Design system
 
-The look lives in `src/assets/css/app.css`: blue, white and black, defined as tokens (`:root` for light, `[data-theme="dark"]` for dark). Fonts are self-hosted (Manrope for headings, Inter for text, JetBrains Mono for IDs) and copied to `dist/vendor/fonts` by the build, so the app needs no internet access.
+The look lives in `src/assets/css/app.css`: a blue and white theme with black text in the light theme and white text in the dark theme. Everything is defined as tokens (`:root` for light, `[data-theme="dark"]` for dark). The dark theme uses neutral charcoal surfaces with the same blue accent; there are no navy or blue-black surfaces.
 
-- **Navigation:** a black rail that collapses to icons with the button at the top left (the choice is remembered per browser) and slides in on phones.
+- **Type scale:** every text size is one of 11, 12, 13, 14, 16, 18, 22 and 28 px (`--fs-label` to `--fs-2xl`), with weights 500, 600, 700 and 800 only. Manrope is used for headings, Inter for text and JetBrains Mono for IDs. All three are self-hosted and copied to `dist/vendor/fonts` by the build, so the app needs no internet access. Use the tokens for new CSS instead of pixel values.
+- **Navigation:** a blue rail with white text that collapses to icons with the button at the top left (remembered per browser) and slides in on phones.
 - **Quotes:** summary tiles, a state-mix bar for the current page, quick state filters, search with filters, and rows marked by state.
-- **Quote detail:** header with key facts, processing journey, copyable system IDs, and a sticky tab bar that shows the quote's ID and state once the header scrolls away.
+- **Quote detail:** a light header with the name, state, IDs, key facts and counts; the processing steps; copyable system IDs; and a sticky tab bar that shows the quote's ID and state once the header scrolls away.
 - **Motion:** short entrance, hover and state animations. They all turn off when the operating system asks for reduced motion.
 - **Accessibility:** text meets WCAG AA contrast in both themes, controls have visible focus rings and keyboard support, and status is never shown by colour alone.
 

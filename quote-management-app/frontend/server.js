@@ -1,38 +1,68 @@
 'use strict';
 
-const fs = require('fs');
-const path = require('path');
-const httpServer = require('http-server');
+const fs = require('node:fs');
+const http = require('node:http');
+const path = require('node:path');
 const createLocalAuth = require('./local-auth');
 const createQuoteDataProxy = require('./quote-data-proxy');
+const createStaticHandler = require('./static-files');
 
-function spaRoutes(req, res) {
-    let pathname;
-    try {
-        pathname = decodeURIComponent(req.url.split('?')[0]);
-    } catch (error) {
-        return res.emit('next');
-    }
+// Browsers may load scripts only from this app. Microsoft sign-in is the one external service.
+// Inline styles are allowed because the UI sets some element styles; scripts never run inline.
+const DEFAULT_CSP = [
+    "default-src 'self'", "script-src 'self'", "style-src 'self' 'unsafe-inline'", "img-src 'self' data:",
+    "font-src 'self'", "connect-src 'self' https://login.microsoftonline.com", "frame-src https://login.microsoftonline.com",
+    "frame-ancestors 'none'", "base-uri 'self'", "form-action 'self'", "object-src 'none'"
+].join('; ');
 
-    // Restrict fallback to navigation routes; assets and API failures must stay visible.
-    if ((req.method === 'GET' || req.method === 'HEAD') &&
-        /^\/(?:login|support-tickets|quotes(?:\/[^/.\\]+)?)\/?$/.test(pathname)) {
-        req.url = '/index.html';
+function securityHeaders(options) {
+    const csp = options.csp !== undefined ? options.csp : process.env.QM_CSP;
+    const external = createLocalAuth.publicOrigin();
+    const headers = {
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'DENY',
+        'Referrer-Policy': 'no-referrer',
+        'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+        'Cross-Origin-Opener-Policy': 'same-origin',
+        'Cross-Origin-Resource-Policy': 'same-origin'
+    };
+    if (csp !== 'off') {
+        headers['Content-Security-Policy'] = csp || DEFAULT_CSP;
     }
-    res.emit('next');
+    if (external && external.protocol === 'https:') {
+        headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains';
+    }
+    return headers;
 }
 
+// Runs the request through each stage in turn; a stage hands over with res.emit('next').
 function createServer(options = {}) {
     const localAuth = createLocalAuth({ now: options.now });
     const quoteDataProxy = createQuoteDataProxy({
         ...options.proxy, now: options.now, getUser: localAuth.getUser
     });
-    return httpServer.createServer({
-        root: options.root || path.join(__dirname, 'dist'),
-        cache: -1,
-        showDir: 'false',
-        before: [localAuth, quoteDataProxy, spaRoutes]
+    const serveStatic = createStaticHandler({ root: options.root || path.join(__dirname, 'dist') });
+    const headers = securityHeaders(options);
+    const stages = [localAuth, quoteDataProxy, serveStatic];
+
+    const server = http.createServer((req, res) => {
+        Object.keys(headers).forEach(name => res.setHeader(name, headers[name]));
+        const pathname = req.url.split('?')[0];
+        // Liveness probe for load balancers and process managers; reveals nothing.
+        if (pathname === '/healthz' && (req.method === 'GET' || req.method === 'HEAD')) {
+            res.setHeader('Cache-Control', 'no-store');
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            return res.end(req.method === 'HEAD' ? undefined : '{"status":"ok"}');
+        }
+        let index = 0;
+        const next = () => {
+            const stage = stages[index++];
+            res.once('next', next);
+            stage(req, res);
+        };
+        next();
     });
+    return { server, listen: (...args) => server.listen(...args) };
 }
 
 // Loads KEY=VALUE lines from a local properties file into process.env.
@@ -92,7 +122,17 @@ if (require.main === module) {
         console.log('Quote Management: ' + (external ? external.origin : 'http://127.0.0.1:' + port) +
             '/ (listening on ' + host + ':' + port + ', Ctrl+C to stop)');
     });
+    // Finish in-flight requests, then exit; force exit if something hangs.
+    ['SIGINT', 'SIGTERM'].forEach(function(signal) {
+        process.once(signal, function() {
+            console.log(signal + ' received, shutting down.');
+            server.server.close(function() { process.exit(0); });
+            server.server.closeIdleConnections();
+            setTimeout(function() { process.exit(1); }, 10000).unref();
+        });
+    });
 }
 
 module.exports = createServer;
+module.exports.DEFAULT_CSP = DEFAULT_CSP;
 module.exports.loadProperties = loadProperties;

@@ -2,47 +2,48 @@
   <nav aria-label="Breadcrumb" class="qm-breadcrumb mb-3"><a href="#!/quotes"><i class="bi bi-grid-1x2 me-1" aria-hidden="true"></i>Quotes</a><span aria-hidden="true" class="mx-2">/</span><span aria-current="page">{{displayValue(quote.externalId || quote.quoteRequestId)}}</span></nav>
   <div class="alert alert-success d-flex align-items-center gap-2" role="status" ng-if="completionNotice"><i class="bi bi-check-circle-fill" aria-hidden="true"></i>{{completionNotice}}</div>
 
-  <section class="qm-detail-hero mb-4" aria-labelledby="quote-detail-heading" qm-hero-watch="ui.compact">
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-2">
-      <span class="qm-kicker mb-0">{{displayValue(quote.category)}}</span>
-      <div class="d-flex flex-wrap gap-2">
-        <button type="button" class="btn btn-light btn-sm qm-action-btn" ng-click="loadQuote()" aria-label="Reload quote details">
+  <section class="qm-quote-head" aria-labelledby="quote-detail-heading" qm-hero-watch="ui.compact">
+    <div class="qm-quote-head-top">
+      <div class="qm-quote-head-main">
+        <div class="qm-quote-head-eyebrow">
+          <span class="qm-kicker">{{displayValue(quote.category)}}</span>
+          <span class="badge qm-status {{getStateBadgeClass(quote.state)}}">{{getStateLabel(quote.state)}}</span>
+        </div>
+        <h1 id="quote-detail-heading" tabindex="-1" class="qm-title">{{displayValue(quote.description || quote.externalId || quote.quoteRequestId)}}</h1>
+        <div class="qm-quote-head-ids">
+          <span class="qm-id-chip"><code>{{displayValue(quote.quoteRequestId)}}</code>
+            <button type="button" ng-click="copyValue(quote.quoteRequestId)" ng-disabled="!canCopy(quote.quoteRequestId)" aria-label="Copy quote request ID" title="Copy quote request ID"><i class="bi" ng-class="isCopied(quote.quoteRequestId) ? 'bi-check2' : 'bi-copy'" aria-hidden="true"></i></button>
+          </span>
+          <span class="qm-sub-chip" ng-if="quote.designSubStatus">Design sub-status: {{quote.designSubStatus}}</span>
+        </div>
+      </div>
+      <div class="qm-quote-head-actions">
+        <button type="button" class="btn btn-outline-secondary" ng-click="loadQuote()" aria-label="Reload quote details">
           <i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>Reload
         </button>
-        <button id="mark-completed" class="btn btn-success btn-sm" ng-if="isFailed() && canUpdateQuotes" ng-click="openCompleteDialog()">
+        <button id="mark-completed" class="btn btn-primary" ng-if="isFailed() && canUpdateQuotes" ng-click="openCompleteDialog()">
           <i class="bi bi-check2-circle me-1"></i>Mark completed
         </button>
       </div>
     </div>
 
-    <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
-      <h1 id="quote-detail-heading" tabindex="-1" class="qm-title">{{displayValue(quote.description || quote.externalId || quote.quoteRequestId)}}</h1>
-      <span class="badge qm-status fs-6 {{getStateBadgeClass(quote.state)}}">{{getStateLabel(quote.state)}}</span>
-    </div>
-    <div class="d-flex flex-wrap gap-2 align-items-center">
-      <span class="qm-id-chip"><code>{{displayValue(quote.quoteRequestId)}}</code>
-        <button type="button" ng-click="copyValue(quote.quoteRequestId)" ng-disabled="!canCopy(quote.quoteRequestId)" aria-label="Copy quote request ID" title="Copy quote request ID"><i class="bi" ng-class="isCopied(quote.quoteRequestId) ? 'bi-check2' : 'bi-copy'" aria-hidden="true"></i></button>
-      </span>
-      <span class="badge bg-light border" ng-if="quote.designSubStatus">Design sub-status: {{quote.designSubStatus}}</span>
-    </div>
-
-    <dl class="qm-hero-facts mb-0">
-      <div class="qm-hero-fact"><dt>External ID</dt><dd title="{{quote.externalId}}">{{displayValue(quote.externalId)}}</dd></div>
-      <div class="qm-hero-fact"><dt>Support ticket</dt><dd title="{{quote.supportTicketNumber}}">{{displayValue(quote.supportTicketNumber)}}</dd></div>
-      <div class="qm-hero-fact"><dt>Created by</dt><dd>{{displayValue(quote.createdBy)}}</dd></div>
-      <div class="qm-hero-fact"><dt>Design status</dt><dd>{{displayValue(quote.designStatus)}}</dd></div>
-      <div class="qm-hero-fact"><dt>Created at</dt><dd>{{quote.createdAt ? (quote.createdAt | date:'dd MMM yyyy, HH:mm:ss') : '—'}}</dd></div>
-      <div class="qm-hero-fact"><dt>Updated at</dt><dd>{{quote.updatedAt ? (quote.updatedAt | date:'dd MMM yyyy, HH:mm:ss') : '—'}}</dd></div>
-      <div class="qm-hero-fact"><dt>Completed at</dt><dd>{{quote.completedAt ? (quote.completedAt | date:'dd MMM yyyy, HH:mm:ss') : '—'}}</dd></div>
-      <div class="qm-hero-fact"><dt>Retries</dt><dd title="{{quote.retryOf ? 'Retry of ' + quote.retryOf : ''}}">{{displayValue(quote.retryCount)}}<span ng-if="quote.retryOf"> · retry of {{quote.retryOf}}</span></dd></div>
+    <dl class="qm-quote-facts">
+      <div class="qm-quote-fact"><dt>External ID</dt><dd title="{{quote.externalId}}">{{displayValue(quote.externalId)}}</dd></div>
+      <div class="qm-quote-fact"><dt>Support ticket</dt><dd title="{{quote.supportTicketNumber}}">{{displayValue(quote.supportTicketNumber)}}</dd></div>
+      <div class="qm-quote-fact"><dt>Created by</dt><dd>{{displayValue(quote.createdBy)}}</dd></div>
+      <div class="qm-quote-fact"><dt>Design status</dt><dd>{{displayValue(quote.designStatus)}}</dd></div>
+      <div class="qm-quote-fact"><dt>Created at</dt><dd>{{quote.createdAt ? (quote.createdAt | date:'dd MMM yyyy, HH:mm:ss') : '—'}}</dd></div>
+      <div class="qm-quote-fact"><dt>Updated at</dt><dd>{{quote.updatedAt ? (quote.updatedAt | date:'dd MMM yyyy, HH:mm:ss') : '—'}}</dd></div>
+      <div class="qm-quote-fact"><dt>Completed at</dt><dd>{{quote.completedAt ? (quote.completedAt | date:'dd MMM yyyy, HH:mm:ss') : '—'}}</dd></div>
+      <div class="qm-quote-fact"><dt>Retries</dt><dd title="{{quote.retryOf ? 'Retry of ' + quote.retryOf : ''}}">{{displayValue(quote.retryCount)}}<span ng-if="quote.retryOf"> · retry of {{quote.retryOf}}</span></dd></div>
     </dl>
 
-    <div class="qm-hero-stats">
-      <div class="qm-hero-stat"><i class="bi bi-geo-alt" aria-hidden="true"></i><div><b>{{detailStats.siteCount}}</b><span>Sites</span></div></div>
-      <div class="qm-hero-stat"><i class="bi bi-box-seam" aria-hidden="true"></i><div><b>{{detailStats.productCount}}</b><span>Products</span></div></div>
-      <div class="qm-hero-stat is-danger"><i class="bi bi-bug" aria-hidden="true"></i><div><b>{{detailStats.errorCount}}</b><span>Errors</span></div></div>
-      <div class="qm-hero-stat is-warning"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i><div><b>{{detailStats.failedStepCount}}</b><span>Failed steps</span></div></div>
-    </div>
+    <ul class="qm-quote-counts" aria-label="Quote contents">
+      <li><i class="bi bi-geo-alt" aria-hidden="true"></i><b>{{detailStats.siteCount}}</b> {{detailStats.siteCount === 1 ? 'Site' : 'Sites'}}</li>
+      <li><i class="bi bi-box-seam" aria-hidden="true"></i><b>{{detailStats.productCount}}</b> {{detailStats.productCount === 1 ? 'Product' : 'Products'}}</li>
+      <li class="is-danger"><i class="bi bi-bug" aria-hidden="true"></i><b>{{detailStats.errorCount}}</b> {{detailStats.errorCount === 1 ? 'Error' : 'Errors'}}</li>
+      <li class="is-warning"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i><b>{{detailStats.failedStepCount}}</b> {{detailStats.failedStepCount === 1 ? 'Failed step' : 'Failed steps'}}</li>
+    </ul>
   </section>
 
   <section class="card mb-4 qm-section-card qm-journey" ng-if="journey.total" aria-labelledby="journey-title">
@@ -75,14 +76,12 @@
       <span class="qm-spotlight-icon" aria-hidden="true"><i class="bi bi-x-octagon-fill"></i></span>
       <div class="qm-spotlight-body">
         <h3 id="spotlight-title">{{journey.spotlight.label}} failed</h3>
-        <p class="qm-spotlight-desc" ng-if="journey.spotlight.description">{{journey.spotlight.description}}</p>
         <p class="qm-spotlight-error" ng-if="journey.spotlight.error">
           <code>{{displayValue(journey.spotlight.error.errorCode)}}</code>
           <span>{{displayValue(journey.spotlight.error.errorMessage)}}</span>
         </p>
         <p class="qm-spotlight-meta">
-          <span class="qm-spotlight-stage">Stage: {{displayValue(journey.spotlight.phaseLabel)}} · {{journey.spotlight.stepName}}</span> ·
-          Attempt {{displayValue(journey.spotlight.attemptCount)}} of {{displayValue(journey.spotlight.maxRetries)}}
+          <span class="qm-spotlight-stage">Step {{journey.spotlight.number}} of {{journey.total}}</span>
           <span ng-if="journey.spotlight.scope && journey.spotlight.scope !== 'QUOTE'"> · {{humanize(journey.spotlight.scope)}} {{journey.spotlight.itemId}}</span>
           <span ng-if="journey.spotlight.startedAt"> · started {{journey.spotlight.startedAt | date:'dd MMM, HH:mm:ss'}}</span>
         </p>
@@ -97,28 +96,19 @@
       </div>
     </div>
 
-    <div class="qm-phases">
-      <section class="qm-phase" ng-repeat="phase in journey.phases track by phase.id" ng-class="'is-' + phase.status" aria-label="{{phase.label}}">
-        <header class="qm-phase-head">
-          <span class="qm-phase-icon" aria-hidden="true"><i class="bi {{phase.icon}}"></i></span>
-          <h3>{{phase.label}}</h3>
-          <span class="qm-phase-count">{{phase.done}}/{{phase.total}}</span>
-        </header>
-        <div class="qm-phase-bar" aria-hidden="true"><span ng-style="{width: (phase.total ? phase.done * 100 / phase.total : 0) + '%'}"></span></div>
-        <ol class="qm-steps">
-          <li class="qm-step" ng-repeat="step in phase.steps track by step._key" ng-class="['is-' + step.tone, {'is-current': step === journey.current}]"
-              ng-style="{'animation-delay': ($index * 35) + 'ms'}">
-            <span class="qm-step-icon" aria-hidden="true"><i class="bi {{step.icon}}"></i></span>
-            <div class="qm-step-body">
-              <span class="qm-step-name" title="{{step.description || step.stepName}}">{{step.label}}</span>
-              <span class="qm-step-meta">
-                {{step.statusLabel}}<span ng-if="step.duration"> · {{step.duration}}</span><span ng-if="step.tone === 'failure' || step.attemptCount > 1"> · attempt {{displayValue(step.attemptCount)}}/{{displayValue(step.maxRetries)}}</span><span ng-if="step.scope && step.scope !== 'QUOTE'"> · {{humanize(step.scope)}}</span>
-              </span>
-            </div>
-          </li>
-        </ol>
-      </section>
-    </div>
+    <ol class="qm-steps" aria-label="Processing steps in order">
+      <li class="qm-step" ng-repeat="step in journey.steps track by step._key" ng-class="['is-' + step.tone, {'is-current': step === journey.current}]"
+          ng-style="{'animation-delay': ($index * 30) + 'ms'}">
+        <span class="qm-step-icon" aria-hidden="true"><i class="bi {{step.icon}}"></i></span>
+        <div class="qm-step-body">
+          <span class="qm-step-name" title="{{step.stepName}}"><span ng-repeat="part in step.parts track by $index">{{part}}<wbr></span></span>
+          <span class="qm-step-meta">
+            {{step.statusLabel}}<span ng-if="step.scope && step.scope !== 'QUOTE'"> · {{humanize(step.scope)}}</span>
+          </span>
+        </div>
+        <span class="qm-step-no" aria-hidden="true">{{step.number < 10 ? '0' + step.number : step.number}}</span>
+      </li>
+    </ol>
   </section>
 
   <div class="card mb-4 qm-section-card">
