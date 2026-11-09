@@ -24,6 +24,7 @@ describe('Unified quote search workspace', function() {
   });
 
   beforeEach(function() {
+    try { localStorage.removeItem('omw-recent-searches'); } catch (error) { /* storage unavailable */ }
     originalConfig = window.APP_CONFIG;
     window.APP_CONFIG = angular.extend({}, window.APP_CONFIG, { quoteDataLookupOnly: false });
     requests = [];
@@ -814,6 +815,112 @@ describe('Unified quote search workspace', function() {
     expect(scope.validationError).toBeNull();
     expect(requests.length).toBe(2);
     expect(requests[1].params.createdFrom).toBeUndefined();
+  });
+
+  describe('home page', function() {
+    function mount() {
+      element = compile(templates[templatePaths[1]])(scope);
+      root.$digest();
+      return element[0];
+    }
+
+    // Lookup-only deployments answer with the single matching quote.
+    function found(index, term) {
+      requests[index].deferred.resolve({ data: { quoteRequestId: term + '-uuid', externalId: term } });
+      root.$digest();
+    }
+
+    it('greets the signed-in user by first name', function() {
+      start();
+      expect(scope.firstName()).toBe('Test');
+      expect(['Good morning', 'Good afternoon', 'Good evening']).toContain(scope.greeting);
+      expect(mount().querySelector('.qm-greeting').textContent).toContain(scope.greeting + ', Test');
+      root.currentUser = { name: 'bharath.kumar@example.com' };
+      expect(scope.firstName()).toBe('bharath');
+      root.currentUser = null;
+      expect(scope.firstName()).toBe('');
+    });
+
+    it('shows the lookup cards before the first search and hides the empty results card', function() {
+      window.APP_CONFIG.quoteDataLookupOnly = true;
+      start();
+      var host = mount();
+      expect(host.querySelectorAll('.qm-start-card').length).toBe(4);
+      expect(host.querySelector('a.qm-start-card').getAttribute('href')).toBe('#!/support-tickets');
+      expect(host.querySelector('.qm-idle-hidden quote-table')).not.toBeNull();
+      expect(host.querySelector('.qm-tips')).not.toBeNull();
+    });
+
+    it('does not show the lookup cards in list mode or once a quote has loaded', function() {
+      start();
+      expect(mount().querySelector('.qm-start')).toBeNull();
+      expect(element[0].querySelector('.qm-idle-hidden')).toBeNull();
+      scope.$destroy();
+      window.APP_CONFIG.quoteDataLookupOnly = true;
+      start();
+      scope.searchTerm = 'PARTNER-EXAMPLE-001';
+      scope.onSearchChange();
+      timeout.flush(300);
+      found(0, 'PARTNER-EXAMPLE-001');
+      expect(mount().querySelector('.qm-start')).toBeNull();
+      expect(element[0].querySelector('.qm-idle-hidden')).toBeNull();
+    });
+
+    it('picks a lookup type from a card, clears the error and focuses the search box', function() {
+      window.APP_CONFIG.quoteDataLookupOnly = true;
+      start();
+      var host = mount();
+      document.body.appendChild(host);
+      scope.searchError = 'Enter a quote request ID.';
+      angular.element(host.querySelectorAll('.qm-start-card')[1]).triggerHandler('click');
+      expect(scope.searchBy).toBe('externalId');
+      expect(scope.searchError).toBeNull();
+      timeout.flush();
+      expect(document.activeElement).toBe(host.querySelector('#quote-search'));
+      expect(host.querySelectorAll('.qm-start-card')[1].classList.contains('is-selected')).toBe(true);
+      document.body.removeChild(host);
+    });
+
+    it('remembers only successful exact lookups, newest first, five at most, and replays them', function() {
+      window.APP_CONFIG.quoteDataLookupOnly = true;
+      start();
+      ['A-1', 'A-2', 'A-3', 'A-4', 'A-5', 'A-6', 'A-2'].forEach(function(term) {
+        scope.searchTerm = term;
+        scope.applyFilters();
+        found(requests.length - 1, term);
+      });
+      expect(scope.recentSearches.map(function(item) { return item.term; })).toEqual(['A-2', 'A-6', 'A-5', 'A-4', 'A-3']);
+      expect(JSON.parse(localStorage.getItem('omw-recent-searches')).length).toBe(5);
+      scope.searchTerm = 'NOT-FOUND';
+      scope.applyFilters();
+      requests[requests.length - 1].deferred.reject({ status: 404, data: { code: 'QUOTE_NOT_FOUND', message: 'Quote not found' } });
+      root.$digest();
+      expect(scope.recentSearches[0].term).toBe('A-2');
+      var host = mount();
+      expect(host.querySelectorAll('.qm-recent-chip').length).toBe(5);
+      var count = requests.length;
+      scope.useRecent({ term: 'A-4', by: 'auto' });
+      expect(scope.searchTerm).toBe('A-4');
+      expect(requests.length).toBe(count + 1);
+    });
+
+    it('ignores corrupted or unavailable recent-search storage', function() {
+      localStorage.setItem('omw-recent-searches', '{not json');
+      start();
+      expect(scope.recentSearches).toEqual([]);
+      localStorage.setItem('omw-recent-searches', JSON.stringify([{ term: 'ok', by: 'auto' }, { term: 5, by: 'auto' }, { term: 'bad', by: 'hack' }, null]));
+      scope.$destroy();
+      start();
+      expect(scope.recentSearches).toEqual([{ term: 'ok', by: 'auto' }]);
+      spyOn(Storage.prototype, 'setItem').and.throwError('blocked');
+      window.APP_CONFIG.quoteDataLookupOnly = true;
+      scope.$destroy();
+      start();
+      scope.searchTerm = 'B-1';
+      scope.applyFilters();
+      expect(function() { found(requests.length - 1, 'B-1'); }).not.toThrow();
+      expect(scope.recentSearches[0].term).toBe('B-1');
+    });
   });
 
   it('uses the visible form submit to flush the debounce exactly once', function() {

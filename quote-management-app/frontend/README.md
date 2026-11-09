@@ -123,7 +123,7 @@ The look lives in `src/assets/css/app.css`: a blue and white theme with black te
 
 - **Type scale:** every text size is one of 11, 12, 13, 14, 16, 18, 22 and 28 px (`--fs-label` to `--fs-2xl`), with weights 500, 600, 700 and 800 only. Manrope is used for headings, Inter for text and JetBrains Mono for IDs. All three are self-hosted and copied to `dist/vendor/fonts` by the build, so the app needs no internet access. Use the tokens for new CSS instead of pixel values.
 - **Navigation:** a blue rail with white text that collapses to icons with the button at the top left (remembered per browser) and slides in on phones.
-- **Quotes:** summary tiles, a state-mix bar for the current page, quick state filters, search with filters, and rows marked by state.
+- **Quotes (home):** a deep-blue banner with a greeting and one large search bar (type menu, ID box, Search), the last five successful lookups as one-click chips (stored in this browser only), and, before the first search, cards that explain each lookup type. After a search the banner shows summary tiles and a state-mix bar; in list mode (`quoteDataLookupOnly: false`) quick state filters and filters sit below it.
 - **Quote detail:** a light header with the name, state, IDs, key facts and counts; the processing steps; copyable system IDs; and a sticky tab bar that shows the quote's ID and state once the header scrolls away.
 - **Motion:** short entrance, hover and state animations. They all turn off when the operating system asks for reduced motion.
 - **Accessibility:** text meets WCAG AA contrast in both themes, controls have visible focus rings and keyboard support, and status is never shown by colour alone.

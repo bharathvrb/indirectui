@@ -82,8 +82,50 @@ angular.module('quoteManagement')
         });
       }
 
+      // Recent searches: the last few exact lookups that found a quote, kept in this browser only.
+      var RECENT_KEY = 'omw-recent-searches';
+      var searchLabels = ['auto', 'quoteRequestId', 'externalId', 'proposalId'];
+      function readRecent() {
+        try {
+          var list = JSON.parse(window.localStorage.getItem(RECENT_KEY));
+          return (angular.isArray(list) ? list : []).filter(function(item) {
+            return item && typeof item.term === 'string' && item.term.length <= 200 && searchLabels.indexOf(item.by) !== -1;
+          }).slice(0, 5);
+        } catch (error) { return []; }
+      }
+      function rememberSearch() {
+        var term = view.text($scope.searchTerm);
+        if (!term || term.length > 200 || !view.lookupCriteria(term, $scope.searchBy, $scope.lookupOnly)) return;
+        var list = $scope.recentSearches.filter(function(item) { return item.term !== term; });
+        list.unshift({ term: term, by: searchLabels.indexOf($scope.searchBy) !== -1 ? $scope.searchBy : 'auto' });
+        $scope.recentSearches = list.slice(0, 5);
+        try { window.localStorage.setItem(RECENT_KEY, JSON.stringify($scope.recentSearches)); } catch (error) { /* storage unavailable */ }
+      }
+      $scope.recentSearches = readRecent();
+      $scope.useRecent = function(item) {
+        $scope.searchTerm = item.term;
+        $scope.searchBy = item.by;
+        $scope.applyFilters();
+      };
+      // Home page: greeting and the "how to look it up" cards.
+      var hour = new Date().getHours();
+      $scope.greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+      $scope.firstName = function() {
+        var user = $scope.$root && $scope.$root.currentUser;
+        return view.text(user && user.name).split(/[\s@.]/)[0];
+      };
+      $scope.useSearchType = function(type) {
+        $scope.searchBy = type;
+        $scope.searchError = null;
+        $timeout(function() {
+          var input = document.getElementById('quote-search');
+          if (input) input.focus();
+        });
+      };
+
       var loader = view.createLoader($scope, 'quotes', function(page) {
         rememberOptions(page.items);
+        if (page.items.length) rememberSearch();
         $scope.lastLoadedAt = new Date();
         // Reflect a server-corrected page without requesting the same results again.
         if (lastQuery.page !== page.currentPage || lastQuery.size !== page.pageSize) {
