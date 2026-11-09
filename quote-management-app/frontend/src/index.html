@@ -35,13 +35,6 @@
           <option value="light">Light</option><option value="dark">Dark</option><option value="system">System</option>
         </select>
       </div>
-      <div class="qm-theme-picker qm-size-picker">
-        <i class="bi bi-fonts" aria-hidden="true"></i>
-        <label class="visually-hidden" for="text-size-preference">Text size</label>
-        <select id="text-size-preference" ng-model="textSizePreference" ng-change="setTextSize()" aria-label="Text size">
-          <option value="auto">Auto size</option><option value="compact">Compact</option><option value="normal">Normal</option><option value="large">Large</option>
-        </select>
-      </div>
       <div class="qm-user" ng-if="currentUser && !isLoginRoute">
         <span class="qm-avatar" aria-hidden="true">{{currentUser.name.charAt(0)}}</span>
         <span class="qm-user-name" ng-bind="currentUser.name"></span>

@@ -79,7 +79,7 @@ describe('Motion helpers', function() {
     });
 
     function mount() {
-      host = compile('<main qm-pointer-glow><div class="qm-start-card"><span class="inner">x</span></div><p class="plain">y</p></main>')(scope)[0];
+      host = compile('<main qm-pointer-glow><div class="qm-lookup-tile"><span class="inner">x</span></div><p class="plain">y</p></main>')(scope)[0];
       document.body.appendChild(host);
       root.$digest();
       return host;
@@ -92,7 +92,7 @@ describe('Motion helpers', function() {
 
     it('publishes the pointer position to the hovered card, once per animation frame', function() {
       mount();
-      var card = host.querySelector('.qm-start-card');
+      var card = host.querySelector('.qm-lookup-tile');
       var box = card.getBoundingClientRect();
       move(host.querySelector('.inner'), box.left + 12, box.top + 7);
       move(host.querySelector('.inner'), box.left + 20, box.top + 9);
