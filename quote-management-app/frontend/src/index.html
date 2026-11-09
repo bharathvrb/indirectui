@@ -14,6 +14,7 @@
   <link href="assets/css/app.css" rel="stylesheet">
 </head>
 <body class="qm-app" ng-class="{'is-login': isLoginRoute, 'sidebar-collapsed': sidebarCollapsed}">
+  <div class="qm-progress" ng-class="{'is-busy': pendingRequests > 0}" aria-hidden="true"></div>
   <div class="qm-boot" ng-if="!appReady" role="status"><div class="loading-spinner"></div>Loading…</div>
   <noscript><div class="alert alert-warning">JavaScript is required to use Quote Management.</div></noscript>
   <a class="qm-skip-link" href="#main-content" ng-click="skipToContent($event)">Skip to content</a>
@@ -54,7 +55,7 @@
     <a href="#!/support-tickets" class="qm-nav-link" title="Sales Support Tickets" ng-class="{active: isActive('/support-tickets')}" ng-attr-aria-current="{{isActive('/support-tickets') ? 'page' : undefined}}"><i class="bi bi-ticket-perforated" aria-hidden="true"></i><span>Sales Support Tickets</span><i class="bi bi-chevron-right qm-nav-arrow" aria-hidden="true"></i></a>
     <a ng-if="supportUrl" ng-href="{{supportUrl}}" class="qm-nav-link qm-support-link" target="_blank" rel="noopener noreferrer"><i class="bi bi-question-circle" aria-hidden="true"></i> Get support <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
   </nav>
-  <main id="main-content" class="app-content" tabindex="-1" ng-cloak>
+  <main id="main-content" class="app-content" tabindex="-1" qm-pointer-glow ng-cloak>
     <div class="alert alert-danger m-3" role="alert" ng-if="shellError">{{shellError}} <button class="btn btn-sm btn-outline-danger" ng-click="shellError = null">Dismiss</button></div>
     <div ng-view></div>
   </main>
@@ -68,6 +69,7 @@
   <script src="app/services/quote-journey.service.js"></script>
   <script src="app/components/shared/quote-table.component.js"></script>
   <script src="app/components/shared/hero-watch.directive.js"></script>
+  <script src="app/components/shared/pointer-glow.directive.js"></script>
   <script src="app/components/login/login.controller.js"></script>
   <script src="app/components/quote-list/quote-list.controller.js"></script>
   <script src="app/components/support-tickets/support-tickets.controller.js"></script>

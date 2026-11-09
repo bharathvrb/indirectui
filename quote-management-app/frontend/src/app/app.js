@@ -34,6 +34,20 @@ angular.module('quoteManagement', ['ngRoute'])
                 request.pathname.indexOf(base.pathname.replace(/\/$/, '') + '/quotedata/') === 0;
         }
 
+        // Drives the thin progress bar at the top of the page: counts proxy requests that are in flight.
+        function track(config, step) {
+            var root = $injector.get('$rootScope');
+            root.pendingRequests = Math.max(0, (root.pendingRequests || 0) + step);
+            config.qmTracked = step > 0;
+        }
+        function release(config) {
+            if (config && config.qmTracked) {
+                config.qmTracked = false;
+                var root = $injector.get('$rootScope');
+                root.pendingRequests = Math.max(0, (root.pendingRequests || 0) - 1);
+            }
+        }
+
         return {
             request: function(config) {
                 if (!isProxy(config.url)) return config;
@@ -47,10 +61,16 @@ angular.module('quoteManagement', ['ngRoute'])
                     delete config.headers.Authorization;
                     delete config.headers.authorization;
                     if (token) config.headers.Authorization = 'Bearer ' + token;
+                    track(config, 1);
                     return config;
                 });
             },
+            response: function(response) {
+                release(response.config);
+                return response;
+            },
             responseError: function(error) {
+                release(error && error.config);
                 if (error.authRequired || (error.status === 401 && error.config && isProxy(error.config.url))) {
                     $injector.get('AuthService').requireLogin('session-expired');
                 }
@@ -60,6 +80,7 @@ angular.module('quoteManagement', ['ngRoute'])
     }])
     .run(['$rootScope', '$location', '$timeout', 'AuthService', function($rootScope, $location, $timeout, AuthService) {
         $rootScope.appReady = true;
+        $rootScope.pendingRequests = 0;
         $rootScope.themePreference = window.QuoteTheme ? window.QuoteTheme.getPreference() : 'light';
         $rootScope.setTheme = function() {
             window.QuoteTheme.setPreference($rootScope.themePreference);

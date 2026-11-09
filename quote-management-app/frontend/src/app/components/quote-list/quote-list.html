@@ -19,7 +19,7 @@
     </div>
 
     <div class="qm-omnibar-wrap">
-      <div class="qm-omnibar">
+      <div class="qm-omnibar" ng-class="{'is-loading': loading}">
         <div class="qm-omnibar-type">
           <label for="quote-search-type" class="visually-hidden">Search by</label>
           <select id="quote-search-type" class="form-select" ng-model="searchBy" ng-change="applyFilters()">
@@ -37,7 +37,7 @@
                  ng-change="onSearchChange()" ng-attr-placeholder="{{lookupOnly ? 'Paste or type an ID' : 'ID, customer, opportunity or ticket number'}}"
                  aria-describedby="quote-search-help quote-search-feedback" ng-attr-aria-invalid="{{!!searchError}}">
         </div>
-        <button type="submit" class="btn btn-primary">Search</button>
+        <button type="submit" class="btn btn-primary"><i class="bi bi-arrow-repeat qm-spin me-2" aria-hidden="true" ng-if="loading"></i>Search</button>
       </div>
       <div class="qm-omnibar-foot">
         <div id="quote-search-help" class="form-text">{{lookupOnly ? 'Smart search detects full quote request IDs and treats anything else as an external ID.' : 'A full quote request ID opens an exact match. Choose Other fields to search by customer, opportunity or ticket.'}}</div>
