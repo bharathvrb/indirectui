@@ -866,37 +866,26 @@ body.is-login .app-topbar .qm-topbar-actions { margin-left: auto; }
 .qm-auth-brand .app-brand-mark { background: #fff; color: var(--qm-primary-hover); box-shadow: 0 10px 22px -8px rgba(8, 24, 80, .5); }
 .qm-auth-brand-name { font-family: var(--qm-display); font-size: var(--fs-lg); font-weight: 800; letter-spacing: -.03em; }
 .qm-auth-brand-name span { font-weight: 500; margin-left: 5px; color: rgba(255, 255, 255, .8); }
-/* Sign-in art: a quote being processed. Rows check off one by one, the progress bar fills and a seal appears, then it repeats.
+/* Sign-in art: one quote moving through three steps. Depth comes from layered glass slabs, soft lights and a floor shadow.
    The resting state is the finished one, so reduced motion shows a completed quote. */
-.qm-doc { width: min(100%, 450px); margin: auto; overflow: visible; }
+.qm-doc { width: min(100%, 440px); margin: auto; overflow: visible; }
 .qm-doc * { transform-box: fill-box; }
-.qm-doc-halo { transform-box: view-box; transform-origin: 210px 210px; animation: spin 90s linear infinite; }
-.qm-doc-halo circle { stroke: rgba(255, 255, 255, .24); stroke-width: 1.5; stroke-dasharray: 3 10; stroke-linecap: round; }
-.qm-doc-float { animation: doc-float 6s ease-in-out infinite; }
-.qm-doc-back { fill: rgba(255, 255, 255, .13); stroke: rgba(255, 255, 255, .38); stroke-width: 1.5; transform-origin: center; }
-.qm-doc-back.is-1 { transform: translate(-16px, 8px) rotate(-7deg); }
-.qm-doc-back.is-2 { transform: translate(16px, 6px) rotate(6deg); }
-.qm-doc-paper { fill: #fff; filter: drop-shadow(0 28px 38px rgba(6, 20, 90, .5)); }
-.qm-doc-logo { fill: #1d4fd7; }
-.qm-doc-mark { fill: #fff; }
-.qm-doc-mark.is-2 { fill: none; stroke: #fff; stroke-width: 1.6; }
-.qm-doc-head { fill: #c9d8fa; }
-.qm-doc-dot { fill: #1d4fd7; stroke: #c8d6f8; stroke-width: 2.5; animation: doc-dot 9s var(--qm-ease) backwards infinite; animation-delay: calc(var(--i) * .9s + .6s); }
-.qm-doc-tick { stroke: #fff; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 26; animation: doc-tick 9s var(--qm-ease) backwards infinite; animation-delay: calc(var(--i) * .9s + .6s); }
-.qm-doc-line { fill: #b6c9f7; transform-origin: left center; animation: doc-line 9s var(--qm-ease) backwards infinite; animation-delay: calc(var(--i) * .9s + .6s); }
-.qm-doc-sub { fill: #dbe5fb; }
-.qm-doc-track { fill: #e3ebfc; }
-.qm-doc-fill { fill: #1d4fd7; transform-origin: left center; animation: doc-fill 9s var(--qm-ease) backwards infinite; animation-delay: .6s; }
-.qm-doc-seal { transform-origin: center; animation: doc-seal 9s var(--qm-ease) backwards infinite; animation-delay: .6s; }
-.qm-doc-seal-disc { fill: #fff; stroke: #1d4fd7; stroke-width: 3.5; filter: drop-shadow(0 10px 18px rgba(6, 20, 90, .4)); }
-.qm-doc-seal-tick { stroke: #1d4fd7; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
-.qm-doc-seal-ripple { stroke: rgba(255, 255, 255, .8); stroke-width: 2; opacity: 0; transform-origin: center; animation: doc-ripple 9s ease-out infinite; animation-delay: .6s; }
-.qm-doc-link { stroke: rgba(255, 255, 255, .45); stroke-width: 1.5; stroke-dasharray: 3 6; stroke-linecap: round; }
-.qm-doc-bubble { fill: rgba(255, 255, 255, .18); stroke: rgba(255, 255, 255, .6); stroke-width: 1.5; }
-.qm-doc-glyph { fill: #fff; }
-.qm-doc-sat { animation: doc-float 5s ease-in-out infinite; }
-.qm-doc-sat.is-2 { animation-delay: -1.7s; animation-duration: 6.4s; }
-.qm-doc-sat.is-3 { animation-delay: -3.1s; animation-duration: 5.6s; }
+.qm-doc-light { fill: rgba(255, 255, 255, .22); animation: doc-drift 14s ease-in-out infinite; }
+.qm-doc-light.is-far { filter: blur(22px); fill: rgba(140, 185, 255, .45); }
+.qm-doc-light.is-near { filter: blur(2px); fill: rgba(255, 255, 255, .55); animation-duration: 9s; }
+.qm-doc-light.is-2 { animation-delay: -5s; animation-direction: reverse; }
+.qm-doc-floor { fill: rgba(5, 18, 85, .5); filter: blur(10px); transform-origin: center; animation: doc-floor 6s ease-in-out infinite; }
+.qm-doc-stack { animation: doc-float 6s ease-in-out infinite; }
+.qm-doc-slab { transform-origin: center; fill: rgba(255, 255, 255, .14); stroke: rgba(255, 255, 255, .4); stroke-width: 1.5; }
+.qm-doc-slab.is-3 { transform: translate(-30px, 20px) scale(.94); fill: rgba(255, 255, 255, .08); animation: doc-slab 6s ease-in-out -.8s infinite; }
+.qm-doc-slab.is-2 { transform: translate(-15px, 10px) scale(.97); fill: rgba(255, 255, 255, .16); animation: doc-slab 6s ease-in-out -.4s infinite; }
+.qm-doc-paper { fill: #fff; filter: drop-shadow(0 30px 40px rgba(5, 18, 85, .45)); }
+.qm-doc-rail { fill: #dbe5fb; }
+.qm-doc-rail-fill { fill: #1d4fd7; transform-origin: center top; animation: doc-rail 7s var(--qm-ease) backwards infinite; animation-delay: calc(var(--i) * 1.6s + .7s); }
+.qm-doc-dot { fill: #1d4fd7; stroke: #c8d6f8; stroke-width: 3; animation: doc-dot 7s var(--qm-ease) backwards infinite; animation-delay: calc(var(--i) * 1.6s + .7s); }
+.qm-doc-tick { stroke: #fff; stroke-width: 3.4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 28; animation: doc-tick 7s var(--qm-ease) backwards infinite; animation-delay: calc(var(--i) * 1.6s + .7s); }
+.qm-doc-bar { fill: #b6c9f7; transform-origin: left center; animation: doc-bar 7s var(--qm-ease) backwards infinite; animation-delay: calc(var(--i) * 1.6s + .7s); }
+.qm-doc-ripple { fill: none; stroke: #1d4fd7; stroke-width: 2.5; opacity: 0; transform-origin: center; animation: doc-ripple 7s ease-out infinite; animation-delay: 3.9s; }
 .qm-auth-card { align-self: center; justify-self: center; width: min(100%, 440px); padding: 96px 32px 32px; animation: rise .55s var(--qm-ease) both; }
 .qm-login-header { display: flex; align-items: center; gap: 14px; padding: 0 0 4px; }
 .qm-auth-symbol { display: grid; place-items: center; flex: none; width: 50px; height: 50px; border-radius: 15px; font-size: 24px; color: #fff; background: var(--qm-gradient); box-shadow: 0 14px 26px -10px rgba(29, 79, 215, .75), inset 0 1px 0 rgba(255,255,255,.3); }
@@ -931,13 +920,15 @@ body.is-login .app-topbar .qm-topbar-actions { margin-left: auto; }
 @keyframes dot-pulse { 0% { box-shadow: 0 0 0 0 currentColor; } 70% { box-shadow: 0 0 0 6px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
 @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(225, 29, 72, .45); } 70% { box-shadow: 0 0 0 9px rgba(225, 29, 72, 0); } 100% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0); } }
 @keyframes aurora { from { transform: translate3d(-4%, -3%, 0) rotate(0deg) scale(1); } to { transform: translate3d(5%, 4%, 0) rotate(8deg) scale(1.12); } }
-@keyframes doc-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
-@keyframes doc-dot { 0%, 3% { fill: #fff; } 9%, 92% { fill: #1d4fd7; } 97%, 100% { fill: #fff; } }
-@keyframes doc-tick { 0%, 5% { stroke-dashoffset: 26; } 12%, 92% { stroke-dashoffset: 0; } 97%, 100% { stroke-dashoffset: 26; } }
-@keyframes doc-line { 0%, 3% { transform: scaleX(.22); fill: #dbe5fb; } 12%, 92% { transform: scaleX(1); fill: #b6c9f7; } 97%, 100% { transform: scaleX(.22); fill: #dbe5fb; } }
-@keyframes doc-fill { 0%, 2% { transform: scaleX(0); } 50%, 92% { transform: scaleX(1); } 98%, 100% { transform: scaleX(0); } }
-@keyframes doc-seal { 0%, 50% { transform: scale(0); opacity: 0; } 58% { transform: scale(1.18); opacity: 1; } 63%, 92% { transform: scale(1); opacity: 1; } 98%, 100% { transform: scale(0); opacity: 0; } }
-@keyframes doc-ripple { 0%, 56% { transform: scale(1); opacity: 0; } 58% { opacity: .85; } 76%, 100% { transform: scale(2.4); opacity: 0; } }
+@keyframes doc-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+@keyframes doc-slab { 0%, 100% { translate: 0 0; } 50% { translate: 0 6px; } }
+@keyframes doc-floor { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(.86); opacity: .6; } }
+@keyframes doc-drift { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(10px, -14px); } }
+@keyframes doc-rail { 0%, 2% { transform: scaleY(0); } 20%, 92% { transform: scaleY(1); } 97%, 100% { transform: scaleY(0); } }
+@keyframes doc-dot { 0%, 2% { fill: #fff; } 14%, 92% { fill: #1d4fd7; } 97%, 100% { fill: #fff; } }
+@keyframes doc-tick { 0%, 10% { stroke-dashoffset: 28; } 20%, 92% { stroke-dashoffset: 0; } 97%, 100% { stroke-dashoffset: 28; } }
+@keyframes doc-bar { 0%, 2% { transform: scaleX(.2); fill: #dbe5fb; } 20%, 92% { transform: scaleX(1); fill: #b6c9f7; } 97%, 100% { transform: scaleX(.2); fill: #dbe5fb; } }
+@keyframes doc-ripple { 0%, 4% { transform: scale(1); opacity: 0; } 6% { opacity: .8; } 30%, 100% { transform: scale(2.6); opacity: 0; } }
 @keyframes toast-in { from { opacity: 0; transform: translateY(14px) scale(.96); } }
 @keyframes toast-timer { to { transform: scaleX(0); } }
 @keyframes value-in { from { opacity: 0; transform: translateY(8px); filter: blur(4px); } }
