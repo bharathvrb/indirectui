@@ -116,7 +116,6 @@ describe('Unified quote search workspace', function() {
     expect(requests[0].params).toEqual({ page: 0, size: 25, sort: 'createdAt,desc' });
     expect(scope.loading).toBe(true);
     expect(scope.totalElements).toBeNull();
-    expect(scope.kpis).toBeNull();
   });
 
   it('does not request an unsupported unfiltered list in lookup-only deployments', function() {
@@ -201,7 +200,6 @@ describe('Unified quote search workspace', function() {
     expect(scope.totalElements).toBe(1);
     expect(scope.totalPages).toBe(1);
     expect(scope.currentPage).toBe(0);
-    expect(scope.kpis.failed).toBe(1);
     expect(scope.error).toBeNull();
   });
 
@@ -211,151 +209,6 @@ describe('Unified quote search workspace', function() {
     expect(view.exactQuoteId('123456789-' + uuid.slice(0, -1), 'auto')).toBe('');
     expect(view.exactQuoteId('Example customer', 'auto')).toBe('');
     expect(view.exactQuoteId(uuid, 'text')).toBe('');
-  });
-
-  describe('auto-refresh', function() {
-    var interval;
-    beforeEach(angular.mock.inject(function($interval) { interval = $interval; }));
-
-    it('is off by default and reloads the current page every interval once switched on', function() {
-      start();
-      resolve(0, [{ quoteRequestId: 'Q-1' }]);
-      expect(scope.autoRefresh).toEqual({ enabled: false, seconds: 60 });
-      interval.flush(120000);
-      expect(requests.length).toBe(1);
-      scope.autoRefresh.enabled = true;
-      scope.toggleAutoRefresh();
-      interval.flush(60000);
-      expect(requests.length).toBe(2);
-      interval.flush(60000);
-      expect(requests.length).toBe(2); // the previous refresh is still loading
-      resolve(1, [{ quoteRequestId: 'Q-1' }]);
-      interval.flush(60000);
-      expect(requests.length).toBe(3);
-      expect(scope.lastLoadedAt instanceof Date).toBe(true);
-    });
-
-    it('stops when switched off or when the page is left', function() {
-      start();
-      resolve(0, []);
-      scope.autoRefresh.enabled = true;
-      scope.toggleAutoRefresh();
-      scope.autoRefresh.enabled = false;
-      scope.toggleAutoRefresh();
-      interval.flush(180000);
-      expect(requests.length).toBe(1);
-      scope.autoRefresh.enabled = true;
-      scope.toggleAutoRefresh();
-      scope.$destroy();
-      interval.flush(180000);
-      expect(requests.length).toBe(1);
-    });
-
-    it('uses a configured interval', function() {
-      window.APP_CONFIG.autoRefreshSeconds = 30;
-      start();
-      expect(scope.autoRefresh.seconds).toBe(30);
-    });
-
-    it('ignores intervals shorter than 15 seconds', function() {
-      window.APP_CONFIG.autoRefreshSeconds = 5;
-      start();
-      expect(scope.autoRefresh.seconds).toBe(60);
-    });
-  });
-
-  describe('state mix and quick state filters', function() {
-    var rows = [
-      { quoteRequestId: 'A', state: 'FAILED' }, { quoteRequestId: 'B', state: 'FAILED' }, { quoteRequestId: 'C', state: 'IN_PROGRESS' },
-      { quoteRequestId: 'D', state: 'COMPLETED' }, { quoteRequestId: 'E', state: 'PENDING_APPROVAL' }, { quoteRequestId: 'F', state: 'RECEIVED' }
-    ];
-
-    it('summarizes the share of each state on the page and keeps the same array until counts change', function() {
-      start();
-      expect(scope.stateMix()).toEqual([]);
-      resolve(0, rows);
-      var mix = scope.stateMix();
-      expect(mix.map(function(part) { return [part.key, part.count, part.percent]; })).toEqual([
-        ['failed', 2, 33.3], ['inProgress', 1, 16.7], ['pendingApproval', 1, 16.7], ['completed', 1, 16.7], ['received', 1, 16.7]
-      ]);
-      expect(mix[0].label).toBe('Failed');
-      expect(scope.stateMix()).toBe(mix);
-    });
-
-    it('omits states with no quotes and clears when there are no results', function() {
-      start();
-      resolve(0, [{ quoteRequestId: 'A', state: 'FAILED' }, { quoteRequestId: 'B', state: 'FAILED' }]);
-      expect(scope.stateMix().map(function(part) { return part.key; })).toEqual(['failed']);
-      scope.refresh();
-      resolve(1, []);
-      expect(scope.stateMix()).toEqual([]);
-    });
-
-    it('lists the quick states in life-cycle order and filters by the chosen state', function() {
-      start();
-      resolve(0, rows);
-      expect(scope.quickStates).toEqual(['RECEIVED', 'IN_PROGRESS', 'PENDING_APPROVAL', 'COMPLETED', 'FAILED']);
-      scope.quickState('FAILED');
-      expect(requests.length).toBe(2);
-      expect(requests[1].params.state).toBe('FAILED');
-      expect(scope.filters.state).toBe('FAILED');
-      scope.quickState('');
-      expect(requests.length).toBe(3);
-      expect(requests[2].params.state).toBeUndefined();
-    });
-
-    it('renders the pills, highlights the active one and sends one request when a pill is clicked', function() {
-      start();
-      resolve(0, rows);
-      element = compile('<div>' + templates[templatePaths[1]] + '</div>')(scope);
-      root.$digest();
-      var pills = element[0].querySelectorAll('.qm-quick-pill');
-      expect(Array.prototype.map.call(pills, function(pill) { return pill.textContent.trim(); }))
-        .toEqual(['All', 'Received', 'In progress', 'Pending approval', 'Completed', 'Failed']);
-      expect(pills[0].classList.contains('active')).toBe(true);
-      angular.element(pills[5]).triggerHandler('click');
-      root.$digest();
-      expect(requests.length).toBe(2);
-      expect(requests[1].params.state).toBe('FAILED');
-      expect(pills[5].classList.contains('active')).toBe(true);
-      expect(pills[5].getAttribute('aria-pressed')).toBe('true');
-      expect(pills[0].getAttribute('aria-pressed')).toBe('false');
-      expect(element[0].querySelector('#quote-state').selectedOptions[0].textContent).toBe('Failed');
-    });
-
-    it('shows the mix bar only for several quotes in list mode', function() {
-      start();
-      resolve(0, rows);
-      element = compile('<div>' + templates[templatePaths[1]] + '</div>')(scope);
-      root.$digest();
-      expect(element[0].querySelectorAll('.qm-mix-bar span').length).toBe(5);
-      expect(element[0].querySelector('.qm-mix-legend').textContent.replace(/\s+/g, ' ')).toContain('Failed 2');
-      scope.refresh();
-      resolve(1, [{ quoteRequestId: 'A', state: 'FAILED' }]);
-      expect(element[0].querySelector('.qm-mix')).toBeNull();
-    });
-
-    it('disables the pills during an exact lookup', function() {
-      start('QuoteListCtrl', '/quotes?search=EXAMPLE-ID&searchBy=quoteRequestId');
-      requests[0].deferred.resolve({ data: { quoteRequestId: 'EXAMPLE-ID', state: 'FAILED' } });
-      root.$digest();
-      element = compile('<div>' + templates[templatePaths[1]] + '</div>')(scope);
-      root.$digest();
-      Array.prototype.forEach.call(element[0].querySelectorAll('.qm-quick-pill'), function(pill) { expect(pill.disabled).toBe(true); });
-    });
-  });
-
-  it('tones each table row by quote state', function() {
-    start();
-    resolve(0, [{ quoteRequestId: 'A', state: 'FAILED' }, { quoteRequestId: 'B', state: 'IN_PROGRESS' },
-      { quoteRequestId: 'C', state: 'PENDING_APPROVAL' }, { quoteRequestId: 'D', state: 'COMPLETED' },
-      { quoteRequestId: 'E', state: 'RECEIVED' }, { quoteRequestId: 'F', state: null }]);
-    var rowsOut = renderTable().querySelectorAll('tbody tr.qm-row-hover');
-    expect(Array.prototype.map.call(rowsOut, function(row) {
-      return Array.prototype.filter.call(row.classList, function(name) { return /^is-/.test(name); })[0];
-    })).toEqual(['is-failed', 'is-progress', 'is-approval', 'is-done', 'is-received', 'is-none']);
-    var component = componentController('quoteTable', { $element: element }, {});
-    expect(['inProgress', 'Pending Approval', 'unknown'].map(component.rowTone)).toEqual(['progress', 'approval', 'none']);
   });
 
   it('moves focus to the results heading after a page change, then cleans up its timer', function() {
@@ -662,7 +515,6 @@ describe('Unified quote search workspace', function() {
     expect(location.search().page).toBe(1);
     expect(location.search().state).toBe('FAILED');
     expect(requests.length).toBe(1);
-    expect(scope.kpis.failed).toBe(1);
   });
 
   it('normalizes optional columns and known response aliases without inventing fields', function() {
@@ -715,7 +567,6 @@ describe('Unified quote search workspace', function() {
     resolve(1, [{ quoteRequestId: 'NEW', state: 'COMPLETED' }]);
     resolve(0, [{ quoteRequestId: 'OLD', state: 'FAILED' }]);
     expect(scope.quotes[0].quoteRequestId).toBe('NEW');
-    expect(scope.kpis.completed).toBe(1);
     expect(scope.error).toBeNull();
   });
 
@@ -898,6 +749,35 @@ describe('Unified quote search workspace', function() {
     expect(requests[1].params.createdFrom).toBeUndefined();
   });
 
+  describe('refresh only on request', function() {
+    it('never reloads by itself, however long the page stays open, and reloads once per Refresh click', function() {
+      var interval;
+      angular.mock.inject(function($interval) { interval = $interval; });
+      start();
+      expect(requests.length).toBe(1);
+      resolve(0, []);
+      interval.flush(10 * 60 * 1000);
+      expect(requests.length).toBe(1);
+      expect(scope.autoRefresh).toBeUndefined();
+      expect(scope.toggleAutoRefresh).toBeUndefined();
+      scope.refresh();
+      expect(requests.length).toBe(2);
+    });
+
+    it('shows a status in one place only: the State filter, with no pills, tiles, mix or summary line', function() {
+      start();
+      resolve(0, [{ quoteRequestId: 'A', state: 'FAILED' }, { quoteRequestId: 'B', state: 'COMPLETED' }]);
+      element = compile(templates[templatePaths[1]])(scope);
+      root.$digest();
+      expect(element[0].querySelector('#quote-state')).not.toBeNull();
+      expect(element[0].querySelector('.qm-quick, .qm-mix, .qm-kpi-card, .qm-meta-line, .qm-autorefresh')).toBeNull();
+      expect(element[0].textContent).not.toMatch(/Total matches|All pages|This page|pending approval ·/i);
+      expect(scope.kpis).toBeUndefined();
+      expect(scope.quickStates).toBeUndefined();
+      expect(scope.stateMix).toBeUndefined();
+    });
+  });
+
   describe('Home and Search are separate pages', function() {
     function mount() {
       element = compile(templates[templatePaths[1]])(scope);
@@ -906,7 +786,7 @@ describe('Unified quote search workspace', function() {
     }
     function hidden(node) { return node.classList.contains('ng-hide'); }
 
-    it('Home lists the default 25 newest quotes at once and shows filters, tiles and a link to Search, not the search box', function() {
+    it('Home lists the default 25 newest quotes at once and shows the filters and a link to Search, not the search box or summary numbers', function() {
       window.APP_CONFIG.quoteDataLookupOnly = true; // only limits the Search page
       start('QuoteListCtrl', '/quotes');
       expect(scope.pageMode).toBe('home');
@@ -916,7 +796,7 @@ describe('Unified quote search workspace', function() {
       var page = mount();
       expect(hidden(page.querySelector('.qm-omnibar-wrap'))).toBe(true);
       expect(page.querySelector('#quote-state')).not.toBeNull();
-      expect(page.querySelector('.qm-kpi-card')).not.toBeNull();
+      expect(page.querySelector('.qm-kpi-card, .qm-mix, .qm-quick-pill, #quote-auto-refresh')).toBeNull();
       expect(page.querySelector('.qm-start')).toBeNull();
       expect(page.querySelector('.qm-title').textContent).toBe('Quotes');
       expect(page.querySelector('a.qm-search-link').getAttribute('href')).toBe('#!/search');
@@ -931,7 +811,6 @@ describe('Unified quote search workspace', function() {
       expect(hidden(page.querySelector('.qm-omnibar-wrap'))).toBe(false);
       expect(page.querySelectorAll('.qm-start-card').length).toBe(4);
       expect(page.querySelector('#quote-state')).toBeNull();
-      expect(page.querySelector('.qm-kpi-card')).toBeNull();
       expect(page.querySelector('.qm-title').textContent).toBe('Search');
       expect(page.querySelector('.qm-greeting')).toBeNull();
       expect(page.textContent).toContain('Enter something to search for.');
@@ -957,7 +836,6 @@ describe('Unified quote search workspace', function() {
       var page = mount();
       expect(page.querySelector('.qm-start')).toBeNull();
       expect(page.querySelector('.qm-idle-hidden')).toBeNull();
-      expect(page.querySelector('.qm-kpi-card')).toBeNull();
     });
 
     it('moves an old /quotes?search= link to the Search page, keeping the whole query', function() {
@@ -1186,7 +1064,6 @@ describe('Unified quote search workspace', function() {
     start();
     resolve(0, [{ quoteRequestId: 'Q-1', state: 'FAILED' }]);
     scope.refresh();
-    expect(scope.kpis).toBeNull();
     expect(scope.totalElements).toBeNull();
     requests[1].deferred.reject({ status: 503, headers: function(name) { return name === 'x-tracking-id' ? 'TRACK-503' : null; } });
     root.$digest();
@@ -1195,7 +1072,6 @@ describe('Unified quote search workspace', function() {
     expect(scope.dataReady).toBe(false);
     expect(scope.quotes).toEqual([]);
     expect(scope.totalElements).toBeNull();
-    expect(scope.kpis).toBeNull();
   });
 
   it('renders genuine empty results as success with zero matching quotes', function() {
@@ -1203,7 +1079,6 @@ describe('Unified quote search workspace', function() {
     resolve(0, []);
     expect(scope.dataReady).toBe(true);
     expect(scope.totalElements).toBe(0);
-    expect(scope.kpis.failed).toBe(0);
     expect(scope.error).toBeNull();
   });
 
@@ -1331,9 +1206,7 @@ describe('Unified quote search workspace', function() {
       host.innerHTML = template;
       expect(host.querySelectorAll('quote-table').length).toBe(1);
       expect(host.querySelectorAll('table').length).toBe(0);
-      Array.prototype.forEach.call(host.querySelectorAll('.qm-kpi-card'), function(card) {
-        expect(card.closest('.qm-hero-card')).not.toBeNull();
-      });
+      expect(host.querySelectorAll('.qm-kpi-card, .qm-mix, .qm-quick-pill, #quote-auto-refresh').length).toBe(0);
       Array.prototype.forEach.call(host.querySelectorAll('input, select'), function(input) {
         expect(host.querySelector('label[for="' + input.id + '"]')).not.toBeNull();
       });

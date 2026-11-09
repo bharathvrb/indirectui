@@ -8,10 +8,6 @@
         <p class="qm-subtitle mb-0 mt-1">{{pageMode === 'home' ? 'Filter the list and open a quote to see its status, steps and errors.' : lookupOnly ? 'Open a quote to see its status, steps and errors.' : 'Find a quote by ID or other fields.'}}</p>
       </div>
       <div class="qm-head-actions">
-        <div class="qm-autorefresh form-check form-switch" ng-if="!lookupOnly && pageMode !== 'search' && listEnabled">
-          <input id="quote-auto-refresh" class="form-check-input" type="checkbox" role="switch" ng-model="autoRefresh.enabled" ng-change="toggleAutoRefresh()">
-          <label class="form-check-label" for="quote-auto-refresh">Auto-refresh <span class="text-muted">{{autoRefresh.seconds}}s</span></label>
-        </div>
         <a class="btn btn-outline-primary qm-search-link" href="#!/search" ng-if="pageMode === 'home'"><i class="bi bi-search me-1" aria-hidden="true"></i>Search</a>
         <button type="button" class="btn btn-primary qm-action-btn" ng-click="refresh()" ng-disabled="(lookupOnly || requireTerm) && !searchTerm" ng-if="listEnabled">
           <i class="bi bi-arrow-clockwise me-1" aria-hidden="true" ng-class="{'qm-spin': loading}"></i>Refresh
@@ -52,57 +48,6 @@
         <button type="button" class="qm-recent-chip" ng-repeat="item in recentSearches track by item.term" ng-click="useRecent(item)" title="Search again for {{item.term}}"><code>{{item.term}}</code></button>
       </div>
     </div>
-
-    <div class="row g-3" aria-label="Quote result summary" ng-if="!lookupOnly && pageMode !== 'search' && listEnabled">
-      <div class="col-6 col-xl-3">
-        <div class="qm-kpi-card qm-kpi-card-info">
-          <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-collection"></i></span>
-          <div>
-            <div class="qm-kpi-label">Total matches</div>
-            <div class="qm-kpi-value">{{displayValue(totalElements)}}</div>
-            <div class="qm-kpi-hint">All pages</div>
-          </div>
-        </div>
-      </div>
-      <div class="col-6 col-xl-3">
-        <div class="qm-kpi-card qm-kpi-card-warning">
-          <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-hourglass-split"></i></span>
-          <div>
-            <div class="qm-kpi-label">In progress</div>
-            <div class="qm-kpi-value">{{displayValue(kpis.inProgress)}}</div>
-            <div class="qm-kpi-hint">This page</div>
-          </div>
-        </div>
-      </div>
-      <div class="col-6 col-xl-3">
-        <div class="qm-kpi-card qm-kpi-card-danger">
-          <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-exclamation-octagon"></i></span>
-          <div>
-            <div class="qm-kpi-label">Failed</div>
-            <div class="qm-kpi-value">{{displayValue(kpis.failed)}}</div>
-            <div class="qm-kpi-hint">This page</div>
-          </div>
-        </div>
-      </div>
-      <div class="col-6 col-xl-3">
-        <div class="qm-kpi-card qm-kpi-card-success">
-          <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-check2-circle"></i></span>
-          <div>
-            <div class="qm-kpi-label">Completed</div>
-            <div class="qm-kpi-value">{{displayValue(kpis.completed)}}</div>
-            <div class="qm-kpi-hint">This page</div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="qm-mix" ng-if="dataReady && !loading && !error && !lookupOnly && pageMode !== 'search' && quotes.length > 1" role="img" aria-label="State mix of the quotes on this page">
-      <div class="qm-mix-bar"><span ng-repeat="part in stateMix() track by part.key" ng-class="'is-' + part.key" ng-style="{width: part.percent + '%'}" title="{{part.label}}: {{part.count}}"></span></div>
-      <ul class="qm-mix-legend"><li ng-repeat="part in stateMix() track by part.key" ng-class="'is-' + part.key"><i aria-hidden="true"></i>{{part.label}} <b>{{part.count}}</b></li></ul>
-    </div>
-    <p class="qm-meta-line mb-0" ng-if="dataReady && !loading && !error && !lookupOnly && pageMode !== 'search'">
-      {{kpis.pendingApproval}} pending approval · {{kpis.ticketLinked}} with a support ticket
-      <span ng-if="lastLoadedAt"> · Updated {{lastLoadedAt | date:'HH:mm:ss'}}</span>
-    </p>
   </section>
 
   <section class="qm-start" ng-if="pageMode !== 'home' && (lookupOnly || requireTerm) && !dataReady && !loading && !error" aria-labelledby="start-heading">
@@ -144,11 +89,6 @@
   <div class="card qm-filter-card mb-4" ng-if="!lookupOnly && pageMode !== 'search' && listEnabled">
     <div class="card-body">
       <h2 class="qm-card-title mb-3"><i class="bi bi-funnel" aria-hidden="true"></i>Filters</h2>
-      <div class="qm-quick" role="group" aria-label="Quick state filter">
-        <button type="button" class="qm-quick-pill" ng-class="{active: !filters.state}" ng-click="quickState('')" ng-disabled="isExactLookup()" ng-attr-aria-pressed="{{!filters.state}}">All</button>
-        <button type="button" class="qm-quick-pill" ng-repeat="state in quickStates" ng-class="['is-' + state.toLowerCase(), {active: filters.state === state}]"
-                ng-click="quickState(state)" ng-disabled="isExactLookup()" ng-attr-aria-pressed="{{filters.state === state}}"><i aria-hidden="true"></i>{{getStateLabel(state)}}</button>
-      </div>
       <div class="row g-3 qm-filter-grid">
         <div class="col-6 col-lg-3">
           <label for="quote-state" class="form-label">State</label>
@@ -187,7 +127,7 @@
                  ng-change="applyFilters()" aria-describedby="quote-date-feedback" ng-attr-aria-invalid="{{!!validationError}}">
         </div>
         <div class="col-12 col-lg-6 d-flex align-items-end">
-          <p class="small text-muted mb-2"><i class="bi bi-sort-down me-1" aria-hidden="true"></i>Newest created first · {{pageSize || 25}} rows per page · {{autoRefresh.enabled ? 'Refreshes every ' + autoRefresh.seconds + 's' : 'Auto-refresh off'}}</p>
+          <p class="small text-muted mb-2"><i class="bi bi-sort-down me-1" aria-hidden="true"></i>Newest created first · {{pageSize || 25}} rows per page</p>
         </div>
       </div>
       <div id="quote-date-feedback" class="mt-2">

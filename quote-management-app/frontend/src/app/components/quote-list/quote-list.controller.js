@@ -1,8 +1,8 @@
 'use strict';
 
 angular.module('quoteManagement')
-  .controller('QuoteListCtrl', ['$scope', '$location', '$timeout', '$interval', '$route', 'QuoteViewService',
-    function($scope, $location, $timeout, $interval, $route, QuoteViewService) {
+  .controller('QuoteListCtrl', ['$scope', '$location', '$timeout', '$route', 'QuoteViewService',
+    function($scope, $location, $timeout, $route, QuoteViewService) {
       var view = QuoteViewService;
       var searchTimer;
       var lastQuery;
@@ -28,54 +28,11 @@ angular.module('quoteManagement')
       // Search never lists without something to look for. Home can be switched off with defaultListEnabled: false.
       $scope.requireTerm = $scope.pageMode === 'search';
       $scope.listEnabled = !($scope.pageMode === 'home' && window.APP_CONFIG && window.APP_CONFIG.defaultListEnabled === false);
-      var refreshSeconds = view.integer(window.APP_CONFIG && window.APP_CONFIG.autoRefreshSeconds, 60, 15);
-      var refreshTimer = null;
-      // Auto-refresh is off by default (UI-01); the interval is configurable in config.js.
-      $scope.autoRefresh = { enabled: false, seconds: refreshSeconds };
-      $scope.lastLoadedAt = null;
-      function stopAutoRefresh() {
-        if (refreshTimer) $interval.cancel(refreshTimer);
-        refreshTimer = null;
-      }
-      $scope.toggleAutoRefresh = function() {
-        stopAutoRefresh();
-        if (!$scope.autoRefresh.enabled) return;
-        refreshTimer = $interval(function() {
-          if (!$scope.loading && !searchTimer && lastQuery) $scope.refresh();
-        }, refreshSeconds * 1000);
-      };
       $scope.isExactLookup = function() { return !!view.lookupCriteria($scope.searchTerm, $scope.searchBy, $scope.lookupOnly); };
       $scope.lookupLabel = function() {
         var criteria = view.lookupCriteria($scope.searchTerm, $scope.searchBy, $scope.lookupOnly);
         if (!criteria) return '';
         return criteria.quoteRequestId ? 'quote request ID' : criteria.externalId ? 'external ID' : 'proposal ID';
-      };
-
-      var mixCache = [];
-      var mixMeta = [
-        ['failed', 'Failed'], ['inProgress', 'In progress'], ['pendingApproval', 'Pending approval'],
-        ['completed', 'Completed'], ['received', 'Received'], ['other', 'Other']
-      ];
-      // Share of each state among the quotes on this page. The same array is returned until the counts change.
-      $scope.stateMix = function() {
-        var kpis = $scope.kpis, total = ($scope.quotes || []).length;
-        if (!kpis || !total) return mixCache.length ? (mixCache = []) : mixCache;
-        var counts = {
-          failed: kpis.failed, inProgress: kpis.inProgress, pendingApproval: kpis.pendingApproval, completed: kpis.completed,
-          received: kpis.received
-        };
-        counts.other = Math.max(0, total - counts.failed - counts.inProgress - counts.pendingApproval - counts.completed - counts.received);
-        var parts = mixMeta.filter(function(meta) { return counts[meta[0]] > 0; }).map(function(meta) {
-          return { key: meta[0], label: meta[1], count: counts[meta[0]], percent: Math.round(counts[meta[0]] * 1000 / total) / 10 };
-        });
-        if (!angular.equals(parts, mixCache)) mixCache = parts;
-        return mixCache;
-      };
-      // Quick filters follow the quote's life cycle, unlike the alphabetical State menu.
-      $scope.quickStates = ['RECEIVED', 'IN_PROGRESS', 'PENDING_APPROVAL', 'COMPLETED', 'FAILED'];
-      $scope.quickState = function(state) {
-        $scope.filters.state = state || '';
-        $scope.applyFilters();
       };
 
       function capitalize(text) { return text.charAt(0).toUpperCase() + text.slice(1); }
@@ -136,7 +93,6 @@ angular.module('quoteManagement')
       var loader = view.createLoader($scope, 'quotes', function(page) {
         rememberOptions(page.items);
         if (page.items.length) rememberSearch();
-        $scope.lastLoadedAt = new Date();
         // Reflect a server-corrected page without requesting the same results again.
         if (lastQuery.page !== page.currentPage || lastQuery.size !== page.pageSize) {
           lastQuery = angular.extend({}, lastQuery, { page: page.currentPage, size: page.pageSize });
@@ -308,7 +264,6 @@ angular.module('quoteManagement')
       });
       $scope.$on('$destroy', function() {
         cancelSearch();
-        stopAutoRefresh();
       });
       readQuery();
       commit(true);

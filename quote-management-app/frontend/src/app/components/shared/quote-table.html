@@ -54,7 +54,7 @@
             </div>
           </td>
         </tr>
-        <tr ng-repeat="row in $ctrl.rows track by $index" class="qm-row-hover" ng-class="'is-' + $ctrl.rowTone(row.state)" ng-style="{'animation-delay': ($index * 22) + 'ms'}">
+        <tr ng-repeat="row in $ctrl.rows track by $index" class="qm-row-hover" ng-style="{'animation-delay': ($index * 22) + 'ms'}">
           <td>
             <a ng-if="row.quoteRequestId != null && row.quoteRequestId !== ''"
                ng-href="{{$ctrl.quoteHref(row.quoteRequestId)}}" class="qm-link-button"
