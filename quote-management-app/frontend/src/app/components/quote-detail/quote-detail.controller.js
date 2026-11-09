@@ -91,8 +91,7 @@ angular.module('quoteManagement')
       $scope.detailStats = {
         siteCount: 0,
         productCount: 0,
-        errorCount: 0,
-        failedStepCount: 0
+        errorCount: 0
       };
 
       function normalizeKey(value) {
@@ -894,10 +893,7 @@ angular.module('quoteManagement')
         $scope.detailStats = {
           siteCount: $scope.sites.filter(function(site) { return !site._synthetic; }).length,
           productCount: productCount,
-          errorCount: $scope.errorRows.length,
-          failedStepCount: $scope.processingSteps.filter(function(step) {
-            return normalizeStepStatus(step.stepStatus) === 'FAILURE';
-          }).length
+          errorCount: $scope.errorRows.length
         };
       }
 
@@ -1018,21 +1014,15 @@ angular.module('quoteManagement')
         return 'bg-secondary';
       };
 
+      // Step status words and colours come from the journey service so the tiles and the table always agree.
+      var stepBadge = { success: 'bg-success', failure: 'bg-danger', progress: 'bg-warning text-dark' };
       $scope.getStepStatusClass = function(stepStatus) {
-        var value = normalizeStepStatus(stepStatus);
-        if (value === 'FAILURE') return 'bg-danger';
-        if (value === 'IN_PROGRESS') return 'bg-warning text-dark';
-        if (value === 'SUCCESS') return 'bg-success';
-        return 'bg-secondary';
+        return stepBadge[QuoteJourney.statusInfo(stepStatus).tone] || 'bg-secondary';
       };
 
       $scope.getStepStatusLabel = function(stepStatus) {
         var value = normalizeStepStatus(stepStatus);
-        if (value === 'FAILURE') return 'Failed';
-        if (value === 'IN_PROGRESS') return 'In Progress';
-        if (value === 'SUCCESS') return 'Success';
-        if (value === 'PENDING') return 'Pending';
-        return value || '—';
+        return value ? QuoteJourney.statusInfo(value).label : '—';
       };
 
       $scope.setTab = function(tab) {

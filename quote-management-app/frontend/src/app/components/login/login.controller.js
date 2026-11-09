@@ -28,7 +28,7 @@ angular.module('quoteManagement')
         $scope.signInLocal = function() {
             if ($scope.signingIn || $scope.localSigningIn) return;
             if (!$scope.localEnabled) {
-                $scope.localError = 'Local sign-in is not enabled on this development server.';
+                $scope.localError = 'Local sign-in is not enabled on this server.';
                 return;
             }
             var username = ($scope.credentials.username || '').trim();

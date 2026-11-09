@@ -5,7 +5,7 @@
       <div>
         <p class="qm-greeting"><i class="bi bi-stars" aria-hidden="true"></i><span>{{greeting}}<span ng-if="firstName()">, <span class="qm-greeting-name">{{firstName()}}</span></span></span></p>
         <h1 id="quotes-heading" class="qm-title">Quotes</h1>
-        <p class="qm-subtitle mb-0 mt-1">{{lookupOnly ? 'Find a quote and review its status, processing steps and errors.' : 'Search, filter and open indirect quote requests.'}}</p>
+        <p class="qm-subtitle mb-0 mt-1">{{lookupOnly ? 'Open a quote to see its status, steps and errors.' : 'Search, filter and open indirect quote requests.'}}</p>
       </div>
       <div class="qm-head-actions">
         <div class="qm-autorefresh form-check form-switch" ng-if="!lookupOnly">
@@ -51,7 +51,7 @@
       </div>
     </div>
 
-    <div class="row g-3" aria-label="Quote result summary" ng-if="!lookupOnly || dataReady || loading">
+    <div class="row g-3" aria-label="Quote result summary" ng-if="!lookupOnly">
       <div class="col-6 col-xl-3">
         <div class="qm-kpi-card qm-kpi-card-info">
           <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-collection"></i></span>
@@ -97,7 +97,7 @@
       <div class="qm-mix-bar"><span ng-repeat="part in stateMix() track by part.key" ng-class="'is-' + part.key" ng-style="{width: part.percent + '%'}" title="{{part.label}}: {{part.count}}"></span></div>
       <ul class="qm-mix-legend"><li ng-repeat="part in stateMix() track by part.key" ng-class="'is-' + part.key"><i aria-hidden="true"></i>{{part.label}} <b>{{part.count}}</b></li></ul>
     </div>
-    <p class="qm-meta-line mb-0" ng-if="dataReady && !loading && !error">
+    <p class="qm-meta-line mb-0" ng-if="dataReady && !loading && !error && !lookupOnly">
       {{kpis.pendingApproval}} pending approval · {{kpis.ticketLinked}} with a support ticket
       <span ng-if="lastLoadedAt"> · Updated {{lastLoadedAt | date:'HH:mm:ss'}}</span>
     </p>
@@ -105,8 +105,7 @@
 
   <section class="qm-start" ng-if="lookupOnly && !dataReady && !loading && !error" aria-labelledby="start-heading">
     <div class="qm-start-head">
-      <h2 id="start-heading">How would you like to look it up?</h2>
-      <p>Pick a type, or paste any ID above and Smart search will choose for you.</p>
+      <h2 id="start-heading">Look up by</h2>
     </div>
     <div class="qm-start-grid">
       <button type="button" class="qm-start-card" ng-class="{'is-selected': searchBy === 'quoteRequestId'}" ng-click="useSearchType('quoteRequestId')">
@@ -136,11 +135,6 @@
         <i class="bi bi-arrow-up-right qm-start-arrow" aria-hidden="true"></i>
       </a>
     </div>
-    <ul class="qm-tips" aria-label="Search tips">
-      <li><i class="bi bi-keyboard" aria-hidden="true"></i>Press Enter to search</li>
-      <li><i class="bi bi-clipboard-check" aria-hidden="true"></i>A full quote request ID opens an exact match</li>
-      <li><i class="bi bi-diagram-3" aria-hidden="true"></i>Open a quote to follow every processing step</li>
-    </ul>
   </section>
 
   <div class="card qm-filter-card mb-4" ng-if="!lookupOnly">

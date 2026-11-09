@@ -42,7 +42,7 @@
           <div class="qm-input-wrap">
             <i class="bi bi-ticket-detailed" aria-hidden="true"></i>
             <input id="ticket-number" type="search" class="form-control" ng-model="ticketNumber"
-                   placeholder="SKY or support ticket number" aria-describedby="ticket-help ticket-feedback"
+                   placeholder="SKY or support ticket number, e.g. SUP-TKT-20260423-002" aria-describedby="ticket-feedback"
                    ng-attr-aria-invalid="{{!!validationError}}">
           </div>
         </div>
@@ -53,7 +53,6 @@
                   aria-label="Refresh current ticket results"><i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>Refresh</button>
         </div>
       </div>
-      <div id="ticket-help" class="form-text mt-2" ng-if="!searched">Example: SUP-TKT-20260423-002</div>
       <div id="ticket-feedback" class="text-danger small mt-2" role="alert" ng-if="validationError">{{validationError}}</div>
     </div>
   </form>

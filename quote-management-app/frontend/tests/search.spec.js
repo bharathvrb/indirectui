@@ -926,7 +926,7 @@ describe('Unified quote search workspace', function() {
       expect(host.querySelectorAll('.qm-start-card').length).toBe(4);
       expect(host.querySelector('a.qm-start-card').getAttribute('href')).toBe('#!/support-tickets');
       expect(host.querySelector('.qm-idle-hidden quote-table')).not.toBeNull();
-      expect(host.querySelector('.qm-tips')).not.toBeNull();
+      expect(host.querySelector('.qm-tips')).toBeNull();
     });
 
     it('does not show the lookup cards in list mode or once a quote has loaded', function() {

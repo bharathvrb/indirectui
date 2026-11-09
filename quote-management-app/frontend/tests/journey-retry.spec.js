@@ -87,7 +87,9 @@ describe('Quote journey and step retry', function() {
       var ring = page.querySelector('.qm-ring');
       expect(ring.getAttribute('aria-label')).toBe('2 of 5 steps completed');
       expect(ring.textContent).toContain('40%');
-      expect(page.querySelector('.qm-journey-status').textContent).toContain('Stopped at CREATE_PROPOSAL');
+      // The failure panel below already names the step, so the status line stays empty then.
+      expect(page.querySelector('.qm-spotlight h3').textContent).toContain('CREATE_PROPOSAL failed');
+      expect(page.querySelector('.qm-journey-status').textContent.trim()).toBe('');
       expect(page.querySelectorAll('.qm-phase, .qm-phases').length).toBe(0);
       var names = Array.prototype.map.call(page.querySelectorAll('.qm-step-name'), function(n) { return n.textContent.trim(); });
       expect(names).toEqual(['ADDRESS_VALIDATION', 'CREATE_CONTACT', 'CREATE_PROPOSAL', 'ADD_SITE', 'CONTRACT_GENERATION']);
@@ -147,21 +149,14 @@ describe('Quote journey and step retry', function() {
       expect(head.querySelector('.qm-quote-head-actions .btn-primary').textContent).toContain('Mark completed');
     });
 
-    function countLabels(page) {
-      return Array.prototype.map.call(page.querySelectorAll('.qm-quote-counts li'), function(li) { return li.textContent.replace(/\s+/g, ' ').trim(); });
-    }
-
-    it('uses singular labels for a count of one', function() {
-      var data = fixture();
-      data.sites = [{ id: 1, siteId: 'S1', siteName: 'Only site', items: [] }];
-      data.errorDetails = data.errorDetails.slice(0, 1);
-      expect(countLabels(start({ data: data }))).toEqual(['1 Site', '0 Products', '1 Error', '1 Failed step']);
+    it('keeps the "Stopped at" line when a step failed but the quote itself is not failed', function() {
+      var page = start({ data: fixture('IN_PROGRESS') });
+      expect(page.querySelector('.qm-spotlight')).toBeNull();
+      expect(page.querySelector('.qm-journey-status').textContent).toContain('Stopped at CREATE_PROPOSAL');
     });
 
-    it('uses plural labels otherwise', function() {
-      var data = fixture();
-      data.sites = [{ id: 1, siteId: 'S1', items: [{ id: 5, itemId: 'I1', productName: 'P' }] }, { id: 2, siteId: 'S2', items: [] }];
-      expect(countLabels(start({ data: data }))).toEqual(['2 Sites', '1 Product', '2 Errors', '1 Failed step']);
+    it('does not repeat the tab counts as a row of chips under the header', function() {
+      expect(start({ data: fixture() }).querySelector('.qm-quote-counts')).toBeNull();
     });
 
     it('hides Mark completed when the quote is not failed', function() {

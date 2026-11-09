@@ -85,7 +85,7 @@ angular.module('quoteManagement')
             requireLogin: requireLogin,
             loginLocal: function(username, password) {
                 if (!localSession.enabled) {
-                    return $q.reject({ data: { message: 'Local sign-in is not enabled on this development server.' } });
+                    return $q.reject({ data: { message: 'Local sign-in is not enabled on this server.' } });
                 }
                 return $http.post('/auth/local/login', { username: username, password: password }).then(function(response) {
                     var session = response.data;

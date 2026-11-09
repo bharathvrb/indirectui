@@ -37,13 +37,6 @@
       <div class="qm-quote-fact"><dt>Completed at</dt><dd>{{quote.completedAt ? (quote.completedAt | date:'dd MMM yyyy, HH:mm:ss') : '—'}}</dd></div>
       <div class="qm-quote-fact"><dt>Retries</dt><dd title="{{quote.retryOf ? 'Retry of ' + quote.retryOf : ''}}">{{displayValue(quote.retryCount)}}<span ng-if="quote.retryOf"> · retry of {{quote.retryOf}}</span></dd></div>
     </dl>
-
-    <ul class="qm-quote-counts" aria-label="Quote contents">
-      <li><i class="bi bi-geo-alt" aria-hidden="true"></i><b>{{detailStats.siteCount}}</b> {{detailStats.siteCount === 1 ? 'Site' : 'Sites'}}</li>
-      <li><i class="bi bi-box-seam" aria-hidden="true"></i><b>{{detailStats.productCount}}</b> {{detailStats.productCount === 1 ? 'Product' : 'Products'}}</li>
-      <li class="is-danger"><i class="bi bi-bug" aria-hidden="true"></i><b>{{detailStats.errorCount}}</b> {{detailStats.errorCount === 1 ? 'Error' : 'Errors'}}</li>
-      <li class="is-warning"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i><b>{{detailStats.failedStepCount}}</b> {{detailStats.failedStepCount === 1 ? 'Failed step' : 'Failed steps'}}</li>
-    </ul>
   </section>
 
   <section class="card mb-4 qm-section-card qm-journey" ng-if="journey.total" aria-labelledby="journey-title">
@@ -58,7 +51,7 @@
       <div class="qm-journey-intro">
         <h2 id="journey-title" class="qm-journey-title">Processing journey</h2>
         <p class="qm-journey-status" ng-switch="journey.status">
-          <span ng-switch-when="failure">Stopped at <strong>{{(journey.spotlight || journey.current).label}}</strong></span>
+          <span ng-switch-when="failure" ng-if="!(isFailed() && journey.spotlight)">Stopped at <strong>{{(journey.spotlight || journey.current).label}}</strong></span>
           <span ng-switch-when="success">All {{journey.total}} steps completed</span>
           <span ng-switch-when="pending">Waiting to start</span>
           <span ng-switch-default>Now on <strong>{{journey.current.label}}</strong></span>
@@ -351,7 +344,7 @@
               <td colspan="13"><div class="qm-detail-inner">
                 <button class="btn btn-sm btn-link p-0" ng-click="item._detailsExpanded = !item._detailsExpanded"
                         aria-expanded="{{item._detailsExpanded}}" aria-controls="{{item._key}}-details">
-                  <i class="bi me-1" ng-class="item._detailsExpanded ? 'bi-chevron-up' : 'bi-chevron-down'" aria-hidden="true"></i>{{item._detailsExpanded ? 'Hide' : 'Show'}} characteristics, prices and terms
+                  <i class="bi me-1" ng-class="item._detailsExpanded ? 'bi-chevron-up' : 'bi-chevron-down'" aria-hidden="true"></i>{{item._detailsExpanded ? 'Hide' : 'Show'}} details
                 </button>
                 <div class="row g-2 small mt-1" ng-if="item._detailsExpanded" id="{{item._key}}-details">
                   <div class="col-md-4"><div class="qm-detail-panel">
@@ -723,8 +716,7 @@
       </div>
     </div>
     <div class="qm-dialog-body">
-      <div class="qm-dialog-meta">
-        <div><span>Step</span><code>{{displayValue(retry.step.stepName)}}</code></div>
+      <div class="qm-dialog-meta is-single">
         <div><span>Attempts so far</span><code>{{displayValue(retry.step.attemptCount)}} of {{displayValue(retry.step.maxRetries)}}</code></div>
       </div>
       <div class="alert alert-warning py-2 mb-0" ng-if="retry.step.maxRetries !== null && retry.step.attemptCount >= retry.step.maxRetries">
@@ -756,7 +748,12 @@
     <i class="bi" ng-class="error === 'Access denied' ? 'bi-shield-lock' : error === 'Quote not found' ? 'bi-search' : error === 'Quote archived' ? 'bi-archive' : 'bi-exclamation-triangle'" aria-hidden="true"></i>
     <h1>{{error === 'Access denied' || error === 'Quote not found' || error === 'Quote archived' ? error : 'Something went wrong'}}</h1>
     <div id="quote-load-error" class="alert alert-danger mt-3" role="alert" tabindex="-1">
-      {{error}}
+      <span ng-switch="error">
+        <span ng-switch-when="Quote not found">Check the ID or link, then search again.</span>
+        <span ng-switch-when="Access denied">Ask an administrator for access to this quote.</span>
+        <span ng-switch-when="Quote archived">This quote is no longer available to open.</span>
+        <span ng-switch-default>{{error}}</span>
+      </span>
       <span class="d-block small mt-1" ng-if="trackingId">Tracking ID: <code>{{trackingId}}</code></span>
       <a ng-if="supportUrl" ng-href="{{supportUrl}}" target="_blank" rel="noopener noreferrer" class="d-inline-block mt-2">Contact support</a>
     </div>
