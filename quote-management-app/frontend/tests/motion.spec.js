@@ -98,8 +98,9 @@ describe('Motion helpers', function() {
       move(host.querySelector('.inner'), box.left + 20, box.top + 9);
       expect(frames.length).toBe(1);
       frames[0]();
-      expect(card.style.getPropertyValue('--mx')).toBe('20px');
-      expect(card.style.getPropertyValue('--my')).toBe('9px');
+      // Mouse coordinates are whole pixels while the card may sit on a fraction, so compare within a pixel.
+      expect(Math.abs(parseFloat(card.style.getPropertyValue('--mx')) - 20)).toBeLessThan(1);
+      expect(Math.abs(parseFloat(card.style.getPropertyValue('--my')) - 9)).toBeLessThan(1);
       frames[0]();
     });
 

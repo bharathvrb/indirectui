@@ -145,8 +145,8 @@ describe('Quote detail scenarios', function() {
         });
     });
     it('labels and colors every step status', function() {
-      [['FAILED', 'Failed', 'bg-danger'], ['INPROGRESS', 'In progress', 'bg-warning text-dark'], ['COMPLETED', 'Completed', 'bg-success'],
-        ['PENDING', 'Waiting', 'bg-secondary'], ['SKIPPED', 'Skipped', 'bg-secondary'], ['', '—', 'bg-secondary']]
+      [['FAILED', 'Failed', 'bg-danger'], ['INPROGRESS', 'In progress', 'bg-warning text-dark'], ['COMPLETED', 'Success', 'bg-success'],
+        ['PENDING', 'Pending', 'bg-secondary'], ['SKIPPED', 'Skipped', 'bg-secondary'], ['', '—', 'bg-secondary']]
         .forEach(function(entry) {
           expect(scope.getStepStatusLabel(entry[0])).toBe(entry[1]);
           expect(scope.getStepStatusClass(entry[0])).toBe(entry[2]);

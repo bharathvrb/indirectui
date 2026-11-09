@@ -125,7 +125,7 @@ describe('Quote journey and step retry', function() {
     it('shows progress and every step in order under its actual name, with no phase groups', function() {
       var page = start();
       var ring = page.querySelector('.qm-ring');
-      expect(ring.getAttribute('aria-label')).toBe('2 of 5 steps completed');
+      expect(ring.getAttribute('aria-label')).toBe('2 of 5 steps finished');
       expect(ring.textContent).toContain('40%');
       // The failure panel below already names the step, so the status line stays empty then.
       expect(page.querySelector('.qm-spotlight h3').textContent).toContain('CREATE_PROPOSAL failed');
@@ -137,10 +137,10 @@ describe('Quote journey and step retry', function() {
       expect(numbers).toEqual(['01', '02', '03', '04', '05']);
       expect(page.querySelector('.qm-step.is-failure .qm-step-meta').textContent.trim()).toBe('Failed');
       expect(page.querySelectorAll('.qm-step-desc, .qm-spotlight-desc').length).toBe(0);
-      expect(page.querySelector('.qm-step.is-success .qm-step-meta').textContent.trim()).toBe('Completed');
+      expect(page.querySelector('.qm-step.is-success .qm-step-meta').textContent.trim()).toBe('Success');
       expect(page.querySelector('.qm-steps').textContent).not.toMatch(/attempt|\d+ ?(s|min)\b/i);
       expect(page.querySelectorAll('.qm-step.is-current').length).toBe(1);
-      expect(page.querySelector('.qm-journey-counts').textContent.replace(/\s+/g, ' ')).toContain('2 done 1 failed 2 waiting');
+      expect(page.querySelector('.qm-journey-counts').textContent.replace(/\s+/g, ' ')).toContain('2 success 1 failed 2 pending');
     });
 
     it('shows the failure summary (UI-03) with stage, step, error code and message only when the quote failed', function() {

@@ -137,12 +137,13 @@ angular.module('quoteManagement')
     }
 
     function summary(rows) {
-      var result = { failed: 0, inProgress: 0, pendingApproval: 0, completed: 0, ticketLinked: 0 };
+      var result = { failed: 0, inProgress: 0, pendingApproval: 0, completed: 0, received: 0, ticketLinked: 0 };
       rows.forEach(function(row) {
         if (row.state === 'FAILED') result.failed++;
         if (row.state === 'IN_PROGRESS') result.inProgress++;
         if (row.state === 'PENDING_APPROVAL') result.pendingApproval++;
         if (row.state === 'COMPLETED') result.completed++;
+        if (row.state === 'RECEIVED') result.received++;
         if (text(row.supportTicketNumber)) result.ticketLinked++;
       });
       return result;

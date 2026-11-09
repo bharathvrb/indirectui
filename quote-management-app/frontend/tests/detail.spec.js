@@ -262,23 +262,34 @@ describe('Unified quote detail workspace', function() {
     expect(panel('events').querySelectorAll('.qm-timeline-item').length).toBe(scope.events.length);
   });
 
-  it('keeps customer profile fields out of the details grid and caches the one-line price', function() {
+  it('labels every customer field by its backend name and invents nothing', function() {
     load(); render();
     var shown = scope.customerDetailFields.map(function(field) { return field[0]; });
-    ['customerName', 'tradingName', 'organizationType', 'channelType', 'customerType', 'customerSubType', 'industry', 'subIndustry']
-      .forEach(function(key) { expect(shown).not.toContain(key); });
-    expect(shown.length + 8).toBe(scope.customerFields.length);
+    expect(shown).not.toContain('customerName');
+    expect(shown).not.toContain('tradingName');
+    expect(shown.length + 2).toBe(scope.customerFields.length);
+    scope.setTab('customer'); root.$digest();
+    var labels = Array.prototype.map.call(element[0].querySelectorAll('#detail-panel-customer .qm-profile .qm-kv dt'), function(dt) { return dt.textContent; });
+    expect(labels).toEqual(scope.customerDetailFields.map(function(field) { return field[1]; }));
+    expect(element[0].querySelector('#detail-panel-customer .qm-profile .qm-tags')).toBeNull();
     scope.customer.customerName = 'acme';
     expect(scope.customerInitial()).toBe('A');
     scope.customer.customerName = '';
     expect(scope.customerInitial()).toBe('•');
-    var item = { prices: [{ amount: 12, currency: 'USD', recurringPeriod: 'month' }] };
-    var first = scope.primaryPrice(item);
-    expect(first).toEqual({ amount: 12, currency: 'USD', period: 'month' });
-    expect(scope.primaryPrice(item)).toBe(first);
-    expect(scope.primaryPrice({ prices: [] })).toBeNull();
-    expect(scope.primaryPrice({ prices: [{ amount: null }] })).toBeNull();
-    expect(scope.primaryPrice(null)).toBeNull();
+  });
+
+  it('shows product and promotion statuses as sent, and no price summary the backend did not ask for', function() {
+    load(); render();
+    expect(scope.primaryPrice).toBeUndefined();
+    expect(scope.getItemStatusLabel('ACTIVE')).toBe('Active');
+    expect(scope.getItemStatusLabel('PENDING')).toBe('Pending');
+    expect(scope.getItemStatusLabel(null)).toBe('—');
+    scope.setTab('products'); root.$digest();
+    expect(element[0].querySelector('.qm-product-price')).toBeNull();
+    var labels = Array.prototype.map.call(element[0].querySelectorAll('.qm-product-tags li b'), function(b) { return b.textContent; });
+    expect(labels.length).toBeGreaterThan(0);
+    labels.forEach(function(label) { expect(['Type', 'Action', 'Qty', 'Bundle', 'Status']).toContain(label); });
+    expect(labels).toContain('Status');
   });
 
   it('supports arrow, Home and End tab navigation', function() {

@@ -121,6 +121,10 @@ Logs go to stdout: one line per QuoteData call with its tracking ID, route and q
 - **Retry and Mark completed endpoints are assumed contracts** (see QuoteData proxy). Confirm them with the QuoteData owner before enabling Retry.
 - **Login attempt limiting is per client address**; behind a reverse proxy all users share the proxy's address.
 
+### Display rule: only what the backend sends
+
+Values from QuoteData are shown as sent and under their own field name (only capitalisation is tidied). The UI does not guess: no sample data, no summary that picks one value (for example one price) out of several, no colour that implies a meaning the data does not state, and no relabelled step statuses (Success, Failed, In progress, Pending and Skipped are the backend values). The few derived items are plain counts of what was returned: the journey counts and ring, the "Removed" mark next to a DELETE action, the Signer mark for Is Signer = Yes, and the summary tiles and state mix of the quotes on the current page. A step number is the backend's `stepOrder` when it sends one. A contact without a name says "Name not provided".
+
 ## Design system
 
 The look lives in `src/assets/css/app.css`: a blue and white theme with black text in the light theme and white text in the dark theme. Everything is defined as tokens (`:root` for light, `[data-theme="dark"]` for dark). The dark theme uses neutral charcoal surfaces with the same blue accent; there are no navy or blue-black surfaces.

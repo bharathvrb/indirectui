@@ -1032,23 +1032,17 @@ angular.module('quoteManagement')
         $scope.toggleSteps();
       };
 
-      // Customer tab: the profile card shows these; the details grid shows the rest.
-      var profileKeys = ['customerName', 'tradingName', 'organizationType', 'channelType', 'customerType', 'customerSubType', 'industry', 'subIndustry'];
+      // Customer tab: the profile card shows these two; every other field appears under its own label in the grid.
+      var profileKeys = ['customerName', 'tradingName'];
       $scope.customerDetailFields = $scope.customerFields.filter(function(field) { return profileKeys.indexOf(field[0]) === -1; });
       $scope.customerInitial = function() {
         var name = $scope.displayValue($scope.customer.customerName);
         return /^[A-Za-z0-9]/.test(name) ? name.charAt(0).toUpperCase() : '•';
       };
-      // First price of an item for the one-line summary on a product card.
-      // The result is cached on the item so the template sees the same object on every digest.
-      $scope.primaryPrice = function(item) {
-        if (!item) return null;
-        if (item._price === undefined) {
-          var price = item.prices && item.prices[0];
-          item._price = !price || price.amount === null || price.amount === undefined || price.amount === ''
-            ? null : { amount: price.amount, currency: price.currency, period: price.recurringPeriod };
-        }
-        return item._price;
+      // Product and promotion statuses are shown as the backend sends them (only the capitalisation is tidied).
+      $scope.getItemStatusLabel = function(status) {
+        var value = $scope.displayValue(status);
+        return value === '—' ? value : $scope.humanize(value);
       };
 
       $scope.setTab = function(tab) {

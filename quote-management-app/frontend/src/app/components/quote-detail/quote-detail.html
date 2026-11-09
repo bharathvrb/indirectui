@@ -41,7 +41,7 @@
 
   <section class="card mb-4 qm-section-card qm-journey" ng-if="journey.total" aria-labelledby="journey-title">
     <div class="qm-journey-head">
-      <div class="qm-ring" ng-class="'is-' + journey.status" role="img" aria-label="{{journey.done}} of {{journey.total}} steps completed">
+      <div class="qm-ring" ng-class="'is-' + journey.status" role="img" aria-label="{{journey.done}} of {{journey.total}} steps finished">
         <svg viewBox="0 0 44 44" aria-hidden="true">
           <circle class="qm-ring-track" cx="22" cy="22" r="18"></circle>
           <circle class="qm-ring-value" cx="22" cy="22" r="18" ng-attr-stroke-dasharray="{{(journey.percent * 1.131).toFixed(1)}} 113.1"></circle>
@@ -53,15 +53,16 @@
         <p class="qm-journey-status" ng-switch="journey.status">
           <span ng-switch-when="failure" ng-if="!(isFailed() && journey.spotlight)">Stopped at <strong>{{(journey.spotlight || journey.current).label}}</strong></span>
           <span ng-switch-when="success">All {{journey.total}} steps completed</span>
-          <span ng-switch-when="pending">Waiting to start</span>
-          <span ng-switch-default>Now on <strong>{{journey.current.label}}</strong></span>
+          <span ng-switch-when="pending">All steps are pending</span>
+          <span ng-switch-default><span ng-if="journey.active">Running: </span><span ng-if="!journey.active">Next: </span><strong>{{journey.current.label}}</strong></span>
         </p>
       </div>
       <ul class="qm-journey-counts" aria-label="Step summary">
-        <li class="is-success"><b>{{journey.done}}</b> done</li>
+        <li class="is-success"><b>{{journey.succeeded}}</b> success</li>
+        <li class="is-skipped" ng-if="journey.skipped"><b>{{journey.skipped}}</b> skipped</li>
         <li class="is-failure" ng-if="journey.failed"><b>{{journey.failed}}</b> failed</li>
-        <li class="is-progress" ng-if="journey.active"><b>{{journey.active}}</b> running</li>
-        <li class="is-pending" ng-if="journey.pending"><b>{{journey.pending}}</b> waiting</li>
+        <li class="is-progress" ng-if="journey.active"><b>{{journey.active}}</b> in progress</li>
+        <li class="is-pending" ng-if="journey.pending"><b>{{journey.pending}}</b> pending</li>
       </ul>
       <button type="button" class="qm-steps-toggle" ng-if="!(isFailed() && journey.spotlight)" ng-click="toggleSteps()" aria-expanded="{{ui.stepsOpen}}" aria-controls="journey-steps">
         <i class="bi bi-list-check" aria-hidden="true"></i>{{ui.stepsOpen ? 'Hide steps' : 'Show all ' + journey.total + ' steps'}}<i class="bi bi-chevron-down qm-chev" aria-hidden="true"></i>
@@ -78,7 +79,7 @@
           <span>{{displayValue(journey.spotlight.error.errorMessage)}}</span>
         </p>
         <p class="qm-spotlight-meta">
-          <span class="qm-spotlight-stage">Step {{journey.spotlight.number}} of {{journey.total}}</span>
+          <span class="qm-spotlight-stage">Step {{journey.spotlight.order}}<span ng-if="journey.spotlight.stepOrder === null || journey.spotlight.stepOrder === undefined"> of {{journey.total}}</span></span>
           <span ng-if="journey.spotlight.scope && journey.spotlight.scope !== 'QUOTE'"> · {{humanize(journey.spotlight.scope)}} {{journey.spotlight.itemId}}</span>
           <span ng-if="journey.spotlight.startedAt"> · started {{journey.spotlight.startedAt | date:'dd MMM, HH:mm:ss'}}</span>
         </p>
@@ -107,7 +108,7 @@
             {{step.statusLabel}}<span ng-if="step.scope && step.scope !== 'QUOTE'"> · {{humanize(step.scope)}}</span>
           </span>
         </div>
-        <span class="qm-step-no" aria-hidden="true">{{step.number < 10 ? '0' + step.number : step.number}}</span>
+        <span class="qm-step-no" aria-hidden="true">{{step.order < 10 ? '0' + step.order : step.order}}</span>
       </li>
     </ol>
     </div></div>
@@ -158,13 +159,7 @@
       <span class="qm-profile-mark" aria-hidden="true">{{customerInitial()}}</span>
       <div class="qm-profile-main">
         <h3 class="qm-profile-name">{{displayValue(customer.customerName)}}</h3>
-        <p class="qm-profile-trading" ng-if="canCopy(customer.tradingName)">Trading as {{customer.tradingName}}</p>
-        <ul class="qm-tags">
-          <li ng-if="canCopy(customer.organizationType)"><i class="bi bi-building" aria-hidden="true"></i>{{customer.organizationType}}</li>
-          <li ng-if="canCopy(customer.customerType)"><i class="bi bi-person-badge" aria-hidden="true"></i>{{customer.customerType}}<span ng-if="canCopy(customer.customerSubType)"> · {{customer.customerSubType}}</span></li>
-          <li ng-if="canCopy(customer.industry)"><i class="bi bi-briefcase" aria-hidden="true"></i>{{customer.industry}}<span ng-if="canCopy(customer.subIndustry)"> · {{customer.subIndustry}}</span></li>
-          <li ng-if="canCopy(customer.channelType)"><i class="bi bi-diagram-2" aria-hidden="true"></i>{{customer.channelType}}</li>
-        </ul>
+        <p class="qm-profile-trading" ng-if="canCopy(customer.tradingName)"><span class="qm-lbl">Trading name</span> {{customer.tradingName}}</p>
       </div>
       <button class="btn btn-sm btn-outline-primary qm-profile-export" ng-click="exportCustomerCsv()" ng-disabled="!canExportCustomer()">
         <i class="bi bi-filetype-csv me-1" aria-hidden="true"></i>Export CSV
@@ -188,8 +183,8 @@
         </p>
       </div>
       <ul class="qm-tags qm-address-geo" ng-if="canCopy(customerAddress.latitude) || canCopy(customerAddress.longitude)">
-        <li><i class="bi bi-compass" aria-hidden="true"></i>Lat {{displayValue(customerAddress.latitude)}}</li>
-        <li><i class="bi bi-compass" aria-hidden="true"></i>Long {{displayValue(customerAddress.longitude)}}</li>
+        <li><b>Latitude</b>{{displayValue(customerAddress.latitude)}}</li>
+        <li><b>Longitude</b>{{displayValue(customerAddress.longitude)}}</li>
       </ul>
     </section>
 
@@ -215,9 +210,9 @@
             <code>{{displayValue(site.siteId)}}</code>
           </div>
           <div class="qm-site-tags">
-            <span class="badge bg-primary" ng-if="canCopy(site.siteType)">{{site.siteType}}</span>
-            <span class="badge" ng-if="canCopy(site.status)" ng-class="isRemoved(site) ? 'bg-danger' : 'bg-success'">{{isRemoved(site) ? 'Removed' : site.status}}</span>
-            <span class="badge bg-secondary" ng-if="canCopy(site.action)">{{site.action}}</span>
+            <span class="badge bg-primary" ng-if="canCopy(site.siteType)" title="Site type">{{site.siteType}}</span>
+            <span class="badge bg-secondary" ng-if="canCopy(site.status)" title="Status">{{site.status}}</span>
+            <span class="badge" ng-if="canCopy(site.action)" ng-class="isRemoved(site) ? 'bg-danger' : 'bg-secondary'" title="Action">{{site.action}}<span ng-if="isRemoved(site)"> · Removed</span></span>
           </div>
         </header>
         <p class="qm-site-address">
@@ -225,8 +220,8 @@
           <span ng-if="site.address.city">{{site.address.city}}</span><span ng-if="site.address.state">, {{site.address.state}}</span><span ng-if="site.address.postCode"> {{site.address.postCode}}</span><span ng-if="site.address.country"> · {{site.address.country}}</span>
         </p>
         <ul class="qm-tags qm-site-ids">
-          <li ng-if="canCopy(site.elocId)"><b>ELOC</b>{{site.elocId}}</li>
-          <li ng-if="canCopy(site.naxIdx9)"><b>NAX</b>{{site.naxIdx9}}</li>
+          <li ng-if="canCopy(site.elocId)"><b>ELOC ID</b>{{site.elocId}}</li>
+          <li ng-if="canCopy(site.naxIdx9)"><b>NAX IDX9</b>{{site.naxIdx9}}</li>
           <li ng-if="canCopy(site.marketId)"><b>Market</b>{{site.marketId}}</li>
           <li ng-if="canCopy(site.divisionId)"><b>Division</b>{{site.divisionId}}</li>
           <li ng-if="canCopy(site.regionId)"><b>Region</b>{{site.regionId}}</li>
@@ -283,17 +278,13 @@
                       title="View related errors" aria-label="View errors for {{item.itemId}}"><i class="bi bi-exclamation-triangle-fill"></i></button>
               <code>{{displayValue(item.itemId)}}</code>
             </div>
-            <div class="qm-product-price" ng-if="primaryPrice(item)">
-              <b>{{primaryPrice(item).amount | number:2}}</b>
-              <span>{{displayValue(primaryPrice(item).currency)}}<span ng-if="primaryPrice(item).period"> / {{primaryPrice(item).period}}</span></span>
-            </div>
           </div>
           <ul class="qm-tags qm-product-tags">
-            <li ng-if="canCopy(item.productOfferingType)">{{item.productOfferingType}}</li>
-            <li ng-class="isRemoved(item) ? 'is-danger' : ''">{{displayValue(item.action)}}<span ng-if="isRemoved(item)"> · Removed</span></li>
-            <li>Qty {{displayValue(item.quantity)}}</li>
-            <li ng-if="item.isBundle === true || item.isBundle === 1 || item.isBundle === 'true'">Bundle</li>
-            <li class="badge qm-status {{getStepStatusClass(item.status)}}">{{getStepStatusLabel(item.status)}}</li>
+            <li ng-if="canCopy(item.productOfferingType)"><b>Type</b>{{item.productOfferingType}}</li>
+            <li ng-class="isRemoved(item) ? 'is-danger' : ''"><b>Action</b>{{displayValue(item.action)}}<span ng-if="isRemoved(item)"> · Removed</span></li>
+            <li><b>Qty</b>{{displayValue(item.quantity)}}</li>
+            <li><b>Bundle</b>{{booleanLabel(item.isBundle)}}</li>
+            <li><b>Status</b>{{getItemStatusLabel(item.status)}}</li>
           </ul>
           <button class="qm-more" ng-click="item._detailsExpanded = !item._detailsExpanded" aria-expanded="{{item._detailsExpanded}}" aria-controls="{{item._key}}-details">
             <i class="bi" ng-class="item._detailsExpanded ? 'bi-chevron-up' : 'bi-chevron-down'" aria-hidden="true"></i>{{item._detailsExpanded ? 'Hide' : 'Show'}} details
@@ -346,9 +337,9 @@
             <span class="badge" ng-class="(promo.status || '').toUpperCase() === 'PENDING' ? 'bg-warning text-dark' : (promo.status || '').toUpperCase() === 'REJECTED' ? 'bg-danger' : 'bg-secondary'">{{displayValue(promo.status)}}</span>
           </header>
           <ul class="qm-tags">
-            <li ng-if="canCopy(promo.promotionType)">{{promo.promotionType}}</li>
-            <li ng-class="promo.qualified ? 'is-success' : ''"><i class="bi" ng-class="promo.qualified ? 'bi-check-circle-fill' : 'bi-circle'" aria-hidden="true"></i>Qualified: {{promo.qualified === null || promo.qualified === undefined ? '—' : (promo.qualified ? 'Yes' : 'No')}}</li>
-            <li ng-class="promo.applied ? 'is-success' : ''"><i class="bi" ng-class="promo.applied ? 'bi-check-circle-fill' : 'bi-circle'" aria-hidden="true"></i>Applied: {{promo.applied === null || promo.applied === undefined ? '—' : (promo.applied ? 'Yes' : 'No')}}</li>
+            <li ng-if="canCopy(promo.promotionType)"><b>Type</b>{{promo.promotionType}}</li>
+            <li ng-class="promo.qualified ? 'is-success' : ''"><b>Qualified</b>{{promo.qualified === null || promo.qualified === undefined ? '—' : (promo.qualified ? 'Yes' : 'No')}}</li>
+            <li ng-class="promo.applied ? 'is-success' : ''"><b>Applied</b>{{promo.applied === null || promo.applied === undefined ? '—' : (promo.applied ? 'Yes' : 'No')}}</li>
           </ul>
           <dl class="qm-kv-grid is-compact">
             <div class="qm-kv"><dt>Product item</dt><dd>{{displayValue(promo.productItemName)}} <small class="text-muted">{{displayValue(promo.productItemId)}}</small></dd></div>
@@ -452,15 +443,15 @@
       <li class="qm-error" ng-repeat="row in filteredErrors() track by row._key">
         <span class="qm-error-icon" aria-hidden="true"><i class="bi bi-bug-fill"></i></span>
         <div class="qm-error-main">
-          <div class="qm-error-top">
-            <span class="qm-error-source">{{displayValue(row.errorSource)}}</span>
-            <code>{{displayValue(row.errorCode)}}</code>
-            <span class="badge bg-danger" ng-if="canCopy(row.httpStatusCode)">HTTP {{row.httpStatusCode}}</span>
-            <span class="badge bg-secondary" ng-if="canCopy(row.retryAttempt)">Attempt {{row.retryAttempt}}</span>
-            <time class="qm-error-time">{{row.createdAt ? (row.createdAt | date:'dd MMM yyyy HH:mm:ss') : '—'}}</time>
-          </div>
-          <p class="qm-error-message">{{displayValue(row.errorMessage)}}</p>
-          <p class="qm-error-detail" ng-if="canCopy(row.errorDetail)">{{row.errorDetail}}</p>
+          <ul class="qm-tags qm-error-tags">
+            <li><b>Source</b>{{displayValue(row.errorSource)}}</li>
+            <li class="qm-error-code"><b>Code</b><code>{{displayValue(row.errorCode)}}</code></li>
+            <li ng-if="canCopy(row.httpStatusCode)"><b>HTTP status</b>{{row.httpStatusCode}}</li>
+            <li ng-if="canCopy(row.retryAttempt)"><b>Retry attempt</b>{{row.retryAttempt}}</li>
+            <li><b>Created</b>{{row.createdAt ? (row.createdAt | date:'dd MMM yyyy HH:mm:ss') : '—'}}</li>
+          </ul>
+          <p class="qm-error-line"><span class="qm-lbl">Message</span><span class="qm-error-message">{{displayValue(row.errorMessage)}}</span></p>
+          <p class="qm-error-line" ng-if="canCopy(row.errorDetail)"><span class="qm-lbl">Detail</span><span class="qm-error-detail">{{row.errorDetail}}</span></p>
           <div class="qm-error-links" ng-if="row.siteId || row.itemId || row.contactId !== null">
             <span class="qm-error-links-label">Jump to</span>
             <button class="qm-link-pill" ng-if="row.siteId" ng-click="jumpToSite(row.siteId)"><i class="bi bi-geo-alt" aria-hidden="true"></i>Site</button>
@@ -477,19 +468,19 @@
 
   <div ng-if="activeTab === 'events'" role="tabpanel" id="detail-panel-events" aria-labelledby="detail-tab-events">
     <div class="card qm-section-card" ng-if="events.length === 0"><div class="qm-empty-inline">Events: No records found</div></div>
-    <ol class="qm-timeline" aria-label="Events, oldest first">
-      <li class="qm-timeline-item" ng-repeat="eventRow in events track by $index" ng-class="eventRow.publishedToOnp ? 'is-ok' : 'is-fail'">
-        <span class="qm-timeline-dot" aria-hidden="true"><i class="bi" ng-class="eventRow.publishedToOnp ? 'bi-check-lg' : 'bi-x-lg'"></i></span>
+    <ol class="qm-timeline" aria-label="Events">
+      <li class="qm-timeline-item" ng-repeat="eventRow in events track by $index">
+        <span class="qm-timeline-dot" aria-hidden="true"></span>
         <div class="qm-timeline-card">
           <div class="qm-timeline-top">
             <h3>{{displayValue(eventRow.eventType)}}</h3>
-            <time>{{eventRow.eventTime ? (eventRow.eventTime | date:'dd MMM yyyy HH:mm:ss') : '—'}}</time>
+            <time><span class="qm-lbl">Event time</span> {{eventRow.eventTime ? (eventRow.eventTime | date:'dd MMM yyyy HH:mm:ss') : '—'}}</time>
           </div>
           <ul class="qm-tags">
-            <li ng-class="eventRow.publishedToOnp ? 'is-success' : 'is-danger'">Published to ONP: {{booleanLabel(eventRow.publishedToOnp)}}</li>
-            <li ng-if="canCopy(eventRow.onpResponseCode)">Response {{eventRow.onpResponseCode}}</li>
+            <li><b>Published to ONP</b>{{booleanLabel(eventRow.publishedToOnp)}}</li>
+            <li ng-if="canCopy(eventRow.onpResponseCode)"><b>ONP response code</b>{{eventRow.onpResponseCode}}</li>
           </ul>
-          <p class="qm-timeline-note" ng-if="canCopy(eventRow.onpResponseMessage)">{{eventRow.onpResponseMessage}}</p>
+          <p class="qm-timeline-note" ng-if="canCopy(eventRow.onpResponseMessage)"><span class="qm-lbl">ONP response message</span> {{eventRow.onpResponseMessage}}</p>
         </div>
       </li>
     </ol>
@@ -612,7 +603,7 @@
       <i class="bi bi-arrow-repeat is-retry" aria-hidden="true"></i>
       <div>
         <h2 id="retry-dialog-title">Retry {{stepLabel(retry.step.stepName)}}?</h2>
-        <p id="retry-dialog-help" class="small text-muted mb-0">The step runs again from where it failed. Later steps continue automatically if it succeeds.</p>
+        <p id="retry-dialog-help" class="small text-muted mb-0">QuoteData will be asked to run this step again.</p>
       </div>
     </div>
     <div class="qm-dialog-body">

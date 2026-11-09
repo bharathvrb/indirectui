@@ -273,7 +273,7 @@ describe('Unified quote search workspace', function() {
       resolve(0, rows);
       var mix = scope.stateMix();
       expect(mix.map(function(part) { return [part.key, part.count, part.percent]; })).toEqual([
-        ['failed', 2, 33.3], ['inProgress', 1, 16.7], ['pendingApproval', 1, 16.7], ['completed', 1, 16.7], ['other', 1, 16.7]
+        ['failed', 2, 33.3], ['inProgress', 1, 16.7], ['pendingApproval', 1, 16.7], ['completed', 1, 16.7], ['received', 1, 16.7]
       ]);
       expect(mix[0].label).toBe('Failed');
       expect(scope.stateMix()).toBe(mix);

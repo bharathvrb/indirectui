@@ -29,7 +29,7 @@ describe('qmContactCard', function() {
       isSigner: true, status: 'ACTIVE', emailAddress: 'jordan.lee@example.com', phoneNumber: '215-555-0100', phoneExtension: '12', mobileNumber: '215-555-0199' });
     expect(card.querySelector('.qm-contact-name').textContent).toBe('Jordan Lee');
     expect(card.querySelector('.qm-contact-avatar').textContent).toBe('JL');
-    expect(card.querySelector('.qm-contact-role').textContent).toBe('IT Director · Decision maker');
+    expect(card.querySelector('.qm-contact-role').textContent).toBe('IT Director');
     expect(card.querySelector('.qm-contact').id).toBe('c-1');
     expect(card.querySelector('.qm-contact').classList.contains('is-signer')).toBe(true);
     var badges = Array.prototype.map.call(card.querySelectorAll('.badge'), function(badge) { return badge.textContent.trim(); });
@@ -39,16 +39,17 @@ describe('qmContactCard', function() {
     expect(card.querySelector('a[href="tel:215-555-0199"]')).not.toBeNull();
   });
 
-  it('falls back sensibly when a contact has no name, no way to reach them, or a repeated role', function() {
-    var card = mount({ _key: 'c-2', role: 'SalesChannel', title: 'Same', roleName: 'Same', status: 'INACTIVE' });
-    expect(card.querySelector('.qm-contact-name').textContent).toBe('Same');
-    expect(card.querySelector('.qm-contact-avatar').textContent).toBe('S');
-    expect(card.querySelector('.qm-contact-role').textContent).toBe('Same');
+  it('never invents a name: a nameless contact says so, and shows only what was sent', function() {
+    var card = mount({ _key: 'c-2', role: 'SalesChannel', roleName: 'Channel', status: 'INACTIVE' });
+    expect(card.querySelector('.qm-contact-name').textContent).toBe('Name not provided');
+    expect(card.querySelector('.qm-contact-avatar').textContent).toBe('•');
+    expect(card.querySelector('.qm-contact-role')).toBeNull();
+    expect(card.querySelector('.badge.bg-primary').title).toBe('Role');
     expect(card.querySelector('.qm-contact-lines')).toBeNull();
     expect(card.querySelector('.badge.bg-secondary').textContent.trim()).toBe('INACTIVE');
     expect(card.querySelector('.qm-contact').classList.contains('is-signer')).toBe(false);
     card = mount({ _key: 'c-3' });
-    expect(card.querySelector('.qm-contact-name').textContent).toBe('Unnamed contact');
+    expect(card.querySelector('.qm-contact-name').textContent).toBe('Name not provided');
     expect(card.querySelector('.qm-contact-role')).toBeNull();
   });
 

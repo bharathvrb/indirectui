@@ -45,16 +45,17 @@ angular.module('quoteManagement')
       var mixCache = [];
       var mixMeta = [
         ['failed', 'Failed'], ['inProgress', 'In progress'], ['pendingApproval', 'Pending approval'],
-        ['completed', 'Completed'], ['other', 'Received']
+        ['completed', 'Completed'], ['received', 'Received'], ['other', 'Other']
       ];
       // Share of each state among the quotes on this page. The same array is returned until the counts change.
       $scope.stateMix = function() {
         var kpis = $scope.kpis, total = ($scope.quotes || []).length;
         if (!kpis || !total) return mixCache.length ? (mixCache = []) : mixCache;
         var counts = {
-          failed: kpis.failed, inProgress: kpis.inProgress, pendingApproval: kpis.pendingApproval, completed: kpis.completed
+          failed: kpis.failed, inProgress: kpis.inProgress, pendingApproval: kpis.pendingApproval, completed: kpis.completed,
+          received: kpis.received
         };
-        counts.other = Math.max(0, total - counts.failed - counts.inProgress - counts.pendingApproval - counts.completed);
+        counts.other = Math.max(0, total - counts.failed - counts.inProgress - counts.pendingApproval - counts.completed - counts.received);
         var parts = mixMeta.filter(function(meta) { return counts[meta[0]] > 0; }).map(function(meta) {
           return { key: meta[0], label: meta[1], count: counts[meta[0]], percent: Math.round(counts[meta[0]] * 1000 / total) / 10 };
         });

@@ -14,9 +14,9 @@ angular.module('quoteManagement')
       '      <p class="qm-contact-role" ng-if="$ctrl.subtitle()">{{$ctrl.subtitle()}}</p>',
       '    </div>',
       '    <div class="qm-contact-tags">',
-      '      <span class="badge bg-primary" ng-if="$ctrl.contact.role">{{$ctrl.contact.role}}</span>',
-      '      <span class="badge bg-success" ng-if="$ctrl.isSigner()"><i class="bi bi-patch-check-fill me-1" aria-hidden="true"></i>Signer</span>',
-      '      <span class="badge" ng-if="$ctrl.contact.status" ng-class="$ctrl.statusClass()">{{$ctrl.contact.status}}</span>',
+      '      <span class="badge bg-primary" ng-if="$ctrl.contact.role" title="Role">{{$ctrl.contact.role}}</span>',
+      '      <span class="badge bg-success" ng-if="$ctrl.isSigner()" title="Is Signer: Yes"><i class="bi bi-patch-check-fill me-1" aria-hidden="true"></i>Signer</span>',
+      '      <span class="badge" ng-if="$ctrl.contact.status" ng-class="$ctrl.statusClass()" title="Status">{{$ctrl.contact.status}}</span>',
       '    </div>',
       '  </header>',
       '  <ul class="qm-contact-lines" ng-if="$ctrl.contact.emailAddress || $ctrl.phone() || $ctrl.contact.mobileNumber">',
@@ -37,24 +37,19 @@ angular.module('quoteManagement')
       function text(value) { return value === null || value === undefined ? '' : String(value).trim(); }
       ctrl.name = function() {
         var full = [text(ctrl.contact.givenName), text(ctrl.contact.familyName)].filter(Boolean).join(' ');
-        return full || text(ctrl.contact.roleName) || text(ctrl.contact.role) || 'Unnamed contact';
+        return full || 'Name not provided';
       };
       ctrl.initials = function() {
         var parts = [text(ctrl.contact.givenName), text(ctrl.contact.familyName)].filter(Boolean);
-        var letters = parts.length ? parts.map(function(part) { return part.charAt(0); }).join('') : ctrl.name().charAt(0);
-        return letters.slice(0, 2).toUpperCase();
+        return parts.length ? parts.map(function(part) { return part.charAt(0); }).join('').slice(0, 2).toUpperCase() : '•';
       };
-      ctrl.subtitle = function() {
-        return [text(ctrl.contact.title), text(ctrl.contact.roleName)].filter(function(item, index, all) {
-          return item && all.indexOf(item) === index;
-        }).join(' · ');
-      };
+      ctrl.subtitle = function() { return text(ctrl.contact.title); };
       ctrl.isSigner = function() { return ctrl.contact.isSigner === true || ctrl.contact.isSigner === 1 || ctrl.contact.isSigner === 'true'; };
       ctrl.phone = function() {
         var number = text(ctrl.contact.phoneNumber);
         return number && text(ctrl.contact.phoneExtension) ? number + ' ext ' + text(ctrl.contact.phoneExtension) : number;
       };
-      ctrl.statusClass = function() { return text(ctrl.contact.status).toUpperCase() === 'ACTIVE' ? 'bg-success' : 'bg-secondary'; };
+      ctrl.statusClass = function() { return 'bg-secondary'; };
       ctrl.value = function(key) { return ctrl.read({ contact: ctrl.contact, key: key }); };
     }
   });
