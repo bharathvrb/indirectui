@@ -6,7 +6,7 @@
 // people who ask their system for reduced motion.
 angular.module('quoteManagement')
   .directive('qmPointerGlow', ['$window', function($window) {
-    var TARGETS = '.qm-start-card, .qm-kpi-card, .qm-step, .qm-id-cell, .qm-contract-card';
+    var TARGETS = '.qm-start-card, .qm-kpi-card, .qm-step, .qm-id-cell, .qm-contract-card, .qm-contact, .qm-site, .qm-promo, .qm-error';
     return {
       restrict: 'A',
       link: function(scope, element) {

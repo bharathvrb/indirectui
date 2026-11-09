@@ -243,6 +243,44 @@ describe('Unified quote detail workspace', function() {
     config.features = originalFeatures;
   });
 
+  it('shows customer, sites, products, errors and events as cards and keeps every field reachable', function() {
+    load(); render();
+    var panel = function(id) { scope.setTab(id); root.$digest(); return element[0].querySelector('#detail-panel-' + id); };
+    var customer = panel('customer');
+    expect(customer.querySelector('.qm-profile-name').textContent).toBe(scope.customer.customerName);
+    expect(customer.querySelectorAll('.qm-kv').length).toBe(scope.customerDetailFields.length);
+    expect(customer.querySelector('.qm-address')).not.toBeNull();
+    expect(customer.querySelectorAll('qm-contact-card').length).toBe(scope.customerContacts.length);
+    expect(panel('sites').querySelectorAll('.qm-site').length).toBe(scope.sites.length);
+    var siteCard = element[0].querySelector('.qm-site');
+    expect(siteCard.querySelector('.qm-kv-grid')).toBeNull();
+    angular.element(siteCard.querySelector('.qm-more')).triggerHandler('click');
+    expect(siteCard.querySelectorAll('.qm-kv-grid .qm-kv').length).toBeGreaterThan(8);
+    expect(panel('products').querySelectorAll('.qm-product').length).toBe(
+      scope.filteredSites().reduce(function(total, site) { return total + site.visibleItems.length; }, 0));
+    expect(panel('errors').querySelectorAll('.qm-error').length).toBe(scope.filteredErrors().length);
+    expect(panel('events').querySelectorAll('.qm-timeline-item').length).toBe(scope.events.length);
+  });
+
+  it('keeps customer profile fields out of the details grid and caches the one-line price', function() {
+    load(); render();
+    var shown = scope.customerDetailFields.map(function(field) { return field[0]; });
+    ['customerName', 'tradingName', 'organizationType', 'channelType', 'customerType', 'customerSubType', 'industry', 'subIndustry']
+      .forEach(function(key) { expect(shown).not.toContain(key); });
+    expect(shown.length + 8).toBe(scope.customerFields.length);
+    scope.customer.customerName = 'acme';
+    expect(scope.customerInitial()).toBe('A');
+    scope.customer.customerName = '';
+    expect(scope.customerInitial()).toBe('•');
+    var item = { prices: [{ amount: 12, currency: 'USD', recurringPeriod: 'month' }] };
+    var first = scope.primaryPrice(item);
+    expect(first).toEqual({ amount: 12, currency: 'USD', period: 'month' });
+    expect(scope.primaryPrice(item)).toBe(first);
+    expect(scope.primaryPrice({ prices: [] })).toBeNull();
+    expect(scope.primaryPrice({ prices: [{ amount: null }] })).toBeNull();
+    expect(scope.primaryPrice(null)).toBeNull();
+  });
+
   it('supports arrow, Home and End tab navigation', function() {
     load(); render();
     scope.tabKeydown(key('ArrowRight'), 0); root.$digest(); flushFocus();

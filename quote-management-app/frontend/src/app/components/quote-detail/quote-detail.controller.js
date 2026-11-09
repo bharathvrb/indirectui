@@ -63,7 +63,7 @@ angular.module('quoteManagement')
         { id: 'contract', label: 'Contracts', icon: 'bi-file-earmark-text' }
       ];
       $scope.journey = QuoteJourney.build([]);
-      $scope.ui = { compact: false };
+      $scope.ui = { compact: false, stepsOpen: false };
       $scope.copiedValue = '';
       // Step retry (UI-11): visible everywhere a step failed; enabled only by features.retryEnabled.
       $scope.retryEnabled = !!($window.APP_CONFIG && $window.APP_CONFIG.features && $window.APP_CONFIG.features.retryEnabled === true);
@@ -1023,6 +1023,32 @@ angular.module('quoteManagement')
       $scope.getStepStatusLabel = function(stepStatus) {
         var value = normalizeStepStatus(stepStatus);
         return value ? QuoteJourney.statusInfo(value).label : '—';
+      };
+
+      // The step grid stays closed until asked for; the failure panel and the journey header both open it.
+      $scope.toggleSteps = function() { $scope.ui.stepsOpen = !$scope.ui.stepsOpen; };
+      $scope.spotlightClick = function(event) {
+        if (event && event.target && event.target.closest && event.target.closest('button, a')) return;
+        $scope.toggleSteps();
+      };
+
+      // Customer tab: the profile card shows these; the details grid shows the rest.
+      var profileKeys = ['customerName', 'tradingName', 'organizationType', 'channelType', 'customerType', 'customerSubType', 'industry', 'subIndustry'];
+      $scope.customerDetailFields = $scope.customerFields.filter(function(field) { return profileKeys.indexOf(field[0]) === -1; });
+      $scope.customerInitial = function() {
+        var name = $scope.displayValue($scope.customer.customerName);
+        return /^[A-Za-z0-9]/.test(name) ? name.charAt(0).toUpperCase() : '•';
+      };
+      // First price of an item for the one-line summary on a product card.
+      // The result is cached on the item so the template sees the same object on every digest.
+      $scope.primaryPrice = function(item) {
+        if (!item) return null;
+        if (item._price === undefined) {
+          var price = item.prices && item.prices[0];
+          item._price = !price || price.amount === null || price.amount === undefined || price.amount === ''
+            ? null : { amount: price.amount, currency: price.currency, period: price.recurringPeriod };
+        }
+        return item._price;
       };
 
       $scope.setTab = function(tab) {
