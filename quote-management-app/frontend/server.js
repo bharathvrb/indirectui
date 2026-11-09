@@ -48,8 +48,8 @@ function createServer(options = {}) {
     const server = http.createServer((req, res) => {
         Object.keys(headers).forEach(name => res.setHeader(name, headers[name]));
         const pathname = req.url.split('?')[0];
-        // Liveness probe for load balancers and process managers; reveals nothing.
-        if (pathname === '/healthz' && (req.method === 'GET' || req.method === 'HEAD')) {
+        // Liveness probe for load balancers and process managers (/health is the name Cloud Foundry apps use); reveals nothing.
+        if ((pathname === '/healthz' || pathname === '/health') && (req.method === 'GET' || req.method === 'HEAD')) {
             res.setHeader('Cache-Control', 'no-store');
             res.setHeader('Content-Type', 'application/json; charset=utf-8');
             return res.end(req.method === 'HEAD' ? undefined : '{"status":"ok"}');
@@ -63,6 +63,34 @@ function createServer(options = {}) {
         next();
     });
     return { server, listen: (...args) => server.listen(...args) };
+}
+
+// Cloud Foundry hands the app its port in PORT and expects it to listen on every interface, so on the
+// platform (VCAP_APPLICATION is set) PORT and 0.0.0.0 win even over a server.properties that says 127.0.0.1:8081.
+// Elsewhere PORT alone also opens every interface; with nothing set the server stays on 127.0.0.1:8081.
+function listenSettings(env = process.env) {
+    const onCloud = !!env.VCAP_APPLICATION && !!env.PORT;
+    const port = Number(onCloud ? env.PORT : env.QM_PORT || env.PORT || 8081);
+    return {
+        port: Number.isInteger(port) && port > 0 && port < 65536 ? port : 8081,
+        host: onCloud ? '0.0.0.0' : env.QM_HOST || (env.PORT ? '0.0.0.0' : '127.0.0.1')
+    };
+}
+
+// On Cloud Foundry the platform names the app's route in VCAP_APPLICATION. Use the first plain host route as
+// the public https origin so QM_PUBLIC_ORIGIN need not be typed. The value comes from the platform, never from
+// a request. Set QM_PUBLIC_ORIGIN yourself for a custom domain or when the app has several routes.
+function cloudOrigin(env = process.env) {
+    if (!env.VCAP_APPLICATION) {
+        return null;
+    }
+    try {
+        const uris = JSON.parse(env.VCAP_APPLICATION).application_uris;
+        const host = Array.isArray(uris) ? uris.find(uri => typeof uri === 'string' && /^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$/i.test(uri)) : null;
+        return host ? 'https://' + host.toLowerCase() : null;
+    } catch (error) {
+        return null;
+    }
 }
 
 // Loads KEY=VALUE lines from a local properties file into process.env.
@@ -104,13 +132,19 @@ if (require.main === module) {
     const propertiesFile = process.env.QM_PROPERTIES_FILE || path.join(__dirname, 'server.properties');
     const loaded = loadProperties(propertiesFile);
     if (loaded.length) console.log('Loaded ' + loaded.length + ' setting(s) from ' + path.basename(propertiesFile) + ': ' + loaded.join(', '));
+    if (!process.env.QM_PUBLIC_ORIGIN) {
+        const derived = cloudOrigin();
+        if (derived) {
+            process.env.QM_PUBLIC_ORIGIN = derived;
+            console.log('Public address taken from the platform route: ' + derived);
+        }
+    }
     const server = createServer({ proxy: { log: console.log } });
     server.server.on('error', function(error) {
         console.error('Could not start the frontend server: ' + error.message);
         process.exitCode = 1;
     });
-    const host = process.env.QM_HOST || '127.0.0.1';
-    const port = Number(process.env.QM_PORT || 8081);
+    const { host, port } = listenSettings();
     const external = createLocalAuth.publicOrigin();
     if (process.env.QM_PUBLIC_ORIGIN && !external) {
         console.warn('QM_PUBLIC_ORIGIN must be an origin such as https://quotes.example.com; it is ignored.');
@@ -136,3 +170,5 @@ if (require.main === module) {
 module.exports = createServer;
 module.exports.DEFAULT_CSP = DEFAULT_CSP;
 module.exports.loadProperties = loadProperties;
+module.exports.listenSettings = listenSettings;
+module.exports.cloudOrigin = cloudOrigin;

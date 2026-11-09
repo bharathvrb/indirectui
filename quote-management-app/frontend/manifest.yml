@@ -1,0 +1,33 @@
+---
+# Cloud Foundry deployment for the OMW Quote Management UI (same conventions as onp-onboard-ui).
+#   cf push                      uses this file
+#   cf set-env ... / cf restage  for the secrets listed in CF_DEPLOY.md (never put them here)
+applications:
+  - name: omw-quote-management-ui
+    memory: 512M
+    disk_quota: 1G
+    instances: 1                # sign-in sessions are kept in memory, so keep one instance (see CF_DEPLOY.md)
+    buildpack: nodejs_buildpack
+    stack: cflinuxfs4
+    # `npm start` builds the UI (prestart: gulp build) and then runs node server.js.
+    command: npm start
+    timeout: 180
+    health-check-type: http
+    health-check-http-endpoint: /health
+    env:
+      NODE_ENV: production
+      # The build needs the dev dependencies (gulp).
+      NPM_CONFIG_PRODUCTION: "false"
+      NPM_CONFIG_INCLUDE: dev
+      # Public settings only. Secrets are set with `cf set-env`.
+      QUOTEDATA_CLIENT_ID: orion_dev
+      QUOTEDATA_SCOPE: orion:orion-dev
+      QUOTEDATA_TOKEN_URL: https://sat-ci.codebig2.net/v2/ws/token.oauth2
+      QUOTEDATA_BASE_URL: https://quotedata-flx.as-g8.cf.comcast.net/quotedata/v1
+      QUOTEDATA_RETRY_ENABLED: "false"
+      SSO_CLIENT_ID: ae57677b-0389-4a92-bbf5-078156e0886b
+      SSO_TENANT_ID: 906aefe9-76a7-4f65-b82d-5ec20775d5aa
+      # Count sign-in attempts per real client (the router appends the client address).
+      QM_TRUST_PROXY: "true"
+      # QM_PUBLIC_ORIGIN is taken from the app's route automatically. Set it only for a custom domain:
+      # QM_PUBLIC_ORIGIN: https://quotes.example.com

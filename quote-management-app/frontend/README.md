@@ -6,7 +6,7 @@ AngularJS + Bootstrap workspace for OMW indirect quote requests, served by a Nod
 
 | Command | What it does |
 | --- | --- |
-| `npm ci` | Install dependencies (Node.js 22+). |
+| `npm ci` | Install dependencies (Node.js 20+). |
 | `npm start` | Build into `dist/`, load `server.properties`, serve on http://127.0.0.1:8081/ (or the configured `QM_HOST`/`QM_PORT`). |
 | `npm run dev` | Rebuild on every change under `src/` (run alongside `npm start`, then refresh the browser). |
 | `npm test` | Karma/Jasmine UI specs in headless Chrome. Set `CHROME_BIN` if Chrome/Edge is not auto-detected. |
@@ -104,11 +104,13 @@ Provider error bodies and secrets are never sent to the browser; the UI shows th
 
 ## Production deployment
 
-1. On a build machine: `npm ci && npm run build` (Node.js 22+).
+**Cloud Foundry:** `manifest.yml`, `.cfignore` and `CF_DEPLOY.md` in this folder deploy the app the same way as the Orion Notification Platform UI: `cf push --no-start`, set the secrets with `cf set-env`, then `cf start`. See `CF_DEPLOY.md` for the steps, settings and troubleshooting. The rest of this section describes running on any other host.
+
+1. On a build machine: `npm ci && npm run build` (Node.js 20+).
 2. Copy `server.js`, `static-files.js`, `local-auth.js`, `quote-data-proxy.js`, `sso-identity.js`, `package.json`, `package-lock.json`, `server.properties` and `dist/` to the server, then run `npm ci --omit=dev` there (installs only the runtime packages, including `jose`).
 3. Fill in `server.properties` (or set real environment variables) and start with `NODE_ENV=production node server.js` under a process manager (systemd, pm2, a container). `npm start` also works but rebuilds first and needs the dev dependencies.
 4. Set `QM_HOST=0.0.0.0` and `QM_PUBLIC_ORIGIN` to the address users open. Put TLS in front (reverse proxy or load balancer) and use an `https://` origin so cookies are Secure and the server sends `Strict-Transport-Security`.
-5. Point the health check at `GET /healthz` (answers `{"status":"ok"}` without signing in and reveals nothing else). `SIGINT`/`SIGTERM` finish in-flight requests before the process exits.
+5. Point the health check at `GET /health` or `/healthz` (answers `{"status":"ok"}` without signing in and reveals nothing else). `SIGINT`/`SIGTERM` finish in-flight requests before the process exits.
 6. To show the Retry button, set **both** `QUOTEDATA_RETRY_ENABLED=true` in `server.properties` and `features.retryEnabled: true` in `dist/config.js` (it is copied from `src/config.js`).
 
 Every response carries `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, a `Permissions-Policy`, and Cross-Origin-Opener/Resource-Policy headers. The default Content-Security-Policy (`DEFAULT_CSP` in `server.js`) allows scripts, styles, fonts and images from the app only, plus Microsoft sign-in for SSO; no inline or `eval` scripts are used. If a new feature needs another origin, set `QM_CSP` to a full replacement policy, or `QM_CSP=off` while diagnosing a blocked request.
