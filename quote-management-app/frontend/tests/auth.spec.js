@@ -259,3 +259,37 @@ describe('Workspace theme preferences', function() {
             .toBe(window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
     });
 });
+
+describe('Workspace text size preferences', function() {
+    'use strict';
+    var previous;
+    beforeEach(function() { previous = window.QuoteTheme.getTextSize(); });
+    afterEach(function() { window.QuoteTheme.setTextSize(previous); });
+
+    it('applies and remembers an explicit size', function() {
+        ['compact', 'large', 'normal'].forEach(function(size) {
+            window.QuoteTheme.setTextSize(size);
+            expect(document.documentElement.getAttribute('data-text-size')).toBe(size);
+            expect(window.QuoteTheme.getResolvedTextSize()).toBe(size);
+            expect(window.localStorage.getItem('omw-text-size')).toBe(size);
+        });
+    });
+
+    it('chooses a size from the viewport width while on auto', function() {
+        window.QuoteTheme.setTextSize('auto');
+        expect(window.QuoteTheme.getTextSize()).toBe('auto');
+        expect(document.documentElement.getAttribute('data-text-size'))
+            .toBe(window.innerWidth < 1600 ? 'compact' : 'normal');
+    });
+
+    it('rejects an unsupported size', function() {
+        expect(function() { window.QuoteTheme.setTextSize('huge'); }).toThrow();
+    });
+
+    it('scales the whole type scale from the root size', function() {
+        var css = Array.prototype.map.call(document.styleSheets, function(sheet) {
+            try { return Array.prototype.map.call(sheet.cssRules, function(r) { return r.cssText; }).join(''); } catch (e) { return ''; }
+        }).join('');
+        expect(css).not.toMatch(/--fs-[a-z0-9]+:\s*\d+(\.\d+)?px/);
+    });
+});
