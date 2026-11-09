@@ -2,6 +2,9 @@
 window.APP_CONFIG = Object.assign({
     // Same-origin server proxy; it holds the QuoteData service credentials (see server.properties).
     apiBaseUrl: '/api',
+    // Home shows the default list of quotes (25 rows, newest first). false turns the list off and Home points to Search.
+    defaultListEnabled: true,
+    // true: the Search page finds one quote by ID only. false: it also offers "Other fields" (free-text search).
     quoteDataLookupOnly: true,
     contractDownloadUrl: '',
     supportUrl: '',
@@ -21,6 +24,6 @@ window.AUTH_CONFIG = Object.assign({
 }, window.AUTH_CONFIG || {});
 
 // Case links can use clean paths; the existing AngularJS router uses hash URLs.
-if (/^\/(?:quotes(?:\/[^/]+)?|support-tickets|login)\/?$/.test(window.location.pathname)) {
+if (/^\/(?:quotes(?:\/[^/]+)?|search|support-tickets|login)\/?$/.test(window.location.pathname)) {
     window.history.replaceState(null, '', '/#!' + window.location.pathname.replace(/\/$/, '') + window.location.search);
 }

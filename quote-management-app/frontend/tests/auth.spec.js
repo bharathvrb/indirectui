@@ -57,6 +57,13 @@ describe('Common SSO workspace', function() {
         expect(auth.getReturnUrl()).toBe('/quotes/Q-123?tab=errors');
     });
 
+    it('accepts the Search page as a return destination', function() {
+        location.search('returnTo', '/search?search=ABC');
+        expect(auth.getReturnUrl()).toBe('/search?search=ABC');
+        location.search('returnTo', '/search/extra');
+        expect(auth.getReturnUrl()).toBe('/quotes');
+    });
+
     it('rejects external or unrecognized return destinations', function() {
         ['https://outside.test/', '//outside.test', '/login', '/quotes\\outside', '/unknown'].forEach(function(target) {
             location.search('returnTo', target);

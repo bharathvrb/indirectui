@@ -1,8 +1,8 @@
 'use strict';
 
 angular.module('quoteManagement')
-  .controller('QuoteListCtrl', ['$scope', '$location', '$timeout', '$interval', 'QuoteViewService',
-    function($scope, $location, $timeout, $interval, QuoteViewService) {
+  .controller('QuoteListCtrl', ['$scope', '$location', '$timeout', '$interval', '$route', 'QuoteViewService',
+    function($scope, $location, $timeout, $interval, $route, QuoteViewService) {
       var view = QuoteViewService;
       var searchTimer;
       var lastQuery;
@@ -19,6 +19,15 @@ angular.module('quoteManagement')
       $scope.searchError = null;
       $scope.searchBy = 'auto';
       $scope.lookupOnly = !!(window.APP_CONFIG && window.APP_CONFIG.quoteDataLookupOnly);
+      // The route says which page this is: 'home' (default list and filters), 'search' (the search features),
+      // or nothing, which shows both together.
+      var route = $route.current && $route.current.$$route;
+      $scope.pageMode = route && route.mode || null;
+      // Home always lists; quoteDataLookupOnly only limits what the Search page offers.
+      if ($scope.pageMode === 'home') $scope.lookupOnly = false;
+      // Search never lists without something to look for. Home can be switched off with defaultListEnabled: false.
+      $scope.requireTerm = $scope.pageMode === 'search';
+      $scope.listEnabled = !($scope.pageMode === 'home' && window.APP_CONFIG && window.APP_CONFIG.defaultListEnabled === false);
       var refreshSeconds = view.integer(window.APP_CONFIG && window.APP_CONFIG.autoRefreshSeconds, 60, 15);
       var refreshTimer = null;
       // Auto-refresh is off by default (UI-01); the interval is configurable in config.js.
@@ -181,6 +190,10 @@ angular.module('quoteManagement')
       function validate() {
         $scope.searchError = ['quoteRequestId', 'externalId', 'proposalId'].indexOf($scope.searchBy) !== -1 && !view.text($scope.searchTerm)
           ? 'Enter a ' + { quoteRequestId: 'quote request ID', externalId: 'external ID', proposalId: 'proposal ID' }[$scope.searchBy] + '.' : null;
+        if (!$scope.listEnabled || ($scope.requireTerm && !$scope.searchError && !view.text($scope.searchTerm))) {
+          $scope.validationError = null;
+          return false;
+        }
         if ($scope.lookupOnly && (!view.text($scope.searchTerm) || $scope.searchBy === 'text')) {
           if ($scope.searchBy === 'text') $scope.searchError = 'This backend requires a quote request ID, external ID, or proposal ID.';
           $scope.validationError = null;
@@ -284,7 +297,7 @@ angular.module('quoteManagement')
         $scope.applyFilters();
       };
       $scope.$on('$routeUpdate', function() {
-        if ($location.path() !== '/quotes') return;
+        if ($location.path() !== '/quotes' && $location.path() !== '/search') return;
         var query = locationQuery();
         if (angular.equals(query, lastQuery)) return;
         cancelSearch();

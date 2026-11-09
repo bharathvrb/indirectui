@@ -35,7 +35,7 @@ angular.module('quoteManagement')
 
         function validReturnUrl(url) {
             if (typeof url !== 'string' || /[\\#]/.test(url)) return false;
-            return /^(\/quotes(?:\/[^/?]+)?|\/support-tickets)(?:\?.*)?$/.test(url);
+            return /^(\/quotes(?:\/[^/?]+)?|\/search|\/support-tickets)(?:\?.*)?$/.test(url);
         }
 
         function requireLogin(reason) {

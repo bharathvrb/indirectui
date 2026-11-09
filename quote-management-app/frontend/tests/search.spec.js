@@ -77,11 +77,14 @@ describe('Unified quote search workspace', function() {
     scope = null;
   });
 
-  function start(name, url) {
-    location.url(url || '/quotes');
+  // Home (/quotes) shows the default list; the search features live on /search. Specs for lookup-only
+  // deployments and for typing in the search box therefore start on /search.
+  // route: pass {} to run the controller with no page mode, which shows the search box and the filters together.
+  function start(name, url, route) {
+    location.url(url || (window.APP_CONFIG.quoteDataLookupOnly ? '/search' : '/quotes'));
     root.$digest();
     scope = root.$new();
-    controller(name || 'QuoteListCtrl', { $scope: scope });
+    controller(name || 'QuoteListCtrl', route ? { $scope: scope, $route: route } : { $scope: scope });
     root.$digest();
   }
 
@@ -547,7 +550,7 @@ describe('Unified quote search workspace', function() {
   });
 
   it('visibly pauses list filters during exact lookup and restores them for general search', function() {
-    start('QuoteListCtrl', '/quotes?search=EXAMPLE-ID&searchBy=quoteRequestId&state=COMPLETED');
+    start('QuoteListCtrl', '/search?search=EXAMPLE-ID&searchBy=quoteRequestId&state=COMPLETED', {});
     element = compile(templates[templatePaths[1]])(scope);
     root.$digest();
     expect(service.getQuote).toHaveBeenCalledOnceWith('EXAMPLE-ID');
@@ -895,6 +898,93 @@ describe('Unified quote search workspace', function() {
     expect(requests[1].params.createdFrom).toBeUndefined();
   });
 
+  describe('Home and Search are separate pages', function() {
+    function mount() {
+      element = compile(templates[templatePaths[1]])(scope);
+      root.$digest();
+      return element[0];
+    }
+    function hidden(node) { return node.classList.contains('ng-hide'); }
+
+    it('Home lists the default 25 newest quotes at once and shows filters, tiles and a link to Search, not the search box', function() {
+      window.APP_CONFIG.quoteDataLookupOnly = true; // only limits the Search page
+      start('QuoteListCtrl', '/quotes');
+      expect(scope.pageMode).toBe('home');
+      expect(scope.lookupOnly).toBe(false);
+      expect(requests.length).toBe(1);
+      expect(requests[0].params).toEqual({ page: 0, size: 25, sort: 'createdAt,desc' });
+      var page = mount();
+      expect(hidden(page.querySelector('.qm-omnibar-wrap'))).toBe(true);
+      expect(page.querySelector('#quote-state')).not.toBeNull();
+      expect(page.querySelector('.qm-kpi-card')).not.toBeNull();
+      expect(page.querySelector('.qm-start')).toBeNull();
+      expect(page.querySelector('.qm-title').textContent).toBe('Quotes');
+      expect(page.querySelector('a.qm-search-link').getAttribute('href')).toBe('#!/search');
+    });
+
+    it('Search shows the search box and lookup cards, makes no request until there is something to look for, and has no filters', function() {
+      start('QuoteListCtrl', '/search');
+      expect(scope.pageMode).toBe('search');
+      expect(requests.length).toBe(0);
+      expect(scope.dataReady).toBe(false);
+      var page = mount();
+      expect(hidden(page.querySelector('.qm-omnibar-wrap'))).toBe(false);
+      expect(page.querySelectorAll('.qm-start-card').length).toBe(4);
+      expect(page.querySelector('#quote-state')).toBeNull();
+      expect(page.querySelector('.qm-kpi-card')).toBeNull();
+      expect(page.querySelector('.qm-title').textContent).toBe('Search');
+      expect(page.querySelector('.qm-greeting')).toBeNull();
+      expect(page.textContent).toContain('Enter something to search for.');
+      expect(page.querySelector('.qm-idle-hidden quote-table')).not.toBeNull();
+    });
+
+    it('typing into the Search page search box reaches the controller (the inputs are not in a child scope)', function() {
+      start('QuoteListCtrl', '/search');
+      var page = mount();
+      var input = angular.element(page.querySelector('#quote-search'));
+      input.val('hello'); input.triggerHandler('input');
+      angular.element(page.querySelector('#quote-search-type')).val('externalId').triggerHandler('change');
+      expect(scope.searchTerm).toBe('hello');
+      expect(scope.searchBy).toBe('externalId');
+    });
+
+    it('Search with an ID makes one lookup and hides the start cards once a quote has loaded', function() {
+      window.APP_CONFIG.quoteDataLookupOnly = true;
+      start('QuoteListCtrl', '/search?search=PARTNER-1&searchBy=externalId');
+      expect(service.findQuote).toHaveBeenCalledOnceWith({ externalId: 'PARTNER-1' });
+      requests[0].deferred.resolve({ data: { quoteRequestId: 'Q-1', externalId: 'PARTNER-1', state: 'FAILED' } });
+      root.$digest();
+      var page = mount();
+      expect(page.querySelector('.qm-start')).toBeNull();
+      expect(page.querySelector('.qm-idle-hidden')).toBeNull();
+      expect(page.querySelector('.qm-kpi-card')).toBeNull();
+    });
+
+    it('moves an old /quotes?search= link to the Search page, keeping the whole query', function() {
+      location.url('/quotes?search=OLD-1&searchBy=externalId&state=FAILED');
+      root.$digest();
+      expect(location.path()).toBe('/search');
+      expect(location.search()).toEqual({ search: 'OLD-1', searchBy: 'externalId', state: 'FAILED' });
+      location.url('/quotes?state=FAILED');
+      root.$digest();
+      expect(location.path()).toBe('/quotes');
+    });
+
+    it('Home can be switched off with defaultListEnabled: false and then points to Search without any request', function() {
+      var original = window.APP_CONFIG.defaultListEnabled;
+      window.APP_CONFIG.defaultListEnabled = false;
+      start('QuoteListCtrl', '/quotes');
+      expect(requests.length).toBe(0);
+      expect(scope.listEnabled).toBe(false);
+      var page = mount();
+      expect(page.textContent).toContain('The default list is turned off');
+      expect(page.querySelector('.qm-filter-card')).toBeNull();
+      expect(page.querySelector('.qm-action-btn')).toBeNull();
+      expect(page.querySelector('.qm-idle-hidden quote-table')).not.toBeNull();
+      window.APP_CONFIG.defaultListEnabled = original;
+    });
+  });
+
   describe('home page', function() {
     function mount() {
       element = compile(templates[templatePaths[1]])(scope);
@@ -1001,8 +1091,9 @@ describe('Unified quote search workspace', function() {
     });
   });
 
-  it('uses the visible form submit to flush the debounce exactly once', function() {
-    start();
+  it('uses the visible form submit on the Search page to flush the debounce exactly once', function() {
+    start('QuoteListCtrl', '/search');
+    expect(requests.length).toBe(0);
     element = compile(templates[templatePaths[1]])(scope);
     root.$digest();
     var input = angular.element(element[0].querySelector('#quote-search'));
@@ -1010,15 +1101,14 @@ describe('Unified quote search workspace', function() {
     input.triggerHandler('input');
     angular.element(element[0].querySelector('form')).triggerHandler('submit');
     timeout.flush(300);
-    expect(requests.length).toBe(2);
-    expect(requests[1].params.search).toBe('submitted');
+    expect(requests.length).toBe(1);
+    expect(requests[0].params.search).toBe('submitted');
     expect(element[0].querySelector('button[type="submit"]').textContent).toBe('Search');
   });
 
-  it('restores Back/Forward URL filters and pages with exactly one request per navigation', function() {
-    start('QuoteListCtrl', '/quotes?search=first&state=FAILED&page=2');
+  it('restores Back/Forward URL filters and pages on Home with exactly one request per navigation', function() {
+    start('QuoteListCtrl', '/quotes?state=FAILED&page=2');
     var firstUrl = location.url();
-    scope.searchTerm = 'second';
     scope.filters.state = 'COMPLETED';
     scope.applyFilters();
     root.$digest();
@@ -1027,15 +1117,33 @@ describe('Unified quote search workspace', function() {
     location.url(firstUrl);
     root.$digest();
     expect(requests.length).toBe(3);
-    expect(scope.searchTerm).toBe('first');
     expect(scope.filters.state).toBe('FAILED');
     expect(requests[2].params.page).toBe(2);
     location.url(secondUrl);
     root.$digest();
     expect(requests.length).toBe(4);
-    expect(scope.searchTerm).toBe('second');
     expect(requests[3].params.state).toBe('COMPLETED');
     expect(requests[3].params.page).toBe(0);
+  });
+
+  it('restores Back/Forward search terms and pages on the Search page with exactly one request per navigation', function() {
+    start('QuoteListCtrl', '/search?search=first&page=2');
+    var firstUrl = location.url();
+    scope.searchTerm = 'second';
+    scope.applyFilters();
+    root.$digest();
+    var secondUrl = location.url();
+    expect(requests.length).toBe(2);
+    location.url(firstUrl);
+    root.$digest();
+    expect(requests.length).toBe(3);
+    expect(scope.searchTerm).toBe('first');
+    expect(requests[2].params.page).toBe(2);
+    location.url(secondUrl);
+    root.$digest();
+    expect(requests.length).toBe(4);
+    expect(scope.searchTerm).toBe('second');
+    expect(requests[3].params.search).toBe('second');
   });
 
   it('cancels pending search text when navigation restores another URL', function() {

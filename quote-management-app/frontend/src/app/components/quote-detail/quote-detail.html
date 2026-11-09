@@ -1,5 +1,5 @@
 <div class="container-fluid quote-detail-screen qm-page-shell" ng-if="!loading && quote">
-  <nav aria-label="Breadcrumb" class="qm-breadcrumb mb-3"><a href="#!/quotes"><i class="bi bi-grid-1x2 me-1" aria-hidden="true"></i>Quotes</a><span aria-hidden="true" class="mx-2">/</span><span aria-current="page">{{displayValue(quote.externalId || quote.quoteRequestId)}}</span></nav>
+  <nav aria-label="Breadcrumb" class="qm-breadcrumb mb-3"><a href="#!/quotes"><i class="bi bi-house-door me-1" aria-hidden="true"></i>Home</a><span aria-hidden="true" class="mx-2">/</span><span aria-current="page">{{displayValue(quote.externalId || quote.quoteRequestId)}}</span></nav>
   <div class="alert alert-success d-flex align-items-center gap-2" role="status" ng-if="completionNotice"><i class="bi bi-check-circle-fill" aria-hidden="true"></i>{{completionNotice}}</div>
 
   <section class="qm-quote-head" aria-labelledby="quote-detail-heading" qm-hero-watch="ui.compact">
@@ -649,7 +649,7 @@
       <a ng-if="supportUrl" ng-href="{{supportUrl}}" target="_blank" rel="noopener noreferrer" class="d-inline-block mt-2">Contact support</a>
     </div>
     <div class="d-flex flex-wrap justify-content-center gap-2">
-      <button class="btn btn-secondary" ng-click="goBack()"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back to Quotes</button>
+      <button class="btn btn-secondary" ng-click="goBack()"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back to Home</button>
       <button class="btn btn-outline-primary" ng-click="loadQuote()" ng-if="error.indexOf('Unable to load') === 0"><i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>Try loading again</button>
     </div>
   </div>

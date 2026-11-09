@@ -8,9 +8,21 @@ angular.module('quoteManagement', ['ngRoute'])
                 templateUrl: 'app/components/login/login.html', controller: 'LoginCtrl', title: 'Welcome'
             })
             .when('/', { redirectTo: '/login' })
+            // Home: the default list of quotes. Search: the search features (smart search and the ID types).
             .when('/quotes', {
                 templateUrl: 'app/components/quote-list/quote-list.html',
-                controller: 'QuoteListCtrl', reloadOnSearch: false, title: 'Quotes'
+                controller: 'QuoteListCtrl', reloadOnSearch: false, title: 'Home', mode: 'home',
+                // Old shared links such as /quotes?search=ABC now belong on the Search page.
+                redirectTo: function(params, path, search) {
+                    if (!search || !search.search) return undefined;
+                    return '/search?' + Object.keys(search).map(function(key) {
+                        return encodeURIComponent(key) + '=' + encodeURIComponent(search[key]);
+                    }).join('&');
+                }
+            })
+            .when('/search', {
+                templateUrl: 'app/components/quote-list/quote-list.html',
+                controller: 'QuoteListCtrl', reloadOnSearch: false, title: 'Search', mode: 'search'
             })
             .when('/quotes/:id', {
                 templateUrl: 'app/components/quote-detail/quote-detail.html',
@@ -122,7 +134,8 @@ angular.module('quoteManagement', ['ngRoute'])
         };
         $rootScope.$on('$routeChangeStart', function(event, next) {
             var route = next && next.$$route;
-            if (!route || route.redirectTo) return;
+            // Plain redirects (like / to /login) are followed as they are; a redirect function still needs the sign-in check.
+            if (!route || typeof route.redirectTo === 'string') return;
             if (route.originalPath !== '/login' && !AuthService.isAuthenticated()) {
                 event.preventDefault();
                 AuthService.requireLogin();
