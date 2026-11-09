@@ -17,7 +17,9 @@ angular.module('quoteManagement')
       $scope.getStateLabel = view.stateLabel;
       $scope.validationError = null;
       $scope.searchError = null;
-      $scope.searchBy = 'auto';
+      // Which kind of ID the Search page looks up; empty until the person chooses one.
+      $scope.searchBy = '';
+      $scope.submitted = false;
       $scope.lookupOnly = !!(window.APP_CONFIG && window.APP_CONFIG.quoteDataLookupOnly);
       // The route says which page this is: 'home' (default list and filters), 'search' (the search features),
       // or nothing, which shows both together.
@@ -28,12 +30,11 @@ angular.module('quoteManagement')
       // Search never lists without something to look for. Home can be switched off with defaultListEnabled: false.
       $scope.requireTerm = $scope.pageMode === 'search';
       $scope.listEnabled = !($scope.pageMode === 'home' && window.APP_CONFIG && window.APP_CONFIG.defaultListEnabled === false);
-      $scope.isExactLookup = function() { return !!view.lookupCriteria($scope.searchTerm, $scope.searchBy, $scope.lookupOnly); };
-      $scope.lookupLabel = function() {
-        var criteria = view.lookupCriteria($scope.searchTerm, $scope.searchBy, $scope.lookupOnly);
-        if (!criteria) return '';
-        return criteria.quoteRequestId ? 'quote request ID' : criteria.externalId ? 'external ID' : 'proposal ID';
-      };
+      // What each Search type is called, and what the field says while it is chosen.
+      var typeLabels = { quoteRequestId: 'quote request ID', externalId: 'external ID', proposalId: 'proposal ID', text: 'search text' };
+      $scope.typeLabel = function() { return typeLabels[$scope.searchBy] || ''; };
+      $scope.isExactLookup = function() { return !!view.lookupCriteria($scope.searchTerm, $scope.searchBy); };
+      $scope.lookupLabel = function() { return view.lookupCriteria($scope.searchTerm, $scope.searchBy) ? typeLabels[$scope.searchBy] : ''; };
 
       function capitalize(text) { return text.charAt(0).toUpperCase() + text.slice(1); }
 
@@ -51,7 +52,7 @@ angular.module('quoteManagement')
 
       // Recent searches: the last few exact lookups that found a quote, kept in this browser only.
       var RECENT_KEY = 'omw-recent-searches';
-      var searchLabels = ['auto', 'quoteRequestId', 'externalId', 'proposalId'];
+      var searchLabels = ['quoteRequestId', 'externalId', 'proposalId'];
       function readRecent() {
         try {
           var list = JSON.parse(window.localStorage.getItem(RECENT_KEY));
@@ -62,9 +63,9 @@ angular.module('quoteManagement')
       }
       function rememberSearch() {
         var term = view.text($scope.searchTerm);
-        if (!term || term.length > 200 || !view.lookupCriteria(term, $scope.searchBy, $scope.lookupOnly)) return;
+        if (!term || term.length > 200 || !view.lookupCriteria(term, $scope.searchBy)) return;
         var list = $scope.recentSearches.filter(function(item) { return item.term !== term; });
-        list.unshift({ term: term, by: searchLabels.indexOf($scope.searchBy) !== -1 ? $scope.searchBy : 'auto' });
+        list.unshift({ term: term, by: $scope.searchBy });
         $scope.recentSearches = list.slice(0, 5);
         try { window.localStorage.setItem(RECENT_KEY, JSON.stringify($scope.recentSearches)); } catch (error) { /* storage unavailable */ }
       }
@@ -74,16 +75,18 @@ angular.module('quoteManagement')
         $scope.searchBy = item.by;
         $scope.applyFilters();
       };
-      // Home page: greeting and the "how to look it up" cards.
-      var hour = new Date().getHours();
-      $scope.greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
-      $scope.firstName = function() {
-        var user = $scope.$root && $scope.$root.currentUser;
-        return view.text(user && user.name).split(/[\s@.]/)[0];
-      };
+      // Choosing what to look up by starts a fresh lookup: the old value and results belong to the old type.
       $scope.useSearchType = function(type) {
+        if (type === $scope.searchBy) return;
+        cancelSearch();
         $scope.searchBy = type;
+        $scope.searchTerm = '';
         $scope.searchError = null;
+        $scope.submitted = false;
+        $scope.currentPage = 0;
+        loader.reset();
+        lastQuery = null;
+        $location.search({ page: 0, size: $scope.pageSize, searchBy: type });
         $timeout(function() {
           var input = document.getElementById('quote-search');
           if (input) input.focus();
@@ -110,7 +113,7 @@ angular.module('quoteManagement')
         $scope.currentPage = view.integer(query.page, 0);
         $scope.pageSize = view.integer(query.size, 25, 1);
         $scope.searchTerm = view.text(query.search);
-        $scope.searchBy = searchTypes.indexOf(query.searchBy) !== -1 ? query.searchBy : 'auto';
+        $scope.searchBy = searchTypes.indexOf(query.searchBy) !== -1 ? query.searchBy : '';
         $scope.filters = {
           fromDate: view.dateInput(query.fromDate),
           toDate: view.dateInput(query.toDate)
@@ -123,7 +126,7 @@ angular.module('quoteManagement')
         var query = { page: $scope.isExactLookup() ? 0 : $scope.currentPage, size: $scope.pageSize };
         var search = view.text($scope.searchTerm);
         if (search) query.search = search;
-        if ($scope.searchBy !== 'auto') query.searchBy = $scope.searchBy;
+        if ($scope.searchBy) query.searchBy = $scope.searchBy;
         filterKeys.forEach(function(key) { if ($scope.filters[key]) query[key] = $scope.filters[key]; });
         if ($scope.filters.fromDate) query.fromDate = view.dateOnly($scope.filters.fromDate) || 'invalid';
         if ($scope.filters.toDate) query.toDate = view.dateOnly($scope.filters.toDate) || 'invalid';
@@ -144,13 +147,15 @@ angular.module('quoteManagement')
       }
 
       function validate() {
-        $scope.searchError = ['quoteRequestId', 'externalId', 'proposalId'].indexOf($scope.searchBy) !== -1 && !view.text($scope.searchTerm)
-          ? 'Enter a ' + { quoteRequestId: 'quote request ID', externalId: 'external ID', proposalId: 'proposal ID' }[$scope.searchBy] + '.' : null;
-        if (!$scope.listEnabled || ($scope.requireTerm && !$scope.searchError && !view.text($scope.searchTerm))) {
+        // Asking for nothing is only an error once the person has pressed Search.
+        $scope.searchError = $scope.submitted && $scope.searchBy && !view.text($scope.searchTerm)
+          ? 'Enter ' + ($scope.searchBy === 'externalId' ? 'an ' : 'a ') + $scope.typeLabel() + '.' : null;
+        var hasTerm = !!view.text($scope.searchTerm);
+        if (!$scope.listEnabled || (($scope.requireTerm || $scope.lookupOnly) && !hasTerm) || ($scope.requireTerm && !$scope.searchBy)) {
           $scope.validationError = null;
           return false;
         }
-        if ($scope.lookupOnly && (!view.text($scope.searchTerm) || $scope.searchBy === 'text')) {
+        if ($scope.lookupOnly && !$scope.isExactLookup()) {
           if ($scope.searchBy === 'text') $scope.searchError = 'This backend requires a quote request ID, external ID, or proposal ID.';
           $scope.validationError = null;
           return false;
@@ -169,7 +174,7 @@ angular.module('quoteManagement')
       }
 
       function request(query) {
-        var criteria = view.lookupCriteria(query.search, query.searchBy, $scope.lookupOnly);
+        var criteria = view.lookupCriteria(query.search, query.searchBy);
         if (criteria) {
           loader.load(angular.extend({ page: 0, size: query.size }, criteria));
           return;
@@ -188,6 +193,8 @@ angular.module('quoteManagement')
         if (!validate()) {
           loader.reset();
           lastQuery = null;
+          // An emptied search drops its value from the address too, so a reload does not bring it back.
+          if ($scope.requireTerm) $location.search(queryString()).replace();
           return;
         }
         var query = queryString();
@@ -201,15 +208,21 @@ angular.module('quoteManagement')
         $scope.currentPage = 0;
         commit(false);
       };
+      $scope.submitSearch = function() {
+        $scope.submitted = true;
+        $scope.applyFilters();
+      };
       $scope.clearFilters = function() {
         $scope.searchTerm = '';
-        $scope.searchBy = 'auto';
+        $scope.submitted = false;
         $scope.filters = { state: '', designStatus: '', category: '', channelType: '', fromDate: null, toDate: null };
         $scope.currentPage = 0;
         commit(!!($scope.validationError || $scope.searchError));
       };
       $scope.onSearchChange = function() {
         cancelSearch();
+        $scope.submitted = false;
+        $scope.searchError = null;
         searchTimer = $timeout(function() {
           searchTimer = null;
           $scope.applyFilters();
@@ -247,7 +260,6 @@ angular.module('quoteManagement')
       $scope.removeFilterChip = function(key) {
         if (key === 'search') {
           $scope.searchTerm = '';
-          $scope.searchBy = 'auto';
         }
         else $scope.filters[key] = key === 'fromDate' || key === 'toDate' ? null : '';
         $scope.applyFilters();

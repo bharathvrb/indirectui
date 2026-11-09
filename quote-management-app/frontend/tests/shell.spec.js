@@ -95,13 +95,6 @@ describe('Application shell', function() {
     expect(window.QuoteTheme.setPreference).toHaveBeenCalledWith('dark');
   });
 
-  it('saves the chosen text size', function() {
-    spyOn(window.QuoteTheme, 'setTextSize');
-    root.textSizePreference = 'large';
-    root.setTextSize();
-    expect(window.QuoteTheme.setTextSize).toHaveBeenCalledWith('large');
-  });
-
   it('treats a missing user as signed out', function() {
     user = null;
     location.url('/quotes');

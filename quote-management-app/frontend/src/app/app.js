@@ -97,10 +97,6 @@ angular.module('quoteManagement', ['ngRoute'])
         $rootScope.setTheme = function() {
             window.QuoteTheme.setPreference($rootScope.themePreference);
         };
-        $rootScope.textSizePreference = window.QuoteTheme ? window.QuoteTheme.getTextSize() : 'auto';
-        $rootScope.setTextSize = function() {
-            window.QuoteTheme.setTextSize($rootScope.textSizePreference);
-        };
         // Skip link: hash links would change the route, so move focus directly.
         $rootScope.skipToContent = function($event) {
             $event.preventDefault();
