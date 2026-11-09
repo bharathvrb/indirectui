@@ -392,7 +392,11 @@ describe('Unified quote search workspace', function() {
       .forEach(function(value) { expect(view.exactQuoteId(value, 'auto')).toBe(value); });
     ['EXT-20261709-1340', 'has space-' + uuid, uuid + '-suffix', '-' + uuid, 'A--' + uuid, uuid.slice(1)]
       .forEach(function(value) { expect(view.exactQuoteId(value, 'auto')).toBe(''); });
-    expect(view.lookupCriteria('PARTNER-QUOTE-1509260632-' + uuid, 'auto', true)).toEqual({ quoteRequestId: 'PARTNER-QUOTE-1509260632-' + uuid });
+    expect(view.lookupCriteria('PARTNER-QUOTE-1509260632-' + uuid, 'auto', true)).toEqual({ quoteRequestId: 'PARTNER-QUOTE-1509260632-' + uuid, fallbackToExternalId: true });
+    expect(view.lookupCriteria('PARTNER-QUOTE-1509260632-' + uuid, 'quoteRequestId', true)).toEqual({ quoteRequestId: 'PARTNER-QUOTE-1509260632-' + uuid });
+    expect(view.lookupCriteria('"EXT-1",', 'auto', true)).toEqual({ externalId: 'EXT-1', fallbackToQuoteRequestId: true });
+    expect(view.lookupCriteria('`' + uuid + '`;', 'auto', false)).toEqual({ quoteRequestId: uuid, fallbackToExternalId: true });
+    expect(view.lookupCriteria('""', 'auto', true)).toBeNull();
     expect(view.lookupCriteria('EXT-1', 'auto', true)).toEqual({ externalId: 'EXT-1', fallbackToQuoteRequestId: true });
     expect(view.lookupCriteria('EXT-1', 'externalId', true)).toEqual({ externalId: 'EXT-1' });
     expect(view.lookupCriteria('EXT-1', 'auto', false)).toBeNull();
@@ -410,6 +414,80 @@ describe('Unified quote search workspace', function() {
     root.$digest();
     expect(scope.error).toBeNull();
     expect(scope.quotes[0].quoteRequestId).toBe('PARTNER-QUOTE-7');
+  });
+
+  it('smart search also falls back when the first lookup returns an empty result or a 400/422/500', function() {
+    window.APP_CONFIG.quoteDataLookupOnly = true;
+    [function(request) { request.deferred.resolve({ data: { content: [], totalElements: 0, totalPages: 0, page: 0, size: 25 } }); },
+     function(request) { request.deferred.reject({ status: 400, data: { code: 'UPSTREAM_BAD_REQUEST', message: 'QuoteData rejected the request.' } }); },
+     function(request) { request.deferred.reject({ status: 422, data: { code: 'X', message: 'x' } }); },
+     function(request) { request.deferred.reject({ status: 500, data: { code: 'X', message: 'x' } }); }
+    ].forEach(function(miss, index) {
+      requests.length = 0;
+      scope && scope.$destroy();
+      service.getQuote.calls.reset();
+      start('QuoteListCtrl', '/quotes?search=PARTNER-QUOTE-' + index);
+      miss(requests[0]);
+      root.$digest();
+      expect(service.getQuote).toHaveBeenCalledOnceWith('PARTNER-QUOTE-' + index);
+      requests[1].deferred.resolve({ data: { quoteRequestId: 'PARTNER-QUOTE-' + index, state: 'FAILED' } });
+      root.$digest();
+      expect(scope.error).toBeNull();
+      expect(scope.quotes[0].quoteRequestId).toBe('PARTNER-QUOTE-' + index);
+    });
+  });
+
+  it('smart search tries a full quote request ID as an external ID when no quote has that request ID', function() {
+    var id = 'PARTNER-QUOTE-1509260632-df5d85a2-3f08-4876-8848-826f2d3c1551';
+    [true, false].forEach(function(lookupOnly) {
+      requests.length = 0;
+      scope && scope.$destroy();
+      service.getQuote.calls.reset();
+      service.findQuote.calls.reset();
+      window.APP_CONFIG.quoteDataLookupOnly = lookupOnly;
+      start('QuoteListCtrl', '/quotes?search=' + id);
+      expect(service.getQuote).toHaveBeenCalledOnceWith(id);
+      requests[0].deferred.reject({ status: 404, data: { code: 'QUOTE_NOT_FOUND', message: 'x' } });
+      root.$digest();
+      expect(service.findQuote).toHaveBeenCalledOnceWith({ externalId: id });
+      requests[1].deferred.resolve({ data: { quoteRequestId: 'OTHER-1', externalId: id, state: 'FAILED' } });
+      root.$digest();
+      expect(scope.error).toBeNull();
+      expect(scope.quotes[0].externalId).toBe(id);
+    });
+  });
+
+  it('smart search reports not found when both identifiers return nothing, and an explicit request ID search never falls back', function() {
+    window.APP_CONFIG.quoteDataLookupOnly = true;
+    start('QuoteListCtrl', '/quotes?search=GONE-1');
+    requests[0].deferred.resolve({ data: { content: [], totalElements: 0, totalPages: 0, page: 0, size: 25 } });
+    root.$digest();
+    requests[1].deferred.resolve({ data: { content: [], totalElements: 0, totalPages: 0, page: 0, size: 25, trackingId: 'T-1' } });
+    root.$digest();
+    expect(scope.error).toBe('No quote has this external ID or quote request ID.');
+    expect(scope.dataReady).toBe(false);
+    scope.$destroy();
+    requests.length = 0;
+    service.findQuote.calls.reset();
+    start('QuoteListCtrl', '/quotes?search=GONE-2&searchBy=quoteRequestId');
+    requests[0].deferred.reject({ status: 404, data: { code: 'QUOTE_NOT_FOUND', message: 'x' } });
+    root.$digest();
+    expect(service.findQuote).not.toHaveBeenCalled();
+    expect(scope.error).toBe('Quote not found for this request ID.');
+  });
+
+  it('smart search does not hide sign-in, permission, rate-limit or connection problems behind a second lookup', function() {
+    window.APP_CONFIG.quoteDataLookupOnly = true;
+    [401, 403, 429, 0, 502, 503].forEach(function(status) {
+      requests.length = 0;
+      scope && scope.$destroy();
+      service.getQuote.calls.reset();
+      start('QuoteListCtrl', '/quotes?search=EXT-' + status);
+      requests[0].deferred.reject({ status: status, data: {} });
+      root.$digest();
+      expect(service.getQuote).not.toHaveBeenCalled();
+      expect(scope.loading).toBe(false);
+    });
   });
 
   it('reports a clear message when neither the external ID nor the quote request ID exists', function() {

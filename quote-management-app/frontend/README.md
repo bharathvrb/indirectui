@@ -47,6 +47,10 @@ Restart the server after changing settings.
 
 `config.js` is public: never put secrets in it.
 
+### Smart search
+
+The default search type. Pasted quotes, backticks and a trailing comma or semicolon are ignored. A value ending in a UUID (with any prefix) is looked up as a quote request ID (`GET /quote?quoteRequestId=…`); anything else is looked up as an external ID (`GET /quote?externalId=…`) when `quoteDataLookupOnly` is `true`. If the first lookup finds nothing, the other identifier is tried once. "Finds nothing" means a 404, a 400/422/500 from QuoteData, or a 200 with no quote in it. Sign-in, permission, rate-limit and connection errors are shown as they are. The explicit Quote request ID, External ID and Proposal ID types make exactly one call and never fall back.
+
 ## Processing journey and step retry
 
 The quote detail page lists the processing steps (`stepExecutions`) as one numbered sequence under their actual names (`ADDRESS_VALIDATION`, `CREATE_CONTACT`, `GENERATE_CONTRACT`, and so on), in the order of the OMW flow, with no grouping. Each step shows only its name, number and status (plus the site or item it applies to, when it has one). Attempt counts and timings stay in the Processing tab. The order is the `FLOW` list in `src/app/services/quote-journey.service.js`; add new step names there. Steps it doesn't know still appear, after the known ones. When the quote has failed, the failure summary (latest failed step, its position such as "Step 6 of 16", error code and message) sits at the top of the list.
