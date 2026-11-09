@@ -136,6 +136,17 @@ angular.module('quoteManagement')
       return responseId || field(response.config && response.config.headers || {}, ['trackingId', 'x-tracking-id']);
     }
 
+    // Counts for the quotes on the page that was loaded; the tiles say so.
+    function summary(rows) {
+      var result = { failed: 0, inProgress: 0, completed: 0 };
+      rows.forEach(function(row) {
+        if (row.state === 'FAILED') result.failed++;
+        if (row.state === 'IN_PROGRESS') result.inProgress++;
+        if (row.state === 'COMPLETED') result.completed++;
+      });
+      return result;
+    }
+
     function createLoader(scope, rowsKey, onSuccess) {
       var generation = 0;
       var destroyed = false;
@@ -148,6 +159,7 @@ angular.module('quoteManagement')
         scope.trackingId = null;
         scope.totalElements = null;
         scope.totalPages = null;
+        scope.kpis = null;
       }
       reset();
       scope.$on('$destroy', function() { destroyed = true; generation++; });
@@ -233,6 +245,7 @@ angular.module('quoteManagement')
             scope[rowsKey] = page.items;
             scope.totalElements = page.totalElements;
             scope.totalPages = page.totalPages;
+            scope.kpis = summary(page.items);
             scope.currentPage = page.currentPage;
             scope.pageSize = page.pageSize;
             scope.loading = false;

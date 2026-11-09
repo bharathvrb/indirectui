@@ -48,6 +48,33 @@
         <button type="button" class="qm-recent-chip" ng-repeat="item in recentSearches track by item.term" ng-click="useRecent(item)" title="Search again for {{item.term}}"><code>{{item.term}}</code></button>
       </div>
     </div>
+    <div class="row g-3" aria-label="Quote summary" ng-if="!lookupOnly && pageMode !== 'search' && listEnabled">
+      <div class="col-6 col-xl-3">
+        <div class="qm-kpi-card qm-kpi-card-info">
+          <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-collection"></i></span>
+          <div><div class="qm-kpi-label">Total quotes</div><div class="qm-kpi-value">{{displayValue(totalElements)}}</div></div>
+        </div>
+      </div>
+      <div class="col-6 col-xl-3">
+        <div class="qm-kpi-card qm-kpi-card-warning">
+          <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-hourglass-split"></i></span>
+          <div><div class="qm-kpi-label">In progress</div><div class="qm-kpi-value">{{displayValue(kpis.inProgress)}}</div></div>
+        </div>
+      </div>
+      <div class="col-6 col-xl-3">
+        <div class="qm-kpi-card qm-kpi-card-danger">
+          <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-exclamation-octagon"></i></span>
+          <div><div class="qm-kpi-label">Failed</div><div class="qm-kpi-value">{{displayValue(kpis.failed)}}</div></div>
+        </div>
+      </div>
+      <div class="col-6 col-xl-3">
+        <div class="qm-kpi-card qm-kpi-card-success">
+          <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-check2-circle"></i></span>
+          <div><div class="qm-kpi-label">Completed</div><div class="qm-kpi-value">{{displayValue(kpis.completed)}}</div></div>
+        </div>
+      </div>
+    </div>
+    <p class="qm-kpi-note" ng-if="!lookupOnly && pageMode !== 'search' && listEnabled">Total quotes counts every page. In progress, Failed and Completed count the quotes on this page.</p>
   </section>
 
   <section class="qm-start" ng-if="pageMode !== 'home' && (lookupOnly || requireTerm) && !dataReady && !loading && !error" aria-labelledby="start-heading">

@@ -764,17 +764,34 @@ describe('Unified quote search workspace', function() {
       expect(requests.length).toBe(2);
     });
 
-    it('shows a status in one place only: the State filter, with no pills, tiles, mix or summary line', function() {
+    it('shows the four summary tiles once, and does not repeat statuses in a mix bar, pills or summary line', function() {
       start();
-      resolve(0, [{ quoteRequestId: 'A', state: 'FAILED' }, { quoteRequestId: 'B', state: 'COMPLETED' }]);
+      expect(scope.kpis).toBeNull();
+      resolve(0, [{ quoteRequestId: 'A', state: 'FAILED' }, { quoteRequestId: 'B', state: 'COMPLETED' }, { quoteRequestId: 'C', state: 'IN_PROGRESS' },
+        { quoteRequestId: 'D', state: 'FAILED' }, { quoteRequestId: 'E', state: 'RECEIVED' }]);
+      expect(scope.kpis).toEqual({ failed: 2, inProgress: 1, completed: 1 });
       element = compile(templates[templatePaths[1]])(scope);
       root.$digest();
-      expect(element[0].querySelector('#quote-state')).not.toBeNull();
-      expect(element[0].querySelector('.qm-quick, .qm-mix, .qm-kpi-card, .qm-meta-line, .qm-autorefresh')).toBeNull();
-      expect(element[0].textContent).not.toMatch(/Total matches|All pages|This page|pending approval ·/i);
-      expect(scope.kpis).toBeUndefined();
+      var tiles = Array.prototype.map.call(element[0].querySelectorAll('.qm-kpi-card'), function(tile) {
+        return [tile.querySelector('.qm-kpi-label').textContent, tile.querySelector('.qm-kpi-value').textContent];
+      });
+      expect(tiles).toEqual([['Total quotes', '5'], ['In progress', '1'], ['Failed', '2'], ['Completed', '1']]);
+      expect(element[0].querySelector('.qm-kpi-note').textContent).toContain('Total quotes counts every page');
+      expect(element[0].textContent).not.toMatch(/All pages|This page/);
+      expect(element[0].querySelector('.qm-quick, .qm-mix, .qm-meta-line, .qm-autorefresh')).toBeNull();
       expect(scope.quickStates).toBeUndefined();
       expect(scope.stateMix).toBeUndefined();
+    });
+
+    it('shows dashes in the tiles while nothing has loaded and after an error, never zeros', function() {
+      start();
+      element = compile(templates[templatePaths[1]])(scope);
+      root.$digest();
+      var values = Array.prototype.map.call(element[0].querySelectorAll('.qm-kpi-value'), function(node) { return node.textContent; });
+      expect(values).toEqual(['—', '—', '—', '—']);
+      requests[0].deferred.reject({ status: 500, data: { code: 'X', message: 'x' } });
+      root.$digest();
+      expect(scope.kpis).toBeNull();
     });
   });
 
@@ -786,7 +803,7 @@ describe('Unified quote search workspace', function() {
     }
     function hidden(node) { return node.classList.contains('ng-hide'); }
 
-    it('Home lists the default 25 newest quotes at once and shows the filters and a link to Search, not the search box or summary numbers', function() {
+    it('Home lists the default 25 newest quotes at once and shows the summary tiles, the filters and a link to Search, not the search box', function() {
       window.APP_CONFIG.quoteDataLookupOnly = true; // only limits the Search page
       start('QuoteListCtrl', '/quotes');
       expect(scope.pageMode).toBe('home');
@@ -796,7 +813,8 @@ describe('Unified quote search workspace', function() {
       var page = mount();
       expect(hidden(page.querySelector('.qm-omnibar-wrap'))).toBe(true);
       expect(page.querySelector('#quote-state')).not.toBeNull();
-      expect(page.querySelector('.qm-kpi-card, .qm-mix, .qm-quick-pill, #quote-auto-refresh')).toBeNull();
+      expect(page.querySelectorAll('.qm-kpi-card').length).toBe(4);
+      expect(page.querySelector('.qm-mix, .qm-quick-pill, #quote-auto-refresh')).toBeNull();
       expect(page.querySelector('.qm-start')).toBeNull();
       expect(page.querySelector('.qm-title').textContent).toBe('Quotes');
       expect(page.querySelector('a.qm-search-link').getAttribute('href')).toBe('#!/search');
@@ -1206,7 +1224,7 @@ describe('Unified quote search workspace', function() {
       host.innerHTML = template;
       expect(host.querySelectorAll('quote-table').length).toBe(1);
       expect(host.querySelectorAll('table').length).toBe(0);
-      expect(host.querySelectorAll('.qm-kpi-card, .qm-mix, .qm-quick-pill, #quote-auto-refresh').length).toBe(0);
+      expect(host.querySelectorAll('.qm-mix, .qm-quick-pill, #quote-auto-refresh').length).toBe(0);
       Array.prototype.forEach.call(host.querySelectorAll('input, select'), function(input) {
         expect(host.querySelector('label[for="' + input.id + '"]')).not.toBeNull();
       });
