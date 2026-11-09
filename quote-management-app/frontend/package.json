@@ -5,16 +5,16 @@
   "description": "AngularJS workspace for OMW indirect quote requests, served by a Node proxy to QuoteData",
   "main": "src/app/app.js",
   "engines": {
-    "node": ">=22"
+    "node": ">=20"
   },
   "scripts": {
     "prestart": "npm run build",
     "start": "node server.js",
     "test": "karma start karma.conf.js",
-    "test:server": "node --test tests/local-auth.server.test.cjs tests/quote-data-proxy.server.test.cjs tests/server-properties.server.test.cjs tests/server.server.test.cjs",
+    "test:server": "node --test tests/local-auth.server.test.cjs tests/quote-data-proxy.server.test.cjs tests/server-properties.server.test.cjs tests/server.server.test.cjs tests/cloud.server.test.cjs tests/css.server.test.cjs",
     "build": "gulp build",
     "dev": "gulp watch",
-    "test:coverage": "karma start karma.coverage.conf.js && node --test --experimental-test-coverage --test-coverage-include=*.js --test-coverage-exclude=tests/** --test-coverage-exclude=gulpfile.js --test-coverage-exclude=karma*.js tests/local-auth.server.test.cjs tests/quote-data-proxy.server.test.cjs tests/server-properties.server.test.cjs tests/server.server.test.cjs"
+    "test:coverage": "karma start karma.coverage.conf.js && node --test --experimental-test-coverage --test-coverage-include=*.js --test-coverage-exclude=tests/** --test-coverage-exclude=gulpfile.js --test-coverage-exclude=karma*.js tests/local-auth.server.test.cjs tests/quote-data-proxy.server.test.cjs tests/server-properties.server.test.cjs tests/server.server.test.cjs tests/cloud.server.test.cjs tests/css.server.test.cjs"
   },
   "keywords": [
     "angularjs",

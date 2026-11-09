@@ -17,7 +17,7 @@ const signedOut = { enabled: true, authenticated: false, user: null, expiresAt: 
 const disabled = { ...signedOut, enabled: false };
 
 function configured(factory, environment = {}) {
-    const variables = ['NODE_ENV', 'LOCAL_LOGIN_USERNAME', 'LOCAL_LOGIN_PASSWORD'];
+    const variables = ['NODE_ENV', 'LOCAL_LOGIN_USERNAME', 'LOCAL_LOGIN_PASSWORD', 'QM_TRUST_PROXY'];
     const previous = Object.fromEntries(variables.map(name => [name, process.env[name]]));
     try {
         for (const name of variables) {
@@ -356,6 +356,34 @@ test('five failed sign-ins throttle subsequent requests until the window expires
     assert.deepEqual((await request(app, '/auth/local/session')).body, signedOut);
     timestamp += 999;
     assertAuthResponse(await signIn(app), 200);
+});
+
+test('behind a trusted proxy each client is throttled on its own, using the address the proxy appended', async t => {
+    const app = await start(t, { environment: { ...enabledEnvironment, QM_TRUST_PROXY: 'true' } });
+    const from = address => ({ headers: { 'x-forwarded-for': address } });
+    for (let attempt = 0; attempt < 5; attempt++) {
+        assertAuthResponse(await signIn(app, { body: invalidBody, ...from('198.51.100.7') }), 401);
+    }
+    assertAuthResponse(await signIn(app, from('198.51.100.7')), 429);
+    // Another client behind the same router is not affected, and a forged first entry cannot dodge the limit.
+    assertAuthResponse(await signIn(app, from('198.51.100.8')), 200);
+    assertAuthResponse(await signIn(app, from('203.0.113.99, 198.51.100.7')), 429);
+});
+
+test('without a trusted proxy the forwarded header is ignored for rate limiting', async t => {
+    const app = await start(t);
+    for (let attempt = 0; attempt < 5; attempt++) {
+        assertAuthResponse(await signIn(app, { body: invalidBody, headers: { 'x-forwarded-for': '198.51.100.' + attempt } }), 401);
+    }
+    assertAuthResponse(await signIn(app, { headers: { 'x-forwarded-for': '198.51.100.200' } }), 429);
+});
+
+test('a trusted proxy header that is not an IP address falls back to the connection address', async t => {
+    const app = await start(t, { environment: { ...enabledEnvironment, QM_TRUST_PROXY: 'true' } });
+    for (let attempt = 0; attempt < 5; attempt++) {
+        assertAuthResponse(await signIn(app, { body: invalidBody, headers: { 'x-forwarded-for': 'not-an-ip' + attempt } }), 401);
+    }
+    assertAuthResponse(await signIn(app, { headers: { 'x-forwarded-for': 'another' } }), 429);
 });
 
 test('parallel failed sign-ins cannot bypass rate limiting', async t => {

@@ -92,7 +92,7 @@ function get(port, pathname, method = 'GET') {
 
 test('case links and app routes serve the single-page app; assets, unknown and API paths do not', async t => {
     const port = await staticServer(t);
-    for (const route of ['/', '/login', '/quotes', '/quotes/', '/support-tickets', '/quotes/PARTNER-QUOTE-1?tab=errors']) {
+    for (const route of ['/', '/login', '/search', '/search/', '/quotes', '/quotes/', '/support-tickets', '/quotes/PARTNER-QUOTE-1?tab=errors']) {
         const response = await get(port, route);
         assert.equal(response.status, 200, route);
         assert.match(response.text, /<title>QM<\/title>/, route);

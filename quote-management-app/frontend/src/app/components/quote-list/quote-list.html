@@ -1,84 +1,25 @@
 <div class="container-fluid quote-list-screen qm-page-shell">
+  <form name="quoteFilters" class="qm-home" novalidate ng-submit="applyFilters()" ng-attr-aria-label="{{pageMode === 'search' ? 'Search quotes' : 'Filter quotes'}}">
   <section class="qm-hero-card" aria-labelledby="quotes-heading">
     <div class="qm-page-head">
       <div>
-        <h1 id="quotes-heading" class="qm-title">Quotes</h1>
-        <p class="qm-subtitle mb-0 mt-1">{{lookupOnly ? 'Find a quote and review its status, processing steps and errors.' : 'Search, filter and open indirect quote requests.'}}</p>
+        <p class="qm-greeting" ng-if="pageMode !== 'search'"><i class="bi bi-stars" aria-hidden="true"></i><span>{{greeting}}<span ng-if="firstName()">, <span class="qm-greeting-name">{{firstName()}}</span></span></span></p>
+        <h1 id="quotes-heading" class="qm-title">{{pageMode === 'search' ? 'Search' : 'Quotes'}}</h1>
+        <p class="qm-subtitle mb-0 mt-1">{{pageMode === 'home' ? 'Filter the list and open a quote to see its status, steps and errors.' : lookupOnly ? 'Open a quote to see its status, steps and errors.' : 'Find a quote by ID or other fields.'}}</p>
       </div>
       <div class="qm-head-actions">
-        <div class="qm-autorefresh form-check form-switch" ng-if="!lookupOnly">
-          <input id="quote-auto-refresh" class="form-check-input" type="checkbox" role="switch" ng-model="autoRefresh.enabled" ng-change="toggleAutoRefresh()">
-          <label class="form-check-label" for="quote-auto-refresh">Auto-refresh <span class="text-muted">{{autoRefresh.seconds}}s</span></label>
-        </div>
-        <button type="button" class="btn btn-primary qm-action-btn" ng-click="refresh()" ng-disabled="lookupOnly && !searchTerm">
+        <a class="btn btn-outline-primary qm-search-link" href="#!/search" ng-if="pageMode === 'home'"><i class="bi bi-search me-1" aria-hidden="true"></i>Search</a>
+        <button type="button" class="btn btn-primary qm-action-btn" ng-click="refresh()" ng-disabled="(lookupOnly || requireTerm) && !searchTerm" ng-if="listEnabled">
           <i class="bi bi-arrow-clockwise me-1" aria-hidden="true" ng-class="{'qm-spin': loading}"></i>Refresh
         </button>
       </div>
     </div>
 
-    <div class="row g-3" aria-label="Quote result summary" ng-if="!lookupOnly || dataReady || loading">
-      <div class="col-6 col-xl-3">
-        <div class="qm-kpi-card qm-kpi-card-info">
-          <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-collection"></i></span>
-          <div>
-            <div class="qm-kpi-label">Total matches</div>
-            <div class="qm-kpi-value">{{displayValue(totalElements)}}</div>
-            <div class="qm-kpi-hint">All pages</div>
-          </div>
-        </div>
-      </div>
-      <div class="col-6 col-xl-3">
-        <div class="qm-kpi-card qm-kpi-card-warning">
-          <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-hourglass-split"></i></span>
-          <div>
-            <div class="qm-kpi-label">In progress</div>
-            <div class="qm-kpi-value">{{displayValue(kpis.inProgress)}}</div>
-            <div class="qm-kpi-hint">This page</div>
-          </div>
-        </div>
-      </div>
-      <div class="col-6 col-xl-3">
-        <div class="qm-kpi-card qm-kpi-card-danger">
-          <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-exclamation-octagon"></i></span>
-          <div>
-            <div class="qm-kpi-label">Failed</div>
-            <div class="qm-kpi-value">{{displayValue(kpis.failed)}}</div>
-            <div class="qm-kpi-hint">This page</div>
-          </div>
-        </div>
-      </div>
-      <div class="col-6 col-xl-3">
-        <div class="qm-kpi-card qm-kpi-card-success">
-          <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-check2-circle"></i></span>
-          <div>
-            <div class="qm-kpi-label">Completed</div>
-            <div class="qm-kpi-value">{{displayValue(kpis.completed)}}</div>
-            <div class="qm-kpi-hint">This page</div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="qm-mix" ng-if="dataReady && !loading && !error && !lookupOnly && quotes.length > 1" role="img" aria-label="State mix of the quotes on this page">
-      <div class="qm-mix-bar"><span ng-repeat="part in stateMix() track by part.key" ng-class="'is-' + part.key" ng-style="{width: part.percent + '%'}" title="{{part.label}}: {{part.count}}"></span></div>
-      <ul class="qm-mix-legend"><li ng-repeat="part in stateMix() track by part.key" ng-class="'is-' + part.key"><i aria-hidden="true"></i>{{part.label}} <b>{{part.count}}</b></li></ul>
-    </div>
-    <p class="qm-meta-line mb-0" ng-if="dataReady && !loading && !error">
-      {{kpis.pendingApproval}} pending approval · {{kpis.ticketLinked}} with a support ticket
-      <span ng-if="lastLoadedAt"> · Updated {{lastLoadedAt | date:'HH:mm:ss'}}</span>
-    </p>
-  </section>
-
-  <form name="quoteFilters" class="card qm-filter-card mb-4" novalidate ng-submit="applyFilters()" aria-label="Search and filter quotes">
-    <div class="card-body">
-      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-        <h2 class="qm-card-title"><i class="bi bi-search" aria-hidden="true"></i>{{lookupOnly ? 'Search' : 'Search and filter'}}</h2>
-        <button type="button" class="btn btn-sm btn-outline-secondary" ng-click="clearFilters()">
-          <i class="bi bi-x-circle me-1" aria-hidden="true"></i>{{lookupOnly ? 'Clear' : 'Clear all'}}
-        </button>
-      </div>
-      <div class="row g-3 qm-search-row">
-        <div class="col-12 col-md-3">
-          <label for="quote-search-type" class="form-label">Search by</label>
+    <!-- ng-hide, not ng-if: the inputs bind searchTerm and searchBy directly, which a child scope would shadow. -->
+    <div class="qm-omnibar-wrap" ng-hide="pageMode === 'home'">
+      <div class="qm-omnibar" ng-class="{'is-loading': loading}">
+        <div class="qm-omnibar-type">
+          <label for="quote-search-type" class="visually-hidden">Search by</label>
           <select id="quote-search-type" class="form-select" ng-model="searchBy" ng-change="applyFilters()">
             <option value="auto">Smart search</option>
             <option value="quoteRequestId">Quote request ID</option>
@@ -87,28 +28,95 @@
             <option value="text" ng-disabled="lookupOnly">Other fields</option>
           </select>
         </div>
-        <div class="col-12 col-md-9">
-          <label for="quote-search" class="form-label">Value</label>
-          <div class="d-flex flex-wrap gap-2">
-            <div class="qm-input-wrap flex-grow-1">
-              <i class="bi bi-search" aria-hidden="true"></i>
-              <input id="quote-search" type="search" class="form-control" ng-model="searchTerm"
-                     ng-change="onSearchChange()" ng-attr-placeholder="{{lookupOnly ? 'Paste or type an ID' : 'ID, customer, opportunity or ticket number'}}"
-                     aria-describedby="quote-search-help quote-search-feedback" ng-attr-aria-invalid="{{!!searchError}}">
-            </div>
-            <button type="submit" class="btn btn-primary">Search</button>
-          </div>
-          <div id="quote-search-help" class="form-text">{{lookupOnly ? 'Smart search detects full quote request IDs and treats anything else as an external ID.' : 'A full quote request ID opens an exact match. Choose Other fields to search by customer, opportunity or ticket.'}}</div>
-          <div id="quote-search-feedback" class="small text-danger mt-1" role="alert" ng-if="searchError">{{searchError}}</div>
-          <div class="small text-primary mt-2" role="status" ng-if="isExactLookup() && !lookupOnly">Exact {{lookupLabel()}} match. List filters are paused until you clear the search.</div>
+        <div class="qm-omnibar-field qm-input-wrap">
+          <label for="quote-search" class="visually-hidden">Value</label>
+          <i class="bi bi-search" aria-hidden="true"></i>
+          <input id="quote-search" type="search" class="form-control" ng-model="searchTerm"
+                 ng-change="onSearchChange()" ng-attr-placeholder="{{lookupOnly ? 'Paste or type an ID' : 'ID, customer, opportunity or ticket number'}}"
+                 aria-describedby="quote-search-help quote-search-feedback" ng-attr-aria-invalid="{{!!searchError}}">
+        </div>
+        <button type="submit" class="btn btn-primary"><i class="bi bi-arrow-repeat qm-spin me-2" aria-hidden="true" ng-if="loading"></i>Search</button>
+      </div>
+      <div class="qm-omnibar-foot">
+        <div id="quote-search-help" class="form-text">{{lookupOnly ? 'Smart search detects full quote request IDs and treats anything else as an external ID.' : 'A full quote request ID opens an exact match. Choose Other fields to search by customer, opportunity or ticket.'}}</div>
+        <button type="button" class="qm-clear" ng-click="clearFilters()"><i class="bi bi-x-circle" aria-hidden="true"></i>{{lookupOnly ? 'Clear' : 'Clear all'}}</button>
+      </div>
+      <div id="quote-search-feedback" class="qm-search-error" role="alert" ng-if="searchError">{{searchError}}</div>
+      <div class="qm-search-note" role="status" ng-if="isExactLookup() && !lookupOnly">Exact {{lookupLabel()}} match. List filters are paused until you clear the search.</div>
+      <div class="qm-recent" ng-if="recentSearches.length" role="group" aria-label="Recent searches">
+        <span class="qm-recent-label"><i class="bi bi-clock-history me-1" aria-hidden="true"></i>Recent</span>
+        <button type="button" class="qm-recent-chip" ng-repeat="item in recentSearches track by item.term" ng-click="useRecent(item)" title="Search again for {{item.term}}"><code>{{item.term}}</code></button>
+      </div>
+    </div>
+    <div class="row g-3" aria-label="Quote summary" ng-if="!lookupOnly && pageMode !== 'search' && listEnabled">
+      <div class="col-6 col-xl-3">
+        <div class="qm-kpi-card qm-kpi-card-info">
+          <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-collection"></i></span>
+          <div><div class="qm-kpi-label">Total quotes</div><div class="qm-kpi-value">{{displayValue(totalElements)}}</div></div>
         </div>
       </div>
-      <div class="qm-quick" ng-if="!lookupOnly" role="group" aria-label="Quick state filter">
-        <button type="button" class="qm-quick-pill" ng-class="{active: !filters.state}" ng-click="quickState('')" ng-disabled="isExactLookup()" ng-attr-aria-pressed="{{!filters.state}}">All</button>
-        <button type="button" class="qm-quick-pill" ng-repeat="state in quickStates" ng-class="['is-' + state.toLowerCase(), {active: filters.state === state}]"
-                ng-click="quickState(state)" ng-disabled="isExactLookup()" ng-attr-aria-pressed="{{filters.state === state}}"><i aria-hidden="true"></i>{{getStateLabel(state)}}</button>
+      <div class="col-6 col-xl-3">
+        <div class="qm-kpi-card qm-kpi-card-warning">
+          <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-hourglass-split"></i></span>
+          <div><div class="qm-kpi-label">In progress</div><div class="qm-kpi-value">{{displayValue(kpis.inProgress)}}</div></div>
+        </div>
       </div>
-      <div class="row g-3 qm-filter-grid" ng-if="!lookupOnly">
+      <div class="col-6 col-xl-3">
+        <div class="qm-kpi-card qm-kpi-card-danger">
+          <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-exclamation-octagon"></i></span>
+          <div><div class="qm-kpi-label">Failed</div><div class="qm-kpi-value">{{displayValue(kpis.failed)}}</div></div>
+        </div>
+      </div>
+      <div class="col-6 col-xl-3">
+        <div class="qm-kpi-card qm-kpi-card-success">
+          <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-check2-circle"></i></span>
+          <div><div class="qm-kpi-label">Completed</div><div class="qm-kpi-value">{{displayValue(kpis.completed)}}</div></div>
+        </div>
+      </div>
+    </div>
+    <p class="qm-kpi-note" ng-if="!lookupOnly && pageMode !== 'search' && listEnabled">Total quotes counts every page. In progress, Failed and Completed count the quotes on this page.</p>
+  </section>
+
+  <section class="qm-start" ng-if="pageMode !== 'home' && (lookupOnly || requireTerm) && !dataReady && !loading && !error" aria-labelledby="start-heading">
+    <div class="qm-start-head">
+      <h2 id="start-heading">Look up by</h2>
+    </div>
+    <div class="qm-start-grid">
+      <button type="button" class="qm-start-card" ng-class="{'is-selected': searchBy === 'quoteRequestId'}" ng-click="useSearchType('quoteRequestId')">
+        <span class="qm-start-icon" aria-hidden="true"><i class="bi bi-fingerprint"></i></span>
+        <h3>Quote request ID</h3>
+        <p>Open one quote by its quote request ID.</p>
+        <i class="bi bi-arrow-up-right qm-start-arrow" aria-hidden="true"></i>
+      </button>
+      <button type="button" class="qm-start-card" ng-class="{'is-selected': searchBy === 'externalId'}" ng-click="useSearchType('externalId')">
+        <span class="qm-start-icon" aria-hidden="true"><i class="bi bi-hash"></i></span>
+        <h3>External ID</h3>
+        <p>Open one quote by its external ID.</p>
+        <i class="bi bi-arrow-up-right qm-start-arrow" aria-hidden="true"></i>
+      </button>
+      <button type="button" class="qm-start-card" ng-class="{'is-selected': searchBy === 'proposalId'}" ng-click="useSearchType('proposalId')">
+        <span class="qm-start-icon" aria-hidden="true"><i class="bi bi-file-earmark-text"></i></span>
+        <h3>Proposal ID</h3>
+        <p>Open one quote by its proposal ID.</p>
+        <i class="bi bi-arrow-up-right qm-start-arrow" aria-hidden="true"></i>
+      </button>
+      <a class="qm-start-card" href="#!/support-tickets">
+        <span class="qm-start-icon" aria-hidden="true"><i class="bi bi-ticket-perforated"></i></span>
+        <h3>Support ticket</h3>
+        <p>List the quotes linked to a ticket number.</p>
+        <i class="bi bi-arrow-up-right qm-start-arrow" aria-hidden="true"></i>
+      </a>
+    </div>
+  </section>
+
+  <div class="card qm-section-card mb-4" ng-if="!listEnabled" role="status">
+    <div class="qm-empty-inline"><i class="bi bi-info-circle" aria-hidden="true"></i>The default list is turned off. <a href="#!/search">Use Search</a> to find a quote.</div>
+  </div>
+
+  <div class="card qm-filter-card mb-4" ng-if="!lookupOnly && pageMode !== 'search' && listEnabled">
+    <div class="card-body">
+      <h2 class="qm-card-title mb-3"><i class="bi bi-funnel" aria-hidden="true"></i>Filters</h2>
+      <div class="row g-3 qm-filter-grid">
         <div class="col-6 col-lg-3">
           <label for="quote-state" class="form-label">State</label>
           <select id="quote-state" class="form-select" ng-model="filters.state" ng-change="applyFilters()" ng-disabled="isExactLookup()"
@@ -146,13 +154,13 @@
                  ng-change="applyFilters()" aria-describedby="quote-date-feedback" ng-attr-aria-invalid="{{!!validationError}}">
         </div>
         <div class="col-12 col-lg-6 d-flex align-items-end">
-          <p class="small text-muted mb-2"><i class="bi bi-sort-down me-1" aria-hidden="true"></i>Newest created first · {{pageSize || 25}} rows per page · {{autoRefresh.enabled ? 'Refreshes every ' + autoRefresh.seconds + 's' : 'Auto-refresh off'}}</p>
+          <p class="small text-muted mb-2"><i class="bi bi-sort-down me-1" aria-hidden="true"></i>Newest created first · {{pageSize || 25}} rows per page</p>
         </div>
       </div>
       <div id="quote-date-feedback" class="mt-2">
         <div class="text-danger small" role="alert" ng-if="validationError">{{validationError}}</div>
       </div>
-      <div class="qm-chip-wrap mt-3" ng-if="hasActiveFilters() && !lookupOnly">
+      <div class="qm-chip-wrap mt-3" ng-if="hasActiveFilters()">
         <span class="small text-muted">Filters:</span>
         <span class="qm-chip" ng-repeat="chip in activeFilterChips() track by chip.key">
           {{chip.label}}
@@ -162,10 +170,13 @@
         </span>
       </div>
     </div>
+  </div>
   </form>
 
-  <quote-table rows="quotes" loading="loading" error="error" tracking-id="trackingId" ready="dataReady"
+  <div ng-class="{'qm-idle-hidden': !listEnabled || ((lookupOnly || requireTerm) && pageMode !== 'home' && !dataReady && !loading && !error)}">
+    <quote-table rows="quotes" loading="loading" error="error" tracking-id="trackingId" ready="dataReady"
                current-page="currentPage" total-pages="totalPages" total-elements="totalElements" page-size="pageSize"
-               idle-message="{{lookupOnly ? 'Enter a quote request ID, external ID, or proposal ID to load a quote.' : 'Fix the highlighted filters to see results.'}}"
+               idle-message="{{lookupOnly ? 'Enter a quote request ID, external ID, or proposal ID to load a quote.' : requireTerm ? 'Enter something to search for.' : 'Fix the highlighted filters to see results.'}}"
                on-page="goToPage(page)" on-retry="refresh()"></quote-table>
+  </div>
 </div>

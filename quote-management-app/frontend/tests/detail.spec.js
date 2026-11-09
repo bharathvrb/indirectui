@@ -243,6 +243,55 @@ describe('Unified quote detail workspace', function() {
     config.features = originalFeatures;
   });
 
+  it('shows customer, sites, products, errors and events as cards and keeps every field reachable', function() {
+    load(); render();
+    var panel = function(id) { scope.setTab(id); root.$digest(); return element[0].querySelector('#detail-panel-' + id); };
+    var customer = panel('customer');
+    expect(customer.querySelector('.qm-profile-name').textContent).toBe(scope.customer.customerName);
+    expect(customer.querySelectorAll('.qm-kv').length).toBe(scope.customerDetailFields.length);
+    expect(customer.querySelector('.qm-address')).not.toBeNull();
+    expect(customer.querySelectorAll('qm-contact-card').length).toBe(scope.customerContacts.length);
+    expect(panel('sites').querySelectorAll('.qm-site').length).toBe(scope.sites.length);
+    var siteCard = element[0].querySelector('.qm-site');
+    expect(siteCard.querySelector('.qm-kv-grid')).toBeNull();
+    angular.element(siteCard.querySelector('.qm-more')).triggerHandler('click');
+    expect(siteCard.querySelectorAll('.qm-kv-grid .qm-kv').length).toBeGreaterThan(8);
+    expect(panel('products').querySelectorAll('.qm-product').length).toBe(
+      scope.filteredSites().reduce(function(total, site) { return total + site.visibleItems.length; }, 0));
+    expect(panel('errors').querySelectorAll('.qm-error').length).toBe(scope.filteredErrors().length);
+    expect(panel('events').querySelectorAll('.qm-timeline-item').length).toBe(scope.events.length);
+  });
+
+  it('labels every customer field by its backend name and invents nothing', function() {
+    load(); render();
+    var shown = scope.customerDetailFields.map(function(field) { return field[0]; });
+    expect(shown).not.toContain('customerName');
+    expect(shown).not.toContain('tradingName');
+    expect(shown.length + 2).toBe(scope.customerFields.length);
+    scope.setTab('customer'); root.$digest();
+    var labels = Array.prototype.map.call(element[0].querySelectorAll('#detail-panel-customer .qm-profile .qm-kv dt'), function(dt) { return dt.textContent; });
+    expect(labels).toEqual(scope.customerDetailFields.map(function(field) { return field[1]; }));
+    expect(element[0].querySelector('#detail-panel-customer .qm-profile .qm-tags')).toBeNull();
+    scope.customer.customerName = 'acme';
+    expect(scope.customerInitial()).toBe('A');
+    scope.customer.customerName = '';
+    expect(scope.customerInitial()).toBe('•');
+  });
+
+  it('shows product and promotion statuses as sent, and no price summary the backend did not ask for', function() {
+    load(); render();
+    expect(scope.primaryPrice).toBeUndefined();
+    expect(scope.getItemStatusLabel('ACTIVE')).toBe('Active');
+    expect(scope.getItemStatusLabel('PENDING')).toBe('Pending');
+    expect(scope.getItemStatusLabel(null)).toBe('—');
+    scope.setTab('products'); root.$digest();
+    expect(element[0].querySelector('.qm-product-price')).toBeNull();
+    var labels = Array.prototype.map.call(element[0].querySelectorAll('.qm-product-tags li b'), function(b) { return b.textContent; });
+    expect(labels.length).toBeGreaterThan(0);
+    labels.forEach(function(label) { expect(['Type', 'Action', 'Qty', 'Bundle', 'Status']).toContain(label); });
+    expect(labels).toContain('Status');
+  });
+
   it('supports arrow, Home and End tab navigation', function() {
     load(); render();
     scope.tabKeydown(key('ArrowRight'), 0); root.$digest(); flushFocus();

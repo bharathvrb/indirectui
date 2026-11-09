@@ -35,7 +35,7 @@ angular.module('quoteManagement')
 
         function validReturnUrl(url) {
             if (typeof url !== 'string' || /[\\#]/.test(url)) return false;
-            return /^(\/quotes(?:\/[^/?]+)?|\/support-tickets)(?:\?.*)?$/.test(url);
+            return /^(\/quotes(?:\/[^/?]+)?|\/search|\/support-tickets)(?:\?.*)?$/.test(url);
         }
 
         function requireLogin(reason) {
@@ -85,7 +85,7 @@ angular.module('quoteManagement')
             requireLogin: requireLogin,
             loginLocal: function(username, password) {
                 if (!localSession.enabled) {
-                    return $q.reject({ data: { message: 'Local sign-in is not enabled on this development server.' } });
+                    return $q.reject({ data: { message: 'Local sign-in is not enabled on this server.' } });
                 }
                 return $http.post('/auth/local/login', { username: username, password: password }).then(function(response) {
                     var session = response.data;

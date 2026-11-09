@@ -63,7 +63,7 @@ angular.module('quoteManagement')
         { id: 'contract', label: 'Contracts', icon: 'bi-file-earmark-text' }
       ];
       $scope.journey = QuoteJourney.build([]);
-      $scope.ui = { compact: false };
+      $scope.ui = { compact: false, stepsOpen: false };
       $scope.copiedValue = '';
       // Step retry (UI-11): visible everywhere a step failed; enabled only by features.retryEnabled.
       $scope.retryEnabled = !!($window.APP_CONFIG && $window.APP_CONFIG.features && $window.APP_CONFIG.features.retryEnabled === true);
@@ -91,8 +91,7 @@ angular.module('quoteManagement')
       $scope.detailStats = {
         siteCount: 0,
         productCount: 0,
-        errorCount: 0,
-        failedStepCount: 0
+        errorCount: 0
       };
 
       function normalizeKey(value) {
@@ -894,10 +893,7 @@ angular.module('quoteManagement')
         $scope.detailStats = {
           siteCount: $scope.sites.filter(function(site) { return !site._synthetic; }).length,
           productCount: productCount,
-          errorCount: $scope.errorRows.length,
-          failedStepCount: $scope.processingSteps.filter(function(step) {
-            return normalizeStepStatus(step.stepStatus) === 'FAILURE';
-          }).length
+          errorCount: $scope.errorRows.length
         };
       }
 
@@ -1018,21 +1014,35 @@ angular.module('quoteManagement')
         return 'bg-secondary';
       };
 
+      // Step status words and colours come from the journey service so the tiles and the table always agree.
+      var stepBadge = { success: 'bg-success', failure: 'bg-danger', progress: 'bg-warning text-dark' };
       $scope.getStepStatusClass = function(stepStatus) {
-        var value = normalizeStepStatus(stepStatus);
-        if (value === 'FAILURE') return 'bg-danger';
-        if (value === 'IN_PROGRESS') return 'bg-warning text-dark';
-        if (value === 'SUCCESS') return 'bg-success';
-        return 'bg-secondary';
+        return stepBadge[QuoteJourney.statusInfo(stepStatus).tone] || 'bg-secondary';
       };
 
       $scope.getStepStatusLabel = function(stepStatus) {
         var value = normalizeStepStatus(stepStatus);
-        if (value === 'FAILURE') return 'Failed';
-        if (value === 'IN_PROGRESS') return 'In Progress';
-        if (value === 'SUCCESS') return 'Success';
-        if (value === 'PENDING') return 'Pending';
-        return value || '—';
+        return value ? QuoteJourney.statusInfo(value).label : '—';
+      };
+
+      // The step grid stays closed until asked for; the failure panel and the journey header both open it.
+      $scope.toggleSteps = function() { $scope.ui.stepsOpen = !$scope.ui.stepsOpen; };
+      $scope.spotlightClick = function(event) {
+        if (event && event.target && event.target.closest && event.target.closest('button, a')) return;
+        $scope.toggleSteps();
+      };
+
+      // Customer tab: the profile card shows these two; every other field appears under its own label in the grid.
+      var profileKeys = ['customerName', 'tradingName'];
+      $scope.customerDetailFields = $scope.customerFields.filter(function(field) { return profileKeys.indexOf(field[0]) === -1; });
+      $scope.customerInitial = function() {
+        var name = $scope.displayValue($scope.customer.customerName);
+        return /^[A-Za-z0-9]/.test(name) ? name.charAt(0).toUpperCase() : '•';
+      };
+      // Product and promotion statuses are shown as the backend sends them (only the capitalisation is tidied).
+      $scope.getItemStatusLabel = function(status) {
+        var value = $scope.displayValue(status);
+        return value === '—' ? value : $scope.humanize(value);
       };
 
       $scope.setTab = function(tab) {

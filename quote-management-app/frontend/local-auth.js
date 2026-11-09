@@ -234,13 +234,28 @@ function createLocalAuth(options = {}) {
         }
     }
 
+    // Behind the Cloud Foundry router every request comes from the router, so attempts would be counted for all
+    // users together. With QM_TRUST_PROXY=true the client is the last X-Forwarded-For entry, which the router
+    // itself appends and a caller cannot forge; anything that is not an IP address is ignored.
+    const trustProxy = process.env.QM_TRUST_PROXY === 'true';
+    function clientAddress(req) {
+        if (trustProxy) {
+            const forwarded = String(req.headers['x-forwarded-for'] || '').split(',').map(part => part.trim()).filter(Boolean);
+            const last = forwarded[forwarded.length - 1];
+            if (last && net.isIP(last)) {
+                return last;
+            }
+        }
+        return req.socket.remoteAddress;
+    }
+
     function throttled(res, seconds) {
         res.setHeader('Retry-After', String(Math.max(1, Math.ceil(seconds))));
         json(res, 429, { message: 'Too many sign-in attempts. Try again later.' });
     }
 
     async function login(req, res) {
-        const address = req.socket.remoteAddress;
+        const address = clientAddress(req);
         let attempt = attempts.get(address);
         if (attempt && attempt.failures + attempt.pending >= MAX_FAILURES) {
             return throttled(res, (attempt.resetAt - now()) / 1000);

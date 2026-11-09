@@ -1,0 +1,19 @@
+# Cloud Foundry upload ignore file. The platform installs and builds the app itself.
+node_modules/
+dist/
+coverage/
+tests/
+karma.conf.js
+karma.coverage.conf.js
+.git/
+.gitignore
+.vscode/
+.idea/
+.DS_Store
+*.log
+*.swp
+*~
+*.local
+.env
+# Local settings and any real secrets in them must never be uploaded; use `cf set-env`.
+server.properties

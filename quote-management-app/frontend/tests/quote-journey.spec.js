@@ -48,7 +48,7 @@ describe('Quote journey model', function() {
   });
 
   it('maps statuses to tone, label and icon, with a safe default for unknown statuses', function() {
-    expect(journey.statusInfo('SUCCESS')).toEqual({ tone: 'success', label: 'Completed', icon: 'bi-check-lg' });
+    expect(journey.statusInfo('SUCCESS')).toEqual({ tone: 'success', label: 'Success', icon: 'bi-check-lg' });
     expect(journey.statusInfo('FAILED').tone).toBe('failure');
     expect(journey.statusInfo('IN_PROGRESS').tone).toBe('progress');
     expect(journey.statusInfo('SKIPPED').tone).toBe('skipped');
@@ -121,8 +121,36 @@ describe('Quote journey model', function() {
     var result = journey.build(input);
     expect(result.steps[0].duration).toBeUndefined();
     expect(result.steps[0].label).toBe('ADDRESS_VALIDATION');
-    expect(result.steps[0].statusLabel).toBe('Completed');
+    expect(result.steps[0].statusLabel).toBe('Success');
     expect(journey.formatDuration).toBeUndefined();
     expect(input).toEqual(copy);
+  });
+});
+
+describe('Quote journey model: numbers and counts come from the backend', function() {
+  'use strict';
+  var journey;
+  beforeEach(function() {
+    angular.mock.module('quoteManagement');
+    angular.mock.inject(function(QuoteJourney) { journey = QuoteJourney; });
+  });
+
+  it('numbers steps by the backend stepOrder when it sent one, and by position otherwise', function() {
+    var withOrder = journey.build([
+      { stepName: 'A', stepStatus: 'SUCCESS', stepOrder: 2 }, { stepName: 'B', stepStatus: 'FAILURE', stepOrder: 7 }
+    ]);
+    expect(withOrder.steps.map(function(step) { return step.order; })).toEqual([2, 7]);
+    var without = journey.build([{ stepName: 'A', stepStatus: 'SUCCESS' }, { stepName: 'B', stepStatus: 'PENDING' }]);
+    expect(without.steps.map(function(step) { return step.order; })).toEqual([1, 2]);
+  });
+
+  it('counts success and skipped separately and uses the backend status words', function() {
+    var result = journey.build([
+      { stepName: 'A', stepStatus: 'SUCCESS' }, { stepName: 'B', stepStatus: 'SKIPPED' },
+      { stepName: 'C', stepStatus: 'PENDING' }, { stepName: 'D', stepStatus: 'IN_PROGRESS' }
+    ]);
+    expect([result.succeeded, result.skipped, result.pending, result.active]).toEqual([1, 1, 1, 1]);
+    var labels = result.steps.map(function(step) { return step.statusLabel; }).sort();
+    expect(labels).toEqual(['In progress', 'Pending', 'Skipped', 'Success']);
   });
 });

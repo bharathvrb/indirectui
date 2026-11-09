@@ -6,7 +6,7 @@
         <p class="qm-subtitle mb-0 mt-1">See every quote linked to a SKY or support ticket.</p>
       </div>
     </div>
-    <div class="row g-3" ng-if="searched" aria-label="Ticket quote summary">
+    <div class="row g-3" aria-label="Ticket quote summary" ng-if="searched">
       <div class="col-6 col-xl-3">
         <div class="qm-kpi-card qm-kpi-card-info">
           <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-collection"></i></span>
@@ -32,6 +32,7 @@
         </div>
       </div>
     </div>
+    <p class="qm-kpi-note" ng-if="searched">Linked quotes counts every page. In progress, Failed and Completed count the quotes on this page.</p>
   </section>
 
   <form name="ticketSearch" class="card qm-filter-card mb-4" ng-submit="searchByTicket()" novalidate aria-label="Find quotes by ticket">
@@ -42,7 +43,7 @@
           <div class="qm-input-wrap">
             <i class="bi bi-ticket-detailed" aria-hidden="true"></i>
             <input id="ticket-number" type="search" class="form-control" ng-model="ticketNumber"
-                   placeholder="SKY or support ticket number" aria-describedby="ticket-help ticket-feedback"
+                   placeholder="SKY or support ticket number, e.g. SUP-TKT-20260423-002" aria-describedby="ticket-feedback"
                    ng-attr-aria-invalid="{{!!validationError}}">
           </div>
         </div>
@@ -53,7 +54,6 @@
                   aria-label="Refresh current ticket results"><i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>Refresh</button>
         </div>
       </div>
-      <div id="ticket-help" class="form-text mt-2" ng-if="!searched">Example: SUP-TKT-20260423-002</div>
       <div id="ticket-feedback" class="text-danger small mt-2" role="alert" ng-if="validationError">{{validationError}}</div>
     </div>
   </form>

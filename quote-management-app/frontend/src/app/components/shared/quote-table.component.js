@@ -15,10 +15,6 @@ angular.module('quoteManagement')
       ctrl.value = QuoteViewService.displayValue;
       ctrl.stateLabel = QuoteViewService.stateLabel;
       ctrl.stateClass = QuoteViewService.stateClass;
-      ctrl.rowTone = function(state) {
-        var value = String(state || '').toUpperCase().replace(/[^A-Z]/g, '');
-        return { FAILED: 'failed', INPROGRESS: 'progress', PENDINGAPPROVAL: 'approval', COMPLETED: 'done', RECEIVED: 'received' }[value] || 'none';
-      };
       ctrl.quoteHref = function(id) { return '#!/quotes/' + encodeURIComponent(id); };
       ctrl.pages = function() {
         var pages = [];

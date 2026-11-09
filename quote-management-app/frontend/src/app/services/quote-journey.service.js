@@ -18,10 +18,10 @@ angular.module('quoteManagement')
     FLOW.forEach(function(name, index) { INDEX[name] = index; });
 
     var TONES = {
-      SUCCESS: { tone: 'success', label: 'Completed', icon: 'bi-check-lg' },
+      SUCCESS: { tone: 'success', label: 'Success', icon: 'bi-check-lg' },
       FAILURE: { tone: 'failure', label: 'Failed', icon: 'bi-x-lg' },
       IN_PROGRESS: { tone: 'progress', label: 'In progress', icon: 'bi-arrow-repeat' },
-      PENDING: { tone: 'pending', label: 'Waiting', icon: 'bi-circle' },
+      PENDING: { tone: 'pending', label: 'Pending', icon: 'bi-circle' },
       SKIPPED: { tone: 'skipped', label: 'Skipped', icon: 'bi-skip-forward' }
     };
 
@@ -89,14 +89,18 @@ angular.module('quoteManagement')
       });
       var useOrder = list.some(function(step) { return number(step.stepOrder) !== null; });
       list.sort(compare(useOrder));
-      list.forEach(function(step, index) { step.number = index + 1; });
+      // number is the place in the list; order is the backend's own stepOrder when it sent one.
+      list.forEach(function(step, index) {
+        step.number = index + 1;
+        step.order = number(step.stepOrder) !== null ? number(step.stepOrder) : step.number;
+      });
       var count = function(tone) { return list.filter(function(step) { return step.tone === tone; }).length; };
       var done = count('success') + count('skipped');
       var current = list.filter(function(step) { return step.tone === 'failure'; })[0] ||
         list.filter(function(step) { return step.tone === 'progress'; })[0] ||
         list.filter(function(step) { return step.tone === 'pending'; })[0] || null;
       return {
-        steps: list, total: list.length, done: done,
+        steps: list, total: list.length, done: done, succeeded: count('success'), skipped: count('skipped'),
         failed: count('failure'), active: count('progress'), pending: count('pending'),
         percent: list.length ? Math.round(done * 100 / list.length) : 0,
         current: current,

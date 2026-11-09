@@ -32,7 +32,7 @@
             }
             window.__localAuth = session;
         }).catch(function(error) {
-            window.__localAuthError = 'Local sign-in could not be initialized. Reload the page or check the development server.';
+            window.__localAuthError = 'Local sign-in could not be initialized. Reload the page or check that the server is running.';
             console.error('Local session initialization failed:', error.name);
         }).finally(function() {
             window.clearTimeout(timeout);

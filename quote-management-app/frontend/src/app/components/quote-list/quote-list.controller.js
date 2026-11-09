@@ -1,8 +1,8 @@
 'use strict';
 
 angular.module('quoteManagement')
-  .controller('QuoteListCtrl', ['$scope', '$location', '$timeout', '$interval', 'QuoteViewService',
-    function($scope, $location, $timeout, $interval, QuoteViewService) {
+  .controller('QuoteListCtrl', ['$scope', '$location', '$timeout', '$route', 'QuoteViewService',
+    function($scope, $location, $timeout, $route, QuoteViewService) {
       var view = QuoteViewService;
       var searchTimer;
       var lastQuery;
@@ -19,53 +19,20 @@ angular.module('quoteManagement')
       $scope.searchError = null;
       $scope.searchBy = 'auto';
       $scope.lookupOnly = !!(window.APP_CONFIG && window.APP_CONFIG.quoteDataLookupOnly);
-      var refreshSeconds = view.integer(window.APP_CONFIG && window.APP_CONFIG.autoRefreshSeconds, 60, 15);
-      var refreshTimer = null;
-      // Auto-refresh is off by default (UI-01); the interval is configurable in config.js.
-      $scope.autoRefresh = { enabled: false, seconds: refreshSeconds };
-      $scope.lastLoadedAt = null;
-      function stopAutoRefresh() {
-        if (refreshTimer) $interval.cancel(refreshTimer);
-        refreshTimer = null;
-      }
-      $scope.toggleAutoRefresh = function() {
-        stopAutoRefresh();
-        if (!$scope.autoRefresh.enabled) return;
-        refreshTimer = $interval(function() {
-          if (!$scope.loading && !searchTimer && lastQuery) $scope.refresh();
-        }, refreshSeconds * 1000);
-      };
+      // The route says which page this is: 'home' (default list and filters), 'search' (the search features),
+      // or nothing, which shows both together.
+      var route = $route.current && $route.current.$$route;
+      $scope.pageMode = route && route.mode || null;
+      // Home always lists; quoteDataLookupOnly only limits what the Search page offers.
+      if ($scope.pageMode === 'home') $scope.lookupOnly = false;
+      // Search never lists without something to look for. Home can be switched off with defaultListEnabled: false.
+      $scope.requireTerm = $scope.pageMode === 'search';
+      $scope.listEnabled = !($scope.pageMode === 'home' && window.APP_CONFIG && window.APP_CONFIG.defaultListEnabled === false);
       $scope.isExactLookup = function() { return !!view.lookupCriteria($scope.searchTerm, $scope.searchBy, $scope.lookupOnly); };
       $scope.lookupLabel = function() {
         var criteria = view.lookupCriteria($scope.searchTerm, $scope.searchBy, $scope.lookupOnly);
         if (!criteria) return '';
         return criteria.quoteRequestId ? 'quote request ID' : criteria.externalId ? 'external ID' : 'proposal ID';
-      };
-
-      var mixCache = [];
-      var mixMeta = [
-        ['failed', 'Failed'], ['inProgress', 'In progress'], ['pendingApproval', 'Pending approval'],
-        ['completed', 'Completed'], ['other', 'Received']
-      ];
-      // Share of each state among the quotes on this page. The same array is returned until the counts change.
-      $scope.stateMix = function() {
-        var kpis = $scope.kpis, total = ($scope.quotes || []).length;
-        if (!kpis || !total) return mixCache.length ? (mixCache = []) : mixCache;
-        var counts = {
-          failed: kpis.failed, inProgress: kpis.inProgress, pendingApproval: kpis.pendingApproval, completed: kpis.completed
-        };
-        counts.other = Math.max(0, total - counts.failed - counts.inProgress - counts.pendingApproval - counts.completed);
-        var parts = mixMeta.filter(function(meta) { return counts[meta[0]] > 0; }).map(function(meta) {
-          return { key: meta[0], label: meta[1], count: counts[meta[0]], percent: Math.round(counts[meta[0]] * 1000 / total) / 10 };
-        });
-        if (!angular.equals(parts, mixCache)) mixCache = parts;
-        return mixCache;
-      };
-      // Quick filters follow the quote's life cycle, unlike the alphabetical State menu.
-      $scope.quickStates = ['RECEIVED', 'IN_PROGRESS', 'PENDING_APPROVAL', 'COMPLETED', 'FAILED'];
-      $scope.quickState = function(state) {
-        $scope.filters.state = state || '';
-        $scope.applyFilters();
       };
 
       function capitalize(text) { return text.charAt(0).toUpperCase() + text.slice(1); }
@@ -82,9 +49,50 @@ angular.module('quoteManagement')
         });
       }
 
+      // Recent searches: the last few exact lookups that found a quote, kept in this browser only.
+      var RECENT_KEY = 'omw-recent-searches';
+      var searchLabels = ['auto', 'quoteRequestId', 'externalId', 'proposalId'];
+      function readRecent() {
+        try {
+          var list = JSON.parse(window.localStorage.getItem(RECENT_KEY));
+          return (angular.isArray(list) ? list : []).filter(function(item) {
+            return item && typeof item.term === 'string' && item.term.length <= 200 && searchLabels.indexOf(item.by) !== -1;
+          }).slice(0, 5);
+        } catch (error) { return []; }
+      }
+      function rememberSearch() {
+        var term = view.text($scope.searchTerm);
+        if (!term || term.length > 200 || !view.lookupCriteria(term, $scope.searchBy, $scope.lookupOnly)) return;
+        var list = $scope.recentSearches.filter(function(item) { return item.term !== term; });
+        list.unshift({ term: term, by: searchLabels.indexOf($scope.searchBy) !== -1 ? $scope.searchBy : 'auto' });
+        $scope.recentSearches = list.slice(0, 5);
+        try { window.localStorage.setItem(RECENT_KEY, JSON.stringify($scope.recentSearches)); } catch (error) { /* storage unavailable */ }
+      }
+      $scope.recentSearches = readRecent();
+      $scope.useRecent = function(item) {
+        $scope.searchTerm = item.term;
+        $scope.searchBy = item.by;
+        $scope.applyFilters();
+      };
+      // Home page: greeting and the "how to look it up" cards.
+      var hour = new Date().getHours();
+      $scope.greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+      $scope.firstName = function() {
+        var user = $scope.$root && $scope.$root.currentUser;
+        return view.text(user && user.name).split(/[\s@.]/)[0];
+      };
+      $scope.useSearchType = function(type) {
+        $scope.searchBy = type;
+        $scope.searchError = null;
+        $timeout(function() {
+          var input = document.getElementById('quote-search');
+          if (input) input.focus();
+        });
+      };
+
       var loader = view.createLoader($scope, 'quotes', function(page) {
         rememberOptions(page.items);
-        $scope.lastLoadedAt = new Date();
+        if (page.items.length) rememberSearch();
         // Reflect a server-corrected page without requesting the same results again.
         if (lastQuery.page !== page.currentPage || lastQuery.size !== page.pageSize) {
           lastQuery = angular.extend({}, lastQuery, { page: page.currentPage, size: page.pageSize });
@@ -138,6 +146,10 @@ angular.module('quoteManagement')
       function validate() {
         $scope.searchError = ['quoteRequestId', 'externalId', 'proposalId'].indexOf($scope.searchBy) !== -1 && !view.text($scope.searchTerm)
           ? 'Enter a ' + { quoteRequestId: 'quote request ID', externalId: 'external ID', proposalId: 'proposal ID' }[$scope.searchBy] + '.' : null;
+        if (!$scope.listEnabled || ($scope.requireTerm && !$scope.searchError && !view.text($scope.searchTerm))) {
+          $scope.validationError = null;
+          return false;
+        }
         if ($scope.lookupOnly && (!view.text($scope.searchTerm) || $scope.searchBy === 'text')) {
           if ($scope.searchBy === 'text') $scope.searchError = 'This backend requires a quote request ID, external ID, or proposal ID.';
           $scope.validationError = null;
@@ -241,7 +253,7 @@ angular.module('quoteManagement')
         $scope.applyFilters();
       };
       $scope.$on('$routeUpdate', function() {
-        if ($location.path() !== '/quotes') return;
+        if ($location.path() !== '/quotes' && $location.path() !== '/search') return;
         var query = locationQuery();
         if (angular.equals(query, lastQuery)) return;
         cancelSearch();
@@ -252,7 +264,6 @@ angular.module('quoteManagement')
       });
       $scope.$on('$destroy', function() {
         cancelSearch();
-        stopAutoRefresh();
       });
       readQuery();
       commit(true);

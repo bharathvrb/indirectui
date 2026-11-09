@@ -81,13 +81,55 @@ describe('Quote journey and step retry', function() {
   function failedStep() { return scope.processingSteps.filter(function(s) { return s.id === 5; })[0]; }
   function key(name, shift) { return { key: name, shiftKey: !!shift, preventDefault: jasmine.createSpy('preventDefault') }; }
 
+  describe('step list drawer', function() {
+    function click(node) { node.dispatchEvent(new MouseEvent('click', { bubbles: true })); }
+    function isOpen(page) { return page.querySelector('.qm-steps-wrap').classList.contains('is-open'); }
+
+    it('shows the failure once and keeps the step grid closed until it is asked for', function() {
+      var page = start();
+      expect(page.querySelectorAll('.qm-spotlight').length).toBe(1);
+      expect(page.querySelector('.qm-steps-toggle')).toBeNull();
+      expect(isOpen(page)).toBe(false);
+      expect(page.querySelector('#spotlight-steps').getAttribute('aria-expanded')).toBe('false');
+      expect(page.querySelector('#spotlight-steps').getAttribute('aria-controls')).toBe('journey-steps');
+    });
+
+    it('opens and closes from a click on the failure panel or its button, but not from its other buttons', function() {
+      var page = start({ retryEnabled: true });
+      click(page.querySelector('.qm-spotlight-body'));
+      expect(isOpen(page)).toBe(true);
+      click(page.querySelector('#spotlight-steps'));
+      expect(isOpen(page)).toBe(false);
+      click(page.querySelector('#spotlight-errors'));
+      click(page.querySelector('#spotlight-retry'));
+      expect(isOpen(page)).toBe(false);
+      click(page.querySelector('.qm-spotlight'));
+      expect(isOpen(page)).toBe(true);
+      expect(page.querySelector('#spotlight-steps').textContent).toContain('Hide steps');
+      expect(page.querySelector('.qm-spotlight').classList.contains('is-open')).toBe(true);
+    });
+
+    it('gives a quote without a failure panel its own toggle in the journey header', function() {
+      var page = start({ data: fixture('IN_PROGRESS') });
+      expect(page.querySelector('.qm-spotlight')).toBeNull();
+      var toggle = page.querySelector('.qm-steps-toggle');
+      expect(toggle.textContent).toContain('Show all ' + scope.journey.total + ' steps');
+      click(toggle);
+      expect(isOpen(page)).toBe(true);
+      expect(toggle.textContent).toContain('Hide steps');
+      expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    });
+  });
+
   describe('journey card', function() {
     it('shows progress and every step in order under its actual name, with no phase groups', function() {
       var page = start();
       var ring = page.querySelector('.qm-ring');
-      expect(ring.getAttribute('aria-label')).toBe('2 of 5 steps completed');
+      expect(ring.getAttribute('aria-label')).toBe('2 of 5 steps finished');
       expect(ring.textContent).toContain('40%');
-      expect(page.querySelector('.qm-journey-status').textContent).toContain('Stopped at CREATE_PROPOSAL');
+      // The failure panel below already names the step, so the status line stays empty then.
+      expect(page.querySelector('.qm-spotlight h3').textContent).toContain('CREATE_PROPOSAL failed');
+      expect(page.querySelector('.qm-journey-status').textContent.trim()).toBe('');
       expect(page.querySelectorAll('.qm-phase, .qm-phases').length).toBe(0);
       var names = Array.prototype.map.call(page.querySelectorAll('.qm-step-name'), function(n) { return n.textContent.trim(); });
       expect(names).toEqual(['ADDRESS_VALIDATION', 'CREATE_CONTACT', 'CREATE_PROPOSAL', 'ADD_SITE', 'CONTRACT_GENERATION']);
@@ -95,10 +137,10 @@ describe('Quote journey and step retry', function() {
       expect(numbers).toEqual(['01', '02', '03', '04', '05']);
       expect(page.querySelector('.qm-step.is-failure .qm-step-meta').textContent.trim()).toBe('Failed');
       expect(page.querySelectorAll('.qm-step-desc, .qm-spotlight-desc').length).toBe(0);
-      expect(page.querySelector('.qm-step.is-success .qm-step-meta').textContent.trim()).toBe('Completed');
+      expect(page.querySelector('.qm-step.is-success .qm-step-meta').textContent.trim()).toBe('Success');
       expect(page.querySelector('.qm-steps').textContent).not.toMatch(/attempt|\d+ ?(s|min)\b/i);
       expect(page.querySelectorAll('.qm-step.is-current').length).toBe(1);
-      expect(page.querySelector('.qm-journey-counts').textContent.replace(/\s+/g, ' ')).toContain('2 done 1 failed 2 waiting');
+      expect(page.querySelector('.qm-journey-counts').textContent.replace(/\s+/g, ' ')).toContain('2 success 1 failed 2 pending');
     });
 
     it('shows the failure summary (UI-03) with stage, step, error code and message only when the quote failed', function() {
@@ -147,21 +189,14 @@ describe('Quote journey and step retry', function() {
       expect(head.querySelector('.qm-quote-head-actions .btn-primary').textContent).toContain('Mark completed');
     });
 
-    function countLabels(page) {
-      return Array.prototype.map.call(page.querySelectorAll('.qm-quote-counts li'), function(li) { return li.textContent.replace(/\s+/g, ' ').trim(); });
-    }
-
-    it('uses singular labels for a count of one', function() {
-      var data = fixture();
-      data.sites = [{ id: 1, siteId: 'S1', siteName: 'Only site', items: [] }];
-      data.errorDetails = data.errorDetails.slice(0, 1);
-      expect(countLabels(start({ data: data }))).toEqual(['1 Site', '0 Products', '1 Error', '1 Failed step']);
+    it('keeps the "Stopped at" line when a step failed but the quote itself is not failed', function() {
+      var page = start({ data: fixture('IN_PROGRESS') });
+      expect(page.querySelector('.qm-spotlight')).toBeNull();
+      expect(page.querySelector('.qm-journey-status').textContent).toContain('Stopped at CREATE_PROPOSAL');
     });
 
-    it('uses plural labels otherwise', function() {
-      var data = fixture();
-      data.sites = [{ id: 1, siteId: 'S1', items: [{ id: 5, itemId: 'I1', productName: 'P' }] }, { id: 2, siteId: 'S2', items: [] }];
-      expect(countLabels(start({ data: data }))).toEqual(['2 Sites', '1 Product', '2 Errors', '1 Failed step']);
+    it('does not repeat the tab counts as a row of chips under the header', function() {
+      expect(start({ data: fixture() }).querySelector('.qm-quote-counts')).toBeNull();
     });
 
     it('hides Mark completed when the quote is not failed', function() {
@@ -223,7 +258,7 @@ describe('Quote journey and step retry', function() {
     it('shows a retry control on every error row, all disabled', function() {
       var page = start();
       scope.setTab('errors'); root.$digest();
-      var buttons = page.querySelectorAll('#detail-panel-errors td button[title]');
+      var buttons = page.querySelectorAll('#detail-panel-errors .qm-error-retry');
       var retry = Array.prototype.filter.call(buttons, function(b) { return /Retry/.test(b.textContent); });
       expect(retry.length).toBe(2);
       retry.forEach(function(button) { expect(button.disabled).toBe(true); });

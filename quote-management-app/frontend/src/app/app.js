@@ -8,9 +8,21 @@ angular.module('quoteManagement', ['ngRoute'])
                 templateUrl: 'app/components/login/login.html', controller: 'LoginCtrl', title: 'Welcome'
             })
             .when('/', { redirectTo: '/login' })
+            // Home: the default list of quotes. Search: the search features (smart search and the ID types).
             .when('/quotes', {
                 templateUrl: 'app/components/quote-list/quote-list.html',
-                controller: 'QuoteListCtrl', reloadOnSearch: false, title: 'Quotes'
+                controller: 'QuoteListCtrl', reloadOnSearch: false, title: 'Home', mode: 'home',
+                // Old shared links such as /quotes?search=ABC now belong on the Search page.
+                redirectTo: function(params, path, search) {
+                    if (!search || !search.search) return undefined;
+                    return '/search?' + Object.keys(search).map(function(key) {
+                        return encodeURIComponent(key) + '=' + encodeURIComponent(search[key]);
+                    }).join('&');
+                }
+            })
+            .when('/search', {
+                templateUrl: 'app/components/quote-list/quote-list.html',
+                controller: 'QuoteListCtrl', reloadOnSearch: false, title: 'Search', mode: 'search'
             })
             .when('/quotes/:id', {
                 templateUrl: 'app/components/quote-detail/quote-detail.html',
@@ -34,6 +46,20 @@ angular.module('quoteManagement', ['ngRoute'])
                 request.pathname.indexOf(base.pathname.replace(/\/$/, '') + '/quotedata/') === 0;
         }
 
+        // Drives the thin progress bar at the top of the page: counts proxy requests that are in flight.
+        function track(config, step) {
+            var root = $injector.get('$rootScope');
+            root.pendingRequests = Math.max(0, (root.pendingRequests || 0) + step);
+            config.qmTracked = step > 0;
+        }
+        function release(config) {
+            if (config && config.qmTracked) {
+                config.qmTracked = false;
+                var root = $injector.get('$rootScope');
+                root.pendingRequests = Math.max(0, (root.pendingRequests || 0) - 1);
+            }
+        }
+
         return {
             request: function(config) {
                 if (!isProxy(config.url)) return config;
@@ -47,10 +73,16 @@ angular.module('quoteManagement', ['ngRoute'])
                     delete config.headers.Authorization;
                     delete config.headers.authorization;
                     if (token) config.headers.Authorization = 'Bearer ' + token;
+                    track(config, 1);
                     return config;
                 });
             },
+            response: function(response) {
+                release(response.config);
+                return response;
+            },
             responseError: function(error) {
+                release(error && error.config);
                 if (error.authRequired || (error.status === 401 && error.config && isProxy(error.config.url))) {
                     $injector.get('AuthService').requireLogin('session-expired');
                 }
@@ -60,6 +92,7 @@ angular.module('quoteManagement', ['ngRoute'])
     }])
     .run(['$rootScope', '$location', '$timeout', 'AuthService', function($rootScope, $location, $timeout, AuthService) {
         $rootScope.appReady = true;
+        $rootScope.pendingRequests = 0;
         $rootScope.themePreference = window.QuoteTheme ? window.QuoteTheme.getPreference() : 'light';
         $rootScope.setTheme = function() {
             window.QuoteTheme.setPreference($rootScope.themePreference);
@@ -101,7 +134,8 @@ angular.module('quoteManagement', ['ngRoute'])
         };
         $rootScope.$on('$routeChangeStart', function(event, next) {
             var route = next && next.$$route;
-            if (!route || route.redirectTo) return;
+            // Plain redirects (like / to /login) are followed as they are; a redirect function still needs the sign-in check.
+            if (!route || typeof route.redirectTo === 'string') return;
             if (route.originalPath !== '/login' && !AuthService.isAuthenticated()) {
                 event.preventDefault();
                 AuthService.requireLogin();

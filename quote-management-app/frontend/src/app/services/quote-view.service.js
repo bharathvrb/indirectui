@@ -1,7 +1,7 @@
 'use strict';
 
 angular.module('quoteManagement')
-  .factory('QuoteViewService', ['QuoteService', function(QuoteService) {
+  .factory('QuoteViewService', ['QuoteService', '$q', function(QuoteService, $q) {
     function text(value) {
       return typeof value === 'string' || typeof value === 'number' ? String(value).trim() : '';
     }
@@ -43,15 +43,23 @@ angular.module('quoteManagement')
       return /^(?:[A-Za-z0-9_.]+(?:-[A-Za-z0-9_.]+)*-)?[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(valueText) ? valueText : '';
     }
 
+    // Smart search tidies what people paste from logs or JSON: wrapping quotes/backticks and a trailing comma or semicolon.
+    function tidy(value) { return text(value).replace(/^[\s"'`]+|[\s"'`,;]+$/g, ''); }
+
     function lookupCriteria(value, searchBy, lookupOnly) {
       var valueText = text(value);
       if (!valueText) return null;
       if (searchBy === 'externalId') return { externalId: valueText };
       if (searchBy === 'proposalId') return { proposalId: valueText };
-      var quoteId = exactQuoteId(valueText, searchBy);
-      if (quoteId) return { quoteRequestId: quoteId };
-      // Smart search: anything else is tried as an external ID, then as a quote request ID if not found.
-      if (lookupOnly && (!searchBy || searchBy === 'auto')) return { externalId: valueText, fallbackToQuoteRequestId: true };
+      if (searchBy === 'quoteRequestId') return { quoteRequestId: valueText };
+      if (searchBy === 'text') return null;
+      var smart = tidy(valueText);
+      if (!smart) return null;
+      // Smart search: an ID that ends in a UUID is a quote request ID; anything else is tried as an external ID.
+      // Either way the other identifier is tried when the first finds nothing (see createLoader).
+      var quoteId = exactQuoteId(smart, searchBy);
+      if (quoteId) return { quoteRequestId: quoteId, fallbackToExternalId: true };
+      if (lookupOnly) return { externalId: smart, fallbackToQuoteRequestId: true };
       return null;
     }
 
@@ -128,14 +136,13 @@ angular.module('quoteManagement')
       return responseId || field(response.config && response.config.headers || {}, ['trackingId', 'x-tracking-id']);
     }
 
+    // Counts for the quotes on the page that was loaded; the tiles say so.
     function summary(rows) {
-      var result = { failed: 0, inProgress: 0, pendingApproval: 0, completed: 0, ticketLinked: 0 };
+      var result = { failed: 0, inProgress: 0, completed: 0 };
       rows.forEach(function(row) {
         if (row.state === 'FAILED') result.failed++;
         if (row.state === 'IN_PROGRESS') result.inProgress++;
-        if (row.state === 'PENDING_APPROVAL') result.pendingApproval++;
         if (row.state === 'COMPLETED') result.completed++;
-        if (text(row.supportTicketNumber)) result.ticketLinked++;
       });
       return result;
     }
@@ -174,7 +181,7 @@ angular.module('quoteManagement')
               : response && response.status === 401
                 ? 'Your session has expired. Sign in again to continue.'
               : response && response.status === 404 && (params.quoteRequestId || params.externalId || params.proposalId)
-                ? (params.quoteRequestId ? 'Quote not found for this request ID.' : params.fallbackToQuoteRequestId ? 'No quote has this external ID or quote request ID.' : 'Quote not found for this identifier.')
+                ? (params.fallbackToQuoteRequestId || params.fallbackToExternalId ? 'No quote has this external ID or quote request ID.' : params.quoteRequestId ? 'Quote not found for this request ID.' : 'Quote not found for this identifier.')
               : response && response.status === 0
                 ? 'Cannot reach the Quote Management server. Check that it is running and your network connection, then retry.'
               : serverMessage ? serverMessage
@@ -188,11 +195,42 @@ angular.module('quoteManagement')
             : params.externalId || params.proposalId
               ? QuoteService.findQuote(params.externalId ? { externalId: params.externalId } : { proposalId: params.proposalId })
             : QuoteService.getQuotes(angular.copy(params));
-          if (params.externalId && params.fallbackToQuoteRequestId) {
-            operation = operation.catch(function(response) {
-              if (!response || response.status !== 404 || destroyed || request !== generation) throw response;
-              resultParams = { quoteRequestId: params.externalId, page: params.page, size: params.size };
-              return QuoteService.getQuote(params.externalId);
+          // Smart search tries the other identifier when the first finds nothing: a 404, a 400/422/500 from QuoteData,
+          // or an empty result. Sign-in, permission, rate-limit and connection problems are reported as they are.
+          var fallback = params.fallbackToExternalId && params.quoteRequestId
+            ? { params: { externalId: params.quoteRequestId, page: params.page, size: params.size },
+                run: function() { return QuoteService.findQuote({ externalId: params.quoteRequestId }); } }
+            : params.fallbackToQuoteRequestId && params.externalId
+              ? { params: { quoteRequestId: params.externalId, page: params.page, size: params.size },
+                  run: function() { return QuoteService.getQuote(params.externalId); } }
+              : null;
+          function noMatch(response) {
+            return { status: 404, data: response && response.data, headers: response && response.headers, config: response && response.config };
+          }
+          // A 200 that holds no quote: nothing, an empty list, or an object without a quote request ID.
+          function isEmpty(response) {
+            var data = response && response.data;
+            if (data === null || data === undefined || data === '') return true;
+            if (angular.isArray(data)) return data.length === 0;
+            if (typeof data !== 'object') return false;
+            var list = angular.isArray(data.content) ? data.content : data.quotes;
+            return angular.isArray(list) ? list.length === 0 : !text(field(data, ['quoteRequestId']));
+          }
+          if (fallback) {
+            var tryOther = function(first) {
+              if (destroyed || request !== generation) return $q.reject(first);
+              resultParams = fallback.params;
+              return fallback.run().then(function(response) {
+                return isEmpty(response) ? $q.reject(noMatch(response)) : response;
+              }, function(response) {
+                return $q.reject(response);
+              });
+            };
+            operation = operation.then(function(response) {
+              return isEmpty(response) ? tryOther(noMatch(response)) : response;
+            }, function(response) {
+              if (!response || [400, 404, 422, 500].indexOf(response.status) === -1) return $q.reject(response);
+              return tryOther(response);
             });
           }
           operation.then(function(response) {
@@ -207,9 +245,9 @@ angular.module('quoteManagement')
             scope[rowsKey] = page.items;
             scope.totalElements = page.totalElements;
             scope.totalPages = page.totalPages;
+            scope.kpis = summary(page.items);
             scope.currentPage = page.currentPage;
             scope.pageSize = page.pageSize;
-            scope.kpis = summary(page.items);
             scope.loading = false;
             scope.dataReady = true;
             if (onSuccess) onSuccess(page);

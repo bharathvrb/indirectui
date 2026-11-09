@@ -14,7 +14,7 @@ const TYPES = {
 };
 
 // Navigation routes the single-page app answers itself. Missing assets and API paths must stay 404s.
-const APP_ROUTE = /^\/(?:login|support-tickets|quotes(?:\/[^/.\\]+)?)\/?$/;
+const APP_ROUTE = /^\/(?:login|search|support-tickets|quotes(?:\/[^/.\\]+)?)\/?$/;
 const FONT_CACHE = 'public, max-age=604800';
 
 function send(res, status, message, headers = {}) {
