@@ -822,11 +822,16 @@ body.is-login .app-topbar .qm-topbar-actions { margin-left: auto; }
     radial-gradient(34% 30% at 20% 82%, rgba(255, 255, 255, .18), transparent 70%); animation: aurora 18s ease-in-out infinite alternate; }
 .qm-auth-art::after { content: ''; position: absolute; inset: 0; z-index: -1; background-image: radial-gradient(rgba(255, 255, 255, .42) 1.3px, transparent 1.8px); background-size: 24px 24px; -webkit-mask-image: radial-gradient(95% 100% at 100% 0%, #000, transparent 78%); mask-image: radial-gradient(95% 100% at 100% 0%, #000, transparent 78%); animation: dots-drift 40s linear infinite; }
 .qm-auth-brand { grid-row: 2; display: inline-flex; flex-direction: column; align-items: center; gap: 18px; }
-/* Wordmark: a heavy "Quote" over a light, widely spaced "Management", with a short rule that draws in underneath. */
-.qm-auth-brand-name { font-family: var(--qm-display); font-size: 3.4rem; font-weight: 800; letter-spacing: -.04em; line-height: 1; }
-.qm-auth-brand-name span { display: block; margin-top: 8px; padding-left: .42em; font-size: 1.25rem; font-weight: 500; letter-spacing: .42em; text-transform: uppercase; color: rgba(255, 255, 255, .85); }
-.qm-auth-rule { display: block; width: 56px; height: 3px; border-radius: 3px; background: linear-gradient(90deg, rgba(255, 255, 255, .15), #fff, rgba(255, 255, 255, .15)); transform-origin: center; animation: rule-in 1.1s var(--qm-ease) .3s backwards; }
-@keyframes rule-in { from { transform: scaleX(0); opacity: 0; } to { transform: scaleX(1); opacity: 1; } }
+/* Wordmark on one line, with thin rings spreading out from it like a signal, the same rings as the corner arcs.
+   At rest (reduced motion) the rings simply stay in place. */
+.qm-auth-brand { position: relative; isolation: isolate; }
+.qm-auth-brand-name { font-family: var(--qm-display); font-size: 2.8rem; font-weight: 800; letter-spacing: -.04em; line-height: 1.1; white-space: nowrap; }
+.qm-auth-brand-name span { font-weight: 300; margin-left: .22em; letter-spacing: -.02em; color: rgba(255, 255, 255, .92); }
+.qm-auth-ripple { position: absolute; left: 50%; top: 50%; z-index: -1; width: 0; height: 0; pointer-events: none; }
+.qm-auth-ripple i { position: absolute; left: -170px; top: -170px; width: 340px; height: 340px; border-radius: 50%; border: 1.5px solid rgba(255, 255, 255, .3); opacity: .5; animation: ripple-out 9s ease-out infinite; }
+.qm-auth-ripple i:nth-child(2) { animation-delay: -3s; }
+.qm-auth-ripple i:nth-child(3) { animation-delay: -6s; }
+@keyframes ripple-out { 0% { transform: scale(.55); opacity: 0; } 12% { opacity: .55; } 100% { transform: scale(2.1); opacity: 0; } }
 .qm-auth-credit { grid-row: 3; align-self: end; margin: 0; font-size: var(--fs-sm); font-weight: 600; letter-spacing: .08em; color: rgba(255, 255, 255, .82); }
 /* Sign-in art: the same quiet rings-and-dots pattern as the page banners, in white on the blue panel.
    Rings spread from the top-right corner, a second set from the bottom-left, and they breathe slowly.
@@ -1008,9 +1013,9 @@ body.is-login .app-topbar .qm-topbar-actions { margin-left: auto; }
     .qm-user-name, .qm-breadcrumb { display: none; }
     .qm-auth-page { grid-template-columns: 1fr; min-height: 100vh; }
     .qm-auth-art { padding: 26px 24px 18px; min-height: 0; }
-    .qm-auth-brand { gap: 12px; padding-top: 40px; }
-    .qm-auth-brand-name { font-size: 2.3rem; }
-    .qm-auth-brand-name span { margin-top: 5px; font-size: .9rem; }
+    .qm-auth-brand { padding-top: 40px; }
+    .qm-auth-brand-name { font-size: 2rem; }
+    .qm-auth-ripple i { left: -110px; top: -110px; width: 220px; height: 220px; }
     .qm-auth-credit { margin-top: 12px; }
     .qm-auth-card { padding: 30px 24px 40px; }
 }
