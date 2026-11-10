@@ -825,7 +825,7 @@ body.is-login .app-topbar .qm-topbar-actions { margin-left: auto; }
 /* Wordmark on one line, with thin rings spreading out from it like a signal, the same rings as the corner arcs.
    At rest (reduced motion) the rings simply stay in place. */
 .qm-auth-brand { position: relative; isolation: isolate; }
-.qm-auth-brand-name { font-family: var(--qm-display); font-size: 2.8rem; font-weight: 800; letter-spacing: -.04em; line-height: 1.1; white-space: nowrap; }
+.qm-auth-brand-name { font-family: var(--qm-display); font-size: 2.52rem; font-weight: 800; letter-spacing: -.04em; line-height: 1.1; white-space: nowrap; }
 .qm-auth-brand-name span { font-weight: 300; margin-left: .22em; letter-spacing: -.02em; color: rgba(255, 255, 255, .92); }
 .qm-auth-ripple { position: absolute; left: 50%; top: 50%; z-index: -1; width: 0; height: 0; pointer-events: none; }
 .qm-auth-ripple i { position: absolute; left: -170px; top: -170px; width: 340px; height: 340px; border-radius: 50%; border: 1.5px solid rgba(255, 255, 255, .3); opacity: .5; animation: ripple-out 9s ease-out infinite; }
@@ -853,7 +853,7 @@ body.is-login .app-topbar .qm-topbar-actions { margin-left: auto; }
 .qm-auth-card { align-self: center; justify-self: center; width: min(100%, 440px); padding: 96px 32px 32px; animation: rise .55s var(--qm-ease) both; }
 .qm-login-header { display: flex; align-items: center; gap: 14px; padding: 0 0 4px; }
 .qm-auth-symbol { display: grid; place-items: center; flex: none; width: 50px; height: 50px; border-radius: 15px; font-size: 1.5rem; color: #fff; background: var(--qm-gradient); box-shadow: 0 14px 26px -10px rgba(29, 79, 215, .75), inset 0 1px 0 rgba(255,255,255,.3); }
-.qm-login-header h1 { font-size: var(--fs-2xl); font-weight: 800; letter-spacing: -.03em; margin: 0; line-height: 1.1; }
+.qm-login-header h1 { font-size: calc(var(--fs-2xl) * .9); font-weight: 800; letter-spacing: -.03em; margin: 0; line-height: 1.1; }
 .qm-login-lead { margin: 4px 0 0; color: var(--qm-muted); font-size: var(--fs-base); }
 .qm-login-body { padding: 26px 0 8px; }
 .qm-login-btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 50px; font-size: var(--fs-base); border-radius: 13px; }
@@ -1014,7 +1014,7 @@ body.is-login .app-topbar .qm-topbar-actions { margin-left: auto; }
     .qm-auth-page { grid-template-columns: 1fr; min-height: 100vh; }
     .qm-auth-art { padding: 26px 24px 18px; min-height: 0; }
     .qm-auth-brand { padding-top: 40px; }
-    .qm-auth-brand-name { font-size: 2rem; }
+    .qm-auth-brand-name { font-size: 1.8rem; }
     .qm-auth-ripple i { left: -110px; top: -110px; width: 220px; height: 220px; }
     .qm-auth-credit { margin-top: 12px; }
     .qm-auth-card { padding: 30px 24px 40px; }
