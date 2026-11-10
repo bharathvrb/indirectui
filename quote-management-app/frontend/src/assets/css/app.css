@@ -820,31 +820,28 @@ body.is-login .app-topbar .qm-topbar-actions { margin-left: auto; }
 .qm-auth-art::before { content: ''; position: absolute; inset: -30%; z-index: -2; background:
     radial-gradient(38% 34% at 72% 24%, rgba(255, 255, 255, .30), transparent 70%),
     radial-gradient(34% 30% at 20% 82%, rgba(255, 255, 255, .18), transparent 70%); animation: aurora 18s ease-in-out infinite alternate; }
-.qm-auth-art::after { content: ''; position: absolute; inset: 0; z-index: -1; opacity: .55; background-image: linear-gradient(rgba(255,255,255,.10) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.10) 1px, transparent 1px); background-size: 38px 38px; mask-image: radial-gradient(80% 70% at 50% 45%, #000, transparent); }
+.qm-auth-art::after { content: ''; position: absolute; inset: 0; z-index: -1; background-image: radial-gradient(rgba(255, 255, 255, .42) 1.3px, transparent 1.8px); background-size: 24px 24px; -webkit-mask-image: radial-gradient(95% 100% at 100% 0%, #000, transparent 78%); mask-image: radial-gradient(95% 100% at 100% 0%, #000, transparent 78%); animation: dots-drift 40s linear infinite; }
 .qm-auth-brand { display: inline-flex; align-items: center; gap: 13px; }
 .qm-auth-brand .app-brand-mark { background: #fff; color: var(--qm-primary-hover); box-shadow: 0 10px 22px -8px rgba(8, 24, 80, .5); }
 .qm-auth-brand-name { font-family: var(--qm-display); font-size: var(--fs-lg); font-weight: 800; letter-spacing: -.03em; }
 .qm-auth-brand-name span { font-weight: 500; margin-left: 5px; color: rgba(255, 255, 255, .8); }
-/* Sign-in art: one quote moving through three steps. Depth comes from layered glass slabs, soft lights and a floor shadow.
-   The resting state is the finished one, so reduced motion shows a completed quote. */
-.qm-doc { width: min(100%, 440px); margin: auto; overflow: visible; }
-.qm-doc * { transform-box: fill-box; }
-.qm-doc-light { fill: rgba(255, 255, 255, .22); animation: doc-drift 14s ease-in-out infinite; }
-.qm-doc-light.is-far { filter: blur(22px); fill: rgba(140, 185, 255, .45); }
-.qm-doc-light.is-near { filter: blur(2px); fill: rgba(255, 255, 255, .55); animation-duration: 9s; }
-.qm-doc-light.is-2 { animation-delay: -5s; animation-direction: reverse; }
-.qm-doc-floor { fill: rgba(5, 18, 85, .5); filter: blur(10px); transform-origin: center; animation: doc-floor 6s ease-in-out infinite; }
-.qm-doc-stack { animation: doc-float 6s ease-in-out infinite; }
-.qm-doc-slab { transform-origin: center; fill: rgba(255, 255, 255, .14); stroke: rgba(255, 255, 255, .4); stroke-width: 1.5; }
-.qm-doc-slab.is-3 { transform: translate(-30px, 20px) scale(.94); fill: rgba(255, 255, 255, .08); animation: doc-slab 6s ease-in-out -.8s infinite; }
-.qm-doc-slab.is-2 { transform: translate(-15px, 10px) scale(.97); fill: rgba(255, 255, 255, .16); animation: doc-slab 6s ease-in-out -.4s infinite; }
-.qm-doc-paper { fill: #fff; filter: drop-shadow(0 30px 40px rgba(5, 18, 85, .45)); }
-.qm-doc-rail { fill: #dbe5fb; }
-.qm-doc-rail-fill { fill: #1d4fd7; transform-origin: center top; animation: doc-rail 7s var(--qm-ease) backwards infinite; animation-delay: calc(var(--i) * 1.6s + .7s); }
-.qm-doc-dot { fill: #1d4fd7; stroke: #c8d6f8; stroke-width: 3; animation: doc-dot 7s var(--qm-ease) backwards infinite; animation-delay: calc(var(--i) * 1.6s + .7s); }
-.qm-doc-tick { stroke: #fff; stroke-width: 3.4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 28; animation: doc-tick 7s var(--qm-ease) backwards infinite; animation-delay: calc(var(--i) * 1.6s + .7s); }
-.qm-doc-bar { fill: #b6c9f7; transform-origin: left center; animation: doc-bar 7s var(--qm-ease) backwards infinite; animation-delay: calc(var(--i) * 1.6s + .7s); }
-.qm-doc-ripple { fill: none; stroke: #1d4fd7; stroke-width: 2.5; opacity: 0; transform-origin: center; animation: doc-ripple 7s ease-out infinite; animation-delay: 3.9s; }
+/* Sign-in art: the same quiet rings-and-dots pattern as the page banners, in white on the blue panel.
+   Rings spread from the top-right corner, a second set from the bottom-left, and they breathe slowly.
+   Reduced motion leaves them still. */
+.qm-auth-pattern { position: absolute; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+.qm-auth-pattern::before, .qm-auth-pattern::after { content: ''; position: absolute; inset: -20%; }
+.qm-auth-pattern::before {
+    background: repeating-radial-gradient(circle at 100% 0%, transparent 0 86px, rgba(255, 255, 255, .30) 87px 88.5px);
+    -webkit-mask-image: radial-gradient(95% 105% at 100% 0%, #000 10%, transparent 80%); mask-image: radial-gradient(95% 105% at 100% 0%, #000 10%, transparent 80%);
+    transform-origin: 100% 0%; animation: rings-breathe 14s ease-in-out infinite;
+}
+.qm-auth-pattern::after {
+    background: repeating-radial-gradient(circle at 0% 100%, transparent 0 72px, rgba(255, 255, 255, .22) 73px 74.5px);
+    -webkit-mask-image: radial-gradient(80% 90% at 0% 100%, #000 10%, transparent 78%); mask-image: radial-gradient(80% 90% at 0% 100%, #000 10%, transparent 78%);
+    transform-origin: 0% 100%; animation: rings-breathe 18s ease-in-out -6s infinite;
+}
+@keyframes dots-drift { from { background-position: 0 0; } to { background-position: 24px 24px; } }
+@keyframes rings-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.07); } }
 .qm-auth-card { align-self: center; justify-self: center; width: min(100%, 440px); padding: 96px 32px 32px; animation: rise .55s var(--qm-ease) both; }
 .qm-login-header { display: flex; align-items: center; gap: 14px; padding: 0 0 4px; }
 .qm-auth-symbol { display: grid; place-items: center; flex: none; width: 50px; height: 50px; border-radius: 15px; font-size: 1.5rem; color: #fff; background: var(--qm-gradient); box-shadow: 0 14px 26px -10px rgba(29, 79, 215, .75), inset 0 1px 0 rgba(255,255,255,.3); }
@@ -879,15 +876,6 @@ body.is-login .app-topbar .qm-topbar-actions { margin-left: auto; }
 @keyframes dot-pulse { 0% { box-shadow: 0 0 0 0 currentColor; } 70% { box-shadow: 0 0 0 6px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
 @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(225, 29, 72, .45); } 70% { box-shadow: 0 0 0 9px rgba(225, 29, 72, 0); } 100% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0); } }
 @keyframes aurora { from { transform: translate3d(-4%, -3%, 0) rotate(0deg) scale(1); } to { transform: translate3d(5%, 4%, 0) rotate(8deg) scale(1.12); } }
-@keyframes doc-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-@keyframes doc-slab { 0%, 100% { translate: 0 0; } 50% { translate: 0 6px; } }
-@keyframes doc-floor { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(.86); opacity: .6; } }
-@keyframes doc-drift { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(10px, -14px); } }
-@keyframes doc-rail { 0%, 2% { transform: scaleY(0); } 20%, 92% { transform: scaleY(1); } 97%, 100% { transform: scaleY(0); } }
-@keyframes doc-dot { 0%, 2% { fill: #fff; } 14%, 92% { fill: #1d4fd7; } 97%, 100% { fill: #fff; } }
-@keyframes doc-tick { 0%, 10% { stroke-dashoffset: 28; } 20%, 92% { stroke-dashoffset: 0; } 97%, 100% { stroke-dashoffset: 28; } }
-@keyframes doc-bar { 0%, 2% { transform: scaleX(.2); fill: #dbe5fb; } 20%, 92% { transform: scaleX(1); fill: #b6c9f7; } 97%, 100% { transform: scaleX(.2); fill: #dbe5fb; } }
-@keyframes doc-ripple { 0%, 4% { transform: scale(1); opacity: 0; } 6% { opacity: .8; } 30%, 100% { transform: scale(2.6); opacity: 0; } }
 @keyframes toast-in { from { opacity: 0; transform: translateY(14px) scale(.96); } }
 @keyframes toast-timer { to { transform: scaleX(0); } }
 @keyframes value-in { from { opacity: 0; transform: translateY(8px); filter: blur(4px); } }
@@ -1017,7 +1005,6 @@ body.is-login .app-topbar .qm-topbar-actions { margin-left: auto; }
     .qm-user-name, .qm-breadcrumb { display: none; }
     .qm-auth-page { grid-template-columns: 1fr; min-height: 100vh; }
     .qm-auth-art { padding: 26px 24px 18px; min-height: 0; }
-    .qm-doc { max-width: 320px; margin: 14px auto 0; }
     .qm-auth-card { padding: 30px 24px 40px; }
 }
 @media (max-width: 767.98px) {
@@ -1049,7 +1036,6 @@ body.is-login .app-topbar .qm-topbar-actions { margin-left: auto; }
     .qm-spotlight { margin-left: 16px; margin-right: 16px; }
     .qm-ring { width: 56px; height: 56px; }
     .qm-auth-art { padding: 22px 20px 6px; }
-    .qm-doc { max-width: 250px; }
     .recovery-dialog .qm-dialog-meta { grid-template-columns: 1fr; }
     .qm-toast { left: 16px; right: 16px; bottom: 16px; }
 }
