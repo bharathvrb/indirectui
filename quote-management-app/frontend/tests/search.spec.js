@@ -854,6 +854,110 @@ describe('Unified quote search workspace', function() {
     });
   });
 
+  describe('product tour video', function() {
+    function mount() {
+      element = compile(templates[templatePaths[1]])(scope);
+      document.body.appendChild(element[0]);
+      root.$digest();
+      return element[0];
+    }
+
+    it('is offered on Home only, and the video is not in the page until it is opened', function() {
+      start('QuoteListCtrl', '/quotes');
+      var page = mount();
+      expect(page.querySelector('#tour-open').textContent).toContain('Watch tour');
+      expect(page.querySelector('video')).toBeNull();
+      expect(page.querySelector('#tour-dialog')).toBeNull();
+      scope.$destroy();
+      element.remove();
+      start('QuoteListCtrl', '/search');
+      expect(mount().querySelector('#tour-open')).toBeNull();
+    });
+
+    it('writes no media address in the template text, so nothing downloads before the dialog is opened', function() {
+      expect(templates[templatePaths[1]]).not.toMatch(/(?:\ssrc|poster)="assets\/media/);
+      expect(templates[templatePaths[1]]).toContain('ng-attr-src="{{tourFiles.mp4}}"');
+    });
+
+    it('opens a dialog with the video, an MP4 and a WebM source, a poster and chapter buttons', function() {
+      start('QuoteListCtrl', '/quotes');
+      var page = mount();
+      var opener = page.querySelector('#tour-open');
+      opener.focus();
+      angular.element(opener).triggerHandler('click');
+      root.$digest();
+      var dialog = page.querySelector('#tour-dialog');
+      expect(dialog.getAttribute('role')).toBe('dialog');
+      expect(dialog.getAttribute('aria-modal')).toBe('true');
+      var video = dialog.querySelector('video#tour-video');
+      expect(video.hasAttribute('controls')).toBe(true);
+      expect(video.getAttribute('preload')).toBe('metadata');
+      expect(video.getAttribute('poster')).toBe('assets/media/quote-management-tour.jpg');
+      var sources = Array.prototype.map.call(video.querySelectorAll('source'), function(source) { return source.getAttribute('src') + ' ' + source.getAttribute('type'); });
+      expect(sources).toEqual(['assets/media/quote-management-tour.mp4 video/mp4', 'assets/media/quote-management-tour.webm video/webm']);
+      var chapters = Array.prototype.map.call(dialog.querySelectorAll('.qm-tour-chapters button'), function(button) { return button.textContent.trim(); });
+      expect(chapters).toEqual(['Sign in', 'Home', 'Filters', 'Open a quote', 'Journey and errors', 'Tabs', 'Search']);
+      timeout.flush(0);
+      expect(document.activeElement).toBe(dialog.querySelector('#tour-close'));
+    });
+
+    it('lists chapters in order, each starting inside the video', function() {
+      start('QuoteListCtrl', '/quotes');
+      var times = scope.tourChapters.map(function(chapter) { return chapter.time; });
+      expect(times[0]).toBe(0);
+      times.forEach(function(time, index) { if (index) expect(time).toBeGreaterThan(times[index - 1]); });
+      expect(times[times.length - 1]).toBeLessThan(89);
+    });
+
+    it('jumps to a chapter and plays from there', function() {
+      start('QuoteListCtrl', '/quotes');
+      var page = mount();
+      scope.openTour(); root.$digest();
+      var video = page.querySelector('#tour-video');
+      var play = spyOn(video, 'play').and.returnValue(Promise.resolve());
+      angular.element(page.querySelectorAll('.qm-tour-chapters button')[3]).triggerHandler('click');
+      expect(play).toHaveBeenCalled();
+      scope.closeTour(); root.$digest();
+      expect(function() { scope.seekTour(10); }).not.toThrow(); // nothing to seek once the video is gone
+    });
+
+    it('closes with Close, Escape or a click outside, pauses the video and returns focus to Watch tour', function() {
+      start('QuoteListCtrl', '/quotes');
+      var page = mount();
+      var opener = page.querySelector('#tour-open');
+      [function() { angular.element(page.querySelector('#tour-close')).triggerHandler('click'); },
+       function() { scope.tourKeydown({ key: 'Escape', preventDefault: function() {} }); },
+       function() { angular.element(page.querySelector('.recovery-dialog-backdrop')).triggerHandler('click'); }].forEach(function(close) {
+        opener.focus();
+        angular.element(opener).triggerHandler('click');
+        root.$digest();
+        var pause = spyOn(page.querySelector('#tour-video'), 'pause');
+        close();
+        root.$digest();
+        timeout.flush(0);
+        expect(pause).toHaveBeenCalled();
+        expect(page.querySelector('#tour-dialog')).toBeNull();
+        expect(document.activeElement).toBe(opener);
+      });
+    });
+
+    it('keeps Tab inside the dialog', function() {
+      start('QuoteListCtrl', '/quotes');
+      var page = mount();
+      scope.openTour(); root.$digest();
+      var stops = page.querySelectorAll('#tour-dialog button, #tour-dialog video[controls]');
+      stops[stops.length - 1].focus();
+      var forward = { key: 'Tab', shiftKey: false, preventDefault: jasmine.createSpy('forward') };
+      scope.tourKeydown(forward);
+      expect(forward.preventDefault).toHaveBeenCalled();
+      expect(document.activeElement).toBe(stops[0]);
+      var back = { key: 'Tab', shiftKey: true, preventDefault: jasmine.createSpy('back') };
+      scope.tourKeydown(back);
+      expect(back.preventDefault).toHaveBeenCalled();
+      expect(document.activeElement).toBe(stops[stops.length - 1]);
+    });
+  });
+
   describe('recent searches', function() {
     function mount() {
       element = compile(templates[templatePaths[1]])(scope);

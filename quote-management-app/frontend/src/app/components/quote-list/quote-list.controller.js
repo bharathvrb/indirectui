@@ -75,6 +75,57 @@ angular.module('quoteManagement')
         $scope.searchBy = item.by;
         $scope.applyFilters();
       };
+      // Home: "Watch tour" opens the product tour video. The video element only exists while the pop-up is open,
+      // so nothing is downloaded until someone asks for it.
+      $scope.tour = { open: false };
+      $scope.tourFiles = { poster: 'assets/media/quote-management-tour.jpg', mp4: 'assets/media/quote-management-tour.mp4', webm: 'assets/media/quote-management-tour.webm' };
+      // Chapter start times in seconds, matching the recorded tour (src/assets/media/quote-management-tour.mp4 and .webm).
+      $scope.tourChapters = [
+        { label: 'Sign in', time: 0 }, { label: 'Home', time: 9.5 }, { label: 'Filters', time: 19 }, { label: 'Open a quote', time: 26 },
+        { label: 'Journey and errors', time: 34 }, { label: 'Tabs', time: 50.5 }, { label: 'Search', time: 68.5 }
+      ];
+      var tourReturnFocus = null;
+      $scope.openTour = function() {
+        tourReturnFocus = document.activeElement;
+        $scope.tour.open = true;
+        $timeout(function() {
+          var close = document.getElementById('tour-close');
+          if (close) close.focus();
+        });
+      };
+      $scope.closeTour = function() {
+        var video = document.getElementById('tour-video');
+        if (video && video.pause) video.pause();
+        $scope.tour.open = false;
+        $timeout(function() {
+          if (tourReturnFocus && document.documentElement.contains(tourReturnFocus)) tourReturnFocus.focus();
+        });
+      };
+      $scope.seekTour = function(time) {
+        var video = document.getElementById('tour-video');
+        if (!video) return;
+        video.currentTime = time;
+        var started = video.play && video.play();
+        if (started && started.catch) started.catch(function() { /* the viewer can press play */ });
+      };
+      $scope.tourKeydown = function(event) {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          $scope.closeTour();
+        } else if (event.key === 'Tab') {
+          var dialog = document.getElementById('tour-dialog');
+          var elements = dialog && dialog.querySelectorAll('button:not([disabled]), video[controls]');
+          if (!elements || !elements.length) return;
+          var first = elements[0], last = elements[elements.length - 1];
+          if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+          } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+          }
+        }
+      };
       // Choosing what to look up by starts a fresh lookup: the old value and results belong to the old type.
       $scope.useSearchType = function(type) {
         if (type === $scope.searchBy) return;

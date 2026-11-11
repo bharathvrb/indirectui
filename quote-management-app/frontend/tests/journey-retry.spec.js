@@ -94,6 +94,14 @@ describe('Quote journey and step retry', function() {
       expect(page.querySelector('#spotlight-steps').getAttribute('aria-controls')).toBe('journey-steps');
     });
 
+    it('shows only the status on each step tile, not the site or item scope', function() {
+      var page = start();
+      var metas = Array.prototype.map.call(page.querySelectorAll('.qm-step-meta'), function(node) { return node.textContent.trim(); });
+      expect(metas.length).toBe(5);
+      expect(metas.every(function(text) { return ['Success', 'Failed', 'Pending'].indexOf(text) !== -1; })).toBe(true);
+      expect(page.querySelector('.qm-steps').textContent).not.toMatch(/Site|Quote item/);
+    });
+
     it('opens and closes from a click on the failure panel or its button, but not from its other buttons', function() {
       var page = start({ retryEnabled: true });
       click(page.querySelector('.qm-spotlight-body'));
@@ -166,11 +174,122 @@ describe('Quote journey and step retry', function() {
       expect(scope.journey.status).toBe('empty');
     });
 
-    it('jumps to the errors tab from the failure summary', function() {
+    it('opens the errors of the failed step in a pop-up from the failure summary, leaving the Errors tab where it is', function() {
+      var page = start();
+      var button = page.querySelector('#spotlight-errors');
+      button.focus();
+      angular.element(button).triggerHandler('click');
+      root.$digest();
+      expect(scope.activeTab).not.toBe('errors');
+      var dialog = page.querySelector('#error-dialog');
+      expect(dialog.getAttribute('role')).toBe('dialog');
+      expect(dialog.getAttribute('aria-modal')).toBe('true');
+      expect(dialog.querySelector('#error-dialog-title').textContent).toContain('CREATE_PROPOSAL errors');
+      var cards = dialog.querySelectorAll('.qm-error');
+      expect(cards.length).toBe(1);
+      expect(cards[0].textContent).toContain('CREATE_PROPOSAL_POLLING_ERROR');
+      expect(cards[0].textContent).toContain('Polling API timed out');
+      // The error with no step link belongs to the Errors tab only.
+      expect(dialog.textContent).not.toContain('UNLINKED');
+      flushFocus();
+      expect(document.activeElement).toBe(dialog.querySelector('#error-dialog-close'));
+    });
+
+    it('closes the errors pop-up with Close, Escape or a click outside it, and returns focus to the button', function() {
+      var page = start();
+      var button = page.querySelector('#spotlight-errors');
+      [function() { angular.element(page.querySelector('#error-dialog-close')).triggerHandler('click'); },
+       function() { scope.errorDialogKeydown(key('Escape')); },
+       function() { angular.element(page.querySelector('.recovery-dialog-backdrop')).triggerHandler('click'); }].forEach(function(close) {
+        button.focus();
+        angular.element(button).triggerHandler('click');
+        root.$digest();
+        expect(page.querySelector('#error-dialog')).not.toBeNull();
+        close();
+        root.$digest();
+        flushFocus();
+        expect(page.querySelector('#error-dialog')).toBeNull();
+        expect(document.activeElement).toBe(button);
+      });
+    });
+
+    it('keeps Tab inside the errors pop-up', function() {
       var page = start();
       angular.element(page.querySelector('#spotlight-errors')).triggerHandler('click');
       root.$digest();
+      var dialog = page.querySelector('#error-dialog');
+      var buttons = dialog.querySelectorAll('button');
+      buttons[buttons.length - 1].focus();
+      var forward = key('Tab');
+      scope.errorDialogKeydown(forward);
+      expect(forward.preventDefault).toHaveBeenCalled();
+      expect(document.activeElement).toBe(buttons[0]);
+    });
+
+    it('lists every error in the Errors tab, still reachable on its own and from "All errors" in the pop-up', function() {
+      var page = start();
+      scope.setTab('errors'); root.$digest();
+      expect(page.querySelectorAll('#detail-panel-errors .qm-error').length).toBe(2);
+      scope.setTab('processing');
+      angular.element(page.querySelector('#spotlight-errors')).triggerHandler('click');
+      root.$digest();
+      angular.element(page.querySelector('#error-dialog .qm-dialog-foot .btn-outline-secondary')).triggerHandler('click');
+      root.$digest();
+      expect(page.querySelector('#error-dialog')).toBeNull();
       expect(scope.activeTab).toBe('errors');
+    });
+
+    it('says so when QuoteData sent no error details for the failed step', function() {
+      var data = fixture(); data.errorDetails = [];
+      var page = start({ data: data });
+      angular.element(page.querySelector('#spotlight-errors')).triggerHandler('click');
+      root.$digest();
+      expect(page.querySelector('#error-dialog').textContent).toContain('QuoteData sent no error details for this step.');
+      expect(page.querySelectorAll('#error-dialog .qm-error').length).toBe(0);
+    });
+
+    it('does not open the retry dialog on top of the errors pop-up', function() {
+      var page = start({ retryEnabled: true });
+      angular.element(page.querySelector('#spotlight-errors')).triggerHandler('click');
+      root.$digest();
+      scope.openRetryDialog(failedStep());
+      expect(scope.retry.open).toBe(false);
+    });
+  });
+
+  describe('Not required steps', function() {
+    function completedWithNotRequired() {
+      var data = fixture('COMPLETED');
+      data.stepExecutions = [
+        { id: 1, stepName: 'ADDRESS_VALIDATION', stepStatus: 'SUCCESS' },
+        { id: 2, stepName: 'CREATE_CONTACT', stepStatus: 'NOT_REQUIRED' },
+        { id: 3, stepName: 'CREATE_CUSTOMER', stepStatus: 'COMPLETED' },
+        { id: 4, stepName: 'CREATE_SITE', stepStatus: 'NOT_REQUIRED' }
+      ];
+      data.errorDetails = [];
+      return data;
+    }
+
+    it('shows Not required steps as steps but leaves them out of the progress: Success plus Not required is completed', function() {
+      var page = start({ data: completedWithNotRequired() });
+      expect(scope.journey.status).toBe('success');
+      expect(page.querySelector('.qm-journey-status').textContent).toContain('All 2 steps completed (2 not required)');
+      expect(page.querySelector('.qm-ring').getAttribute('aria-label')).toBe('2 of 2 steps finished');
+      expect(page.querySelector('.qm-ring span').textContent).toBe('100%');
+      var tiles = Array.prototype.map.call(page.querySelectorAll('.qm-step'), function(node) {
+        return node.querySelector('.qm-step-name').textContent.trim() + ' ' + node.querySelector('.qm-step-meta').textContent.trim();
+      });
+      expect(tiles).toEqual(['ADDRESS_VALIDATION Success', 'CREATE_CONTACT Not required', 'CREATE_CUSTOMER Success', 'CREATE_SITE Not required']);
+      expect(page.querySelectorAll('.qm-step.is-notrequired').length).toBe(2);
+      expect(page.querySelector('.qm-journey-counts .is-notrequired').textContent).toMatch(/2\s+not required/);
+    });
+
+    it('lists the Not required steps in the Processing tab too', function() {
+      var page = start({ data: completedWithNotRequired() });
+      scope.setTab('processing'); root.$digest();
+      var rows = Array.prototype.map.call(page.querySelectorAll('#detail-panel-processing tbody tr'), function(row) { return row.textContent.replace(/\s+/g, ' '); });
+      expect(rows.length).toBe(4);
+      expect(rows.filter(function(text) { return text.indexOf('Not required') !== -1; }).length).toBe(2);
     });
   });
 
@@ -184,7 +303,7 @@ describe('Quote journey and step retry', function() {
       expect(head.querySelector('.badge').textContent.trim()).toBe('Failed');
       expect(head.querySelector('.qm-id-chip code').textContent).toBe('PARTNER-QUOTE-1-SYNTHETIC');
       var facts = Array.prototype.map.call(head.querySelectorAll('.qm-quote-fact dt'), function(dt) { return dt.textContent; });
-      expect(facts).toEqual(['External ID', 'Support ticket', 'Created by', 'Design status', 'Created at', 'Updated at', 'Completed at', 'Retries']);
+      expect(facts).toEqual(['External ID', 'Support ticket', 'Created by', 'Created at', 'Completed at']);
       expect(head.querySelector('.qm-quote-head-actions #mark-completed')).not.toBeNull();
       expect(head.querySelector('.qm-quote-head-actions .btn-primary').textContent).toContain('Mark completed');
     });

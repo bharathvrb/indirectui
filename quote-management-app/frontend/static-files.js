@@ -10,7 +10,8 @@ const TYPES = {
     '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8',
     '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8', '.map': 'application/json; charset=utf-8',
     '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.ico': 'image/x-icon',
-    '.woff': 'font/woff', '.woff2': 'font/woff2', '.txt': 'text/plain; charset=utf-8'
+    '.woff': 'font/woff', '.woff2': 'font/woff2', '.txt': 'text/plain; charset=utf-8',
+    '.mp4': 'video/mp4', '.webm': 'video/webm'
 };
 
 // Navigation routes the single-page app answers itself. Missing assets and API paths must stay 404s.
@@ -23,6 +24,29 @@ function send(res, status, message, headers = {}) {
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     Object.keys(headers).forEach(name => res.setHeader(name, headers[name]));
     res.end(message);
+}
+
+// One byte range ("bytes=0-99", "bytes=100-", "bytes=-500"). Video players need this to start in Safari and to seek.
+// Returns { start, end }, null when the header should be ignored (not a bytes range, or several ranges), or 'invalid'.
+function parseRange(header, size) {
+    const match = /^bytes=(\d*)-(\d*)$/.exec(String(header || '').trim());
+    if (!match || (match[1] === '' && match[2] === '')) {
+        return null;
+    }
+    let start;
+    let end;
+    if (match[1] === '') {
+        const suffix = Number(match[2]);
+        if (suffix === 0) {
+            return 'invalid';
+        }
+        start = Math.max(size - suffix, 0);
+        end = size - 1;
+    } else {
+        start = Number(match[1]);
+        end = match[2] === '' ? size - 1 : Math.min(Number(match[2]), size - 1);
+    }
+    return start >= size || start > end ? 'invalid' : { start, end };
 }
 
 function createStaticHandler({ root }) {
@@ -74,11 +98,25 @@ function createStaticHandler({ root }) {
                 return res.end();
             }
             res.setHeader('Content-Type', TYPES[path.extname(file).toLowerCase()] || 'application/octet-stream');
-            res.setHeader('Content-Length', stats.size);
+            res.setHeader('Accept-Ranges', 'bytes');
+            // A Range request is honoured unless If-Range names a different version of the file.
+            const ifRange = req.headers['if-range'];
+            const range = req.headers.range && (!ifRange || ifRange === etag || ifRange === lastModified)
+                ? parseRange(req.headers.range, stats.size) : null;
+            if (range === 'invalid') {
+                return send(res, 416, 'Range not satisfiable.', { 'Content-Range': 'bytes */' + stats.size });
+            }
+            if (range) {
+                res.statusCode = 206;
+                res.setHeader('Content-Range', 'bytes ' + range.start + '-' + range.end + '/' + stats.size);
+                res.setHeader('Content-Length', range.end - range.start + 1);
+            } else {
+                res.setHeader('Content-Length', stats.size);
+            }
             if (req.method === 'HEAD') {
                 return res.end();
             }
-            pipeline(fs.createReadStream(file), res, () => {});
+            pipeline(fs.createReadStream(file, range ? { start: range.start, end: range.end } : undefined), res, () => {});
         });
     };
 }

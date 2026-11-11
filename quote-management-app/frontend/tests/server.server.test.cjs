@@ -19,6 +19,7 @@ async function start(t, options = {}) {
     fs.writeFileSync(path.join(root, 'app.js'), 'window.ok = true;');
     fs.writeFileSync(path.join(root, 'style.css'), 'body{}');
     fs.writeFileSync(path.join(root, 'data.bin'), 'x');
+    fs.writeFileSync(path.join(root, 'tour.mp4'), '0123456789');
     fs.writeFileSync(path.join(root, '.env'), 'SECRET=1');
     fs.writeFileSync(path.join(root, 'vendor', 'fonts', 'a.woff2'), 'font');
     fs.writeFileSync(path.join(parent, 'outside.txt'), 'outside');
@@ -140,4 +141,53 @@ test('the CSP can be replaced or switched off, and HSTS appears only behind an h
     process.env.QM_PUBLIC_ORIGIN = 'http://quotes.example.com';
     const plain = await start(t);
     assert.equal((await request(plain, '/')).headers['strict-transport-security'], undefined);
+});
+
+test('serves video with byte ranges so players can start and seek', async t => {
+    const port = await start(t);
+    const whole = await request(port, '/tour.mp4');
+    assert.equal(whole.status, 200);
+    assert.equal(whole.headers['content-type'], 'video/mp4');
+    assert.equal(whole.headers['accept-ranges'], 'bytes');
+    assert.equal(whole.text, '0123456789');
+    const part = await request(port, '/tour.mp4', { headers: { Range: 'bytes=2-4' } });
+    assert.equal(part.status, 206);
+    assert.equal(part.text, '234');
+    assert.equal(part.headers['content-range'], 'bytes 2-4/10');
+    assert.equal(part.headers['content-length'], '3');
+    const open = await request(port, '/tour.mp4', { headers: { Range: 'bytes=7-' } });
+    assert.equal(open.text, '789');
+    assert.equal(open.headers['content-range'], 'bytes 7-9/10');
+    const tail = await request(port, '/tour.mp4', { headers: { Range: 'bytes=-4' } });
+    assert.equal(tail.text, '6789');
+    const clipped = await request(port, '/tour.mp4', { headers: { Range: 'bytes=8-99' } });
+    assert.equal(clipped.text, '89');
+    assert.equal(clipped.headers['content-range'], 'bytes 8-9/10');
+    const head = await request(port, '/tour.mp4', { method: 'HEAD', headers: { Range: 'bytes=0-1' } });
+    assert.equal(head.status, 206);
+    assert.equal(head.text, '');
+});
+
+test('answers an unsatisfiable range with 416 and ignores ranges it does not understand', async t => {
+    const port = await start(t);
+    const past = await request(port, '/tour.mp4', { headers: { Range: 'bytes=10-' } });
+    assert.equal(past.status, 416);
+    assert.equal(past.headers['content-range'], 'bytes */10');
+    assert.equal((await request(port, '/tour.mp4', { headers: { Range: 'bytes=5-2' } })).status, 416);
+    assert.equal((await request(port, '/tour.mp4', { headers: { Range: 'bytes=-0' } })).status, 416);
+    for (const range of ['items=0-1', 'bytes=0-1,4-5', 'bytes=abc', 'bytes=-']) {
+        const answer = await request(port, '/tour.mp4', { headers: { Range: range } });
+        assert.equal(answer.status, 200, range);
+        assert.equal(answer.text, '0123456789');
+    }
+});
+
+test('a range is ignored when If-Range names another version of the file', async t => {
+    const port = await start(t);
+    const first = await request(port, '/tour.mp4');
+    const same = await request(port, '/tour.mp4', { headers: { Range: 'bytes=0-1', 'If-Range': first.headers.etag } });
+    assert.equal(same.status, 206);
+    const other = await request(port, '/tour.mp4', { headers: { Range: 'bytes=0-1', 'If-Range': 'W/"stale"' } });
+    assert.equal(other.status, 200);
+    assert.equal(other.text, '0123456789');
 });

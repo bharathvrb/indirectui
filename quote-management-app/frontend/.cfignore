@@ -17,3 +17,6 @@ karma.coverage.conf.js
 .env
 # Local settings and any real secrets in them must never be uploaded; use `cf set-env`.
 server.properties
+
+# Tools for maintainers (the tour recording script); not needed to run the app.
+tools/
