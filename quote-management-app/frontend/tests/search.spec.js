@@ -628,6 +628,19 @@ describe('Unified quote search workspace', function() {
     expect(requests[1].params.createdFrom).toBeUndefined();
   });
 
+  it('treats a FAILURE state like a failed one: red badge, its own word, and counted as Failed', function() {
+    expect(view.stateLabel('FAILURE')).toBe('Failure');
+    expect(view.stateLabel('failure')).toBe('Failure');
+    expect(view.stateClass('FAILURE')).toBe('bg-danger');
+    expect(view.stateClass('FAILED')).toBe('bg-danger');
+    start();
+    resolve(0, [{ quoteRequestId: 'A', state: 'FAILURE' }, { quoteRequestId: 'B', state: 'FAILED' }, { quoteRequestId: 'C', state: 'COMPLETED' }]);
+    expect(scope.kpis).toEqual({ failed: 2, inProgress: 0, completed: 1 });
+    var badge = renderTable().querySelector('tbody tr .badge');
+    expect(badge.textContent.trim()).toBe('Failure');
+    expect(badge.classList.contains('bg-danger')).toBe(true);
+  });
+
   describe('refresh only on request', function() {
     it('never reloads by itself, however long the page stays open, and reloads once per Refresh click', function() {
       var interval;

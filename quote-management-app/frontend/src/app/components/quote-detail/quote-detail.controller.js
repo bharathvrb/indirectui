@@ -1003,6 +1003,7 @@ angular.module('quoteManagement')
         if (value === 'PENDING_APPROVAL') return 'Pending Approval';
         if (value === 'COMPLETED') return 'Completed';
         if (value === 'FAILED') return 'Failed';
+        if (value === 'FAILURE') return 'Failure'; // QuoteData sends either word; each is shown as sent
         return value || '—';
       };
 
@@ -1012,7 +1013,7 @@ angular.module('quoteManagement')
         if (value === 'IN_PROGRESS') return 'bg-warning text-dark';
         if (value === 'PENDING_APPROVAL') return 'bg-info text-dark';
         if (value === 'COMPLETED') return 'bg-success';
-        if (value === 'FAILED') return 'bg-danger';
+        if (value === 'FAILED' || value === 'FAILURE') return 'bg-danger';
         return 'bg-secondary';
       };
 

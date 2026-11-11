@@ -138,7 +138,7 @@ describe('Quote detail scenarios', function() {
     it('labels and colors every quote state', function() {
       [['RECEIVED', 'Received', 'bg-primary'], ['inProgress', 'In Progress', 'bg-warning text-dark'],
         ['PendingApproval', 'Pending Approval', 'bg-info text-dark'], ['COMPLETED', 'Completed', 'bg-success'],
-        ['FAILED', 'Failed', 'bg-danger'], ['ARCHIVED', 'ARCHIVED', 'bg-secondary'], [null, '—', 'bg-secondary']]
+        ['FAILED', 'Failed', 'bg-danger'], ['FAILURE', 'Failure', 'bg-danger'], ['failure', 'Failure', 'bg-danger'], ['ARCHIVED', 'ARCHIVED', 'bg-secondary'], [null, '—', 'bg-secondary']]
         .forEach(function(entry) {
           expect(scope.getStateLabel(entry[0])).toBe(entry[1]);
           expect(scope.getStateBadgeClass(entry[0])).toBe(entry[2]);
