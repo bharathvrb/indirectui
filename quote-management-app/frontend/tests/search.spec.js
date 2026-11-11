@@ -764,6 +764,21 @@ describe('Unified quote search workspace', function() {
       expect(scope.stateMix).toBeUndefined();
     });
 
+    it('with totalElements 277 and size 25, the Total quotes tile shows 25 and the counts come from those 25', function() {
+      start();
+      var states = ['FAILURE', 'IN_PROGRESS', 'COMPLETED', 'RECEIVED', 'PENDING_APPROVAL'];
+      var rows = [];
+      for (var i = 0; i < 25; i++) rows.push({ quoteRequestId: 'Q-' + i, state: states[i % 5] });
+      resolve(0, rows, { totalElements: 277, size: 25, totalPages: 12 });
+      expect(scope.totalElements).toBe(277);
+      expect(scope.pageSize).toBe(25);
+      expect(scope.kpis).toEqual({ total: 25, failed: 5, inProgress: 5, completed: 5, other: 10 });
+      element = compile(templates[templatePaths[1]])(scope);
+      root.$digest();
+      expect(element[0].querySelector('.qm-kpi-card .qm-kpi-value').textContent).toBe('25');
+      expect(element[0].textContent).toContain('of 277');
+    });
+
     it('puts every state that is not In progress, Failed or Completed under Other, so the four groups add up to the total', function() {
       start();
       var states = ['RECEIVED', 'PENDING_APPROVAL', 'ARCHIVED', null, '', 'IN_PROGRESS', 'COMPLETED', 'FAILED', 'FAILURE'];
