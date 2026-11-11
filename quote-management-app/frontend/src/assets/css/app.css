@@ -67,6 +67,7 @@
     --qm-slate-soft: #edf1f8;  --qm-slate-text: #475371;
     --qm-red: #e11d48;
     --qm-green: #16a34a;
+    --qm-green-solid: #15803d;   /* filled green that carries a white tick */
     --qm-amber: #f59e0b;
     --qm-violet: #8b5cf6;
 
@@ -142,6 +143,7 @@
     --qm-side-to: #14338f;
     --qm-blue-soft: #1d3669;   --qm-blue-text: #b6cfff;
     --qm-green-soft: #12301f;  --qm-green-text: #74dcaa;
+    --qm-green-solid: #1a8a4c;
     --qm-amber-soft: #33270d;  --qm-amber-text: #f2c86e;
     --qm-red-soft: #3a1820;    --qm-red-text: #ff9aab;
     --qm-violet-soft: #28204a; --qm-violet-text: #c4b2ff;
@@ -544,7 +546,7 @@ td.qm-empty-inline { display: table-cell; text-align: center; }
 .qm-journey-counts li { display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: 999px; font-size: var(--fs-sm); font-weight: 600; background: var(--qm-surface); border: 1px solid var(--qm-border); color: var(--qm-muted); }
 .qm-journey-counts li b { color: var(--qm-text); font-variant-numeric: tabular-nums; }
 .qm-journey-counts li::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--qm-border-strong); }
-.qm-journey-counts .is-success::before { background: var(--qm-primary); }
+.qm-journey-counts .is-success::before { background: var(--qm-green); }
 .qm-journey-counts .is-failure::before { background: var(--qm-red); }
 .qm-journey-counts .is-progress::before { background: var(--qm-amber); }
 
@@ -564,12 +566,12 @@ td.qm-empty-inline { display: table-cell; text-align: center; }
 .qm-steps { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; margin: 0; padding: 20px 24px 24px; list-style: none; }
 .qm-step { position: relative; display: flex; align-items: flex-start; gap: 12px; min-width: 0; padding: 13px 16px; border: 1px solid var(--qm-border); border-radius: 14px; background: var(--qm-surface-soft); transition: border-color .2s, box-shadow .2s, transform .25s var(--qm-ease), background-color .2s; animation: rise .45s var(--qm-ease) both; }
 .qm-step:hover { border-color: var(--qm-border-strong); box-shadow: var(--qm-shadow); transform: translateY(-2px); background: var(--qm-surface); }
-.qm-step.is-success { background: var(--qm-primary-soft); border-color: transparent; }
+.qm-step.is-success { background: var(--qm-green-soft); border-color: rgba(22, 163, 74, .32); }
 .qm-step.is-failure { background: var(--qm-red-soft); border-color: rgba(225, 29, 72, .4); }
 .qm-step.is-progress { border-color: var(--qm-amber); background: var(--qm-amber-soft); }
 .qm-step.is-pending { background: var(--qm-surface); }
 .qm-step-icon { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; font-size: 0.875rem; background: var(--qm-surface); border: 2px solid var(--qm-border-strong); color: var(--qm-muted); transition: background-color .3s, border-color .3s; }
-.qm-step.is-success .qm-step-icon { background: var(--qm-solid); border-color: var(--qm-solid); color: #fff; }
+.qm-step.is-success .qm-step-icon { background: var(--qm-green-solid); border-color: var(--qm-green-solid); color: #fff; }
 .qm-step.is-failure .qm-step-icon { background: var(--qm-red); border-color: var(--qm-red); color: #fff; animation: pulse-red 2s ease-out infinite; }
 .qm-step.is-progress .qm-step-icon { border-color: var(--qm-amber); color: var(--qm-amber-text); }
 .qm-step.is-progress .qm-step-icon i { animation: spin 1.4s linear infinite; }
@@ -579,7 +581,7 @@ td.qm-empty-inline { display: table-cell; text-align: center; }
 .qm-step.is-pending .qm-step-name { color: var(--qm-text-soft); font-weight: 600; }
 .qm-step.is-failure .qm-step-name { color: var(--qm-red-text); }
 .qm-step-meta { font-size: var(--fs-caption); color: var(--qm-muted); }
-.qm-step.is-success .qm-step-meta { color: var(--qm-blue-text); font-weight: 600; }
+.qm-step.is-success .qm-step-meta { color: var(--qm-green-text); font-weight: 600; }
 .qm-step-no { flex: none; font-family: var(--qm-mono); font-size: var(--fs-label); font-weight: 600; color: var(--qm-muted); }
 .qm-step.is-current { box-shadow: 0 0 0 3px var(--qm-primary-ring); }
 .qm-step.is-failure.is-current { box-shadow: 0 0 0 3px rgba(225, 29, 72, .22); }
