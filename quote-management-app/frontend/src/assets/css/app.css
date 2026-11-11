@@ -401,9 +401,11 @@ body.qm-app:not(.is-login) .app-topbar .app-brand { display: none; }
 .qm-kpi-card-warning .qm-kpi-icon { background: var(--qm-amber-soft); color: var(--qm-amber-text); }
 .qm-kpi-card-danger .qm-kpi-icon { background: var(--qm-red-soft); color: var(--qm-red-text); }
 .qm-kpi-card-success .qm-kpi-icon { background: var(--qm-green-soft); color: var(--qm-green-text); }
+.qm-kpi-card-neutral .qm-kpi-icon { background: var(--qm-slate-soft); color: var(--qm-slate-text); }
 .qm-kpi-card-warning::after { background: radial-gradient(circle, var(--qm-amber-soft), transparent 70%); }
 .qm-kpi-card-danger::after { background: radial-gradient(circle, var(--qm-red-soft), transparent 70%); }
 .qm-kpi-card-success::after { background: radial-gradient(circle, var(--qm-green-soft), transparent 70%); }
+.qm-kpi-card-neutral::after { background: radial-gradient(circle, var(--qm-slate-soft), transparent 70%); }
 .qm-kpi-card > div:last-child { position: relative; z-index: 1; min-width: 0; }
 .qm-kpi-label { font-size: var(--fs-caption); font-weight: 600; color: var(--qm-muted); }
 .qm-kpi-value { font-family: var(--qm-display); font-size: var(--fs-2xl); font-weight: 800; letter-spacing: -.03em; line-height: 1.1; color: var(--qm-text); font-variant-numeric: tabular-nums; animation: value-in .6s var(--qm-ease) both; }

@@ -7,28 +7,34 @@
       </div>
     </div>
     <div class="row g-3" aria-label="Ticket quote summary" ng-if="searched">
-      <div class="col-6 col-xl-3">
+      <div class="col-6 col-md-4 col-xl">
         <div class="qm-kpi-card qm-kpi-card-info">
           <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-collection"></i></span>
-          <div><div class="qm-kpi-label">Linked quotes</div><div class="qm-kpi-value">{{displayValue(totalElements)}}</div></div>
+          <div><div class="qm-kpi-label">Linked quotes</div><div class="qm-kpi-value">{{displayValue(kpis.total)}}</div></div>
         </div>
       </div>
-      <div class="col-6 col-xl-3">
+      <div class="col-6 col-md-4 col-xl">
         <div class="qm-kpi-card qm-kpi-card-warning">
           <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-hourglass-split"></i></span>
           <div><div class="qm-kpi-label">In progress</div><div class="qm-kpi-value">{{displayValue(kpis.inProgress)}}</div></div>
         </div>
       </div>
-      <div class="col-6 col-xl-3">
+      <div class="col-6 col-md-4 col-xl">
         <div class="qm-kpi-card qm-kpi-card-danger">
           <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-exclamation-octagon"></i></span>
           <div><div class="qm-kpi-label">Failed</div><div class="qm-kpi-value">{{displayValue(kpis.failed)}}</div></div>
         </div>
       </div>
-      <div class="col-6 col-xl-3">
+      <div class="col-6 col-md-4 col-xl">
         <div class="qm-kpi-card qm-kpi-card-success">
           <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-check2-circle"></i></span>
           <div><div class="qm-kpi-label">Completed</div><div class="qm-kpi-value">{{displayValue(kpis.completed)}}</div></div>
+        </div>
+      </div>
+      <div class="col-12 col-md-4 col-xl">
+        <div class="qm-kpi-card qm-kpi-card-neutral">
+          <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-three-dots"></i></span>
+          <div><div class="qm-kpi-label">Other</div><div class="qm-kpi-value">{{displayValue(kpis.other)}}</div></div>
         </div>
       </div>
     </div>
