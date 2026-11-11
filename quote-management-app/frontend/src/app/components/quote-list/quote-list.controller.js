@@ -329,6 +329,16 @@ angular.module('quoteManagement')
         cancelSearch();
       });
       readQuery();
+      // The default list (opened with no search or filter in the address) starts with the configured category. It is an
+      // ordinary Category filter: it shows in the menu and as a chip, and a person can change or clear it.
+      var defaultCategory = window.APP_CONFIG && typeof window.APP_CONFIG.defaultCategory === 'string' ? window.APP_CONFIG.defaultCategory.trim() : '';
+      var untouched = ['search', 'searchBy', 'state', 'designStatus', 'category', 'channelType', 'fromDate', 'toDate'].every(function(key) {
+        return view.text($location.search()[key]) === '';
+      });
+      if (defaultCategory && $scope.listEnabled && !$scope.requireTerm && !$scope.lookupOnly && untouched) {
+        $scope.filters.category = defaultCategory;
+        rememberOptions([]);
+      }
       commit(true);
     }
   ]);

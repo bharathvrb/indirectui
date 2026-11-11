@@ -39,6 +39,7 @@ Restart the server after changing settings.
 | --- | --- |
 | `APP_CONFIG.apiBaseUrl` | Proxy path, `/api`. |
 | `APP_CONFIG.defaultListEnabled` | `true` (default): **Home** (`/quotes`) opens with the default list, 25 quotes newest first, with filters (`GET /quote?page=0&size=25&sort=createdAt,desc`). `false` turns the list off; Home then points to Search and makes no request. |
+| `APP_CONFIG.defaultCategory` | `'Enterprise Multi-Site'` (default): the first load of the default list sends `category=Enterprise Multi-Site` (`GET /quote?page=0&size=25&sort=createdAt,desc&category=Enterprise+Multi-Site`). It appears as the Category filter and as a filter chip, so it can be changed or cleared (Clear filters loads every category). It is not added when the address already holds a filter or search, and it never applies to Search. Blank loads every category. |
 | `APP_CONFIG.quoteDataLookupOnly` | Applies to the **Search** page (`/search`). `true` (default): it finds one quote by quote request ID, external ID or proposal ID. `false`: it also offers an *Other fields* tile, a free-text search sent as `search=` (confirm that QuoteData supports it first). |
 | `APP_CONFIG.contractDownloadUrl` | Optional contract download endpoint (`documentType`, `dmaasId` query). Blank shows IDs with copy buttons only. |
 | `APP_CONFIG.supportUrl` | Optional HTTPS support link shown in the menu and on error pages. |

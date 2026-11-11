@@ -122,7 +122,7 @@ angular.module('quoteManagement')
     function summary(rows) {
       var result = { failed: 0, inProgress: 0, completed: 0 };
       rows.forEach(function(row) {
-        if (row.state === 'FAILED') result.failed++;
+        if (row.state === 'FAILED' || row.state === 'FAILURE') result.failed++;
         if (row.state === 'IN_PROGRESS') result.inProgress++;
         if (row.state === 'COMPLETED') result.completed++;
       });
@@ -216,7 +216,7 @@ angular.module('quoteManagement')
     function stateLabel(value) {
       var labels = {
         RECEIVED: 'Received', IN_PROGRESS: 'In progress', PENDING_APPROVAL: 'Pending approval',
-        COMPLETED: 'Completed', FAILED: 'Failed'
+        COMPLETED: 'Completed', FAILED: 'Failed', FAILURE: 'Failure'
       };
       return labels[normalizeState(value)] || text(value) || '—';
     }
@@ -234,7 +234,7 @@ angular.module('quoteManagement')
       stateClass: function(value) {
         var classes = {
           RECEIVED: 'bg-primary', IN_PROGRESS: 'bg-warning text-dark',
-          PENDING_APPROVAL: 'bg-info text-dark', COMPLETED: 'bg-success', FAILED: 'bg-danger'
+          PENDING_APPROVAL: 'bg-info text-dark', COMPLETED: 'bg-success', FAILED: 'bg-danger', FAILURE: 'bg-danger'
         };
         return classes[normalizeState(value)] || 'bg-secondary';
       }

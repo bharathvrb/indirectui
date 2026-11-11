@@ -4,6 +4,9 @@ window.APP_CONFIG = Object.assign({
     apiBaseUrl: '/api',
     // Home shows the default list of quotes (25 rows, newest first). false turns the list off and Home points to Search.
     defaultListEnabled: true,
+    // Sent as category=... on the first load of that default list, and shown as the Category filter (the person can change it).
+    // Leave blank to load every category.
+    defaultCategory: 'Enterprise Multi-Site',
     // true: the Search page finds one quote by ID only. false: it also offers "Other fields" (free-text search).
     quoteDataLookupOnly: true,
     contractDownloadUrl: '',
