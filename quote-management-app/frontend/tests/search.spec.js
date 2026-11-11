@@ -217,6 +217,19 @@ describe('Unified quote search workspace', function() {
     expect(document.activeElement).toBe(table.querySelector('.qm-results-heading'));
   });
 
+  it('counts the loaded quotes in the Support tickets tiles too, with Other, not the server total', function() {
+    start('SupportTicketsCtrl', '/support-tickets?ticketNumber=SUP-1');
+    requests[0].deferred.resolve({ data: { content: [{ quoteRequestId: 'A', state: 'FAILURE' }, { quoteRequestId: 'B', state: 'RECEIVED' }, { quoteRequestId: 'C', state: 'COMPLETED' }],
+      totalElements: 60, totalPages: 20, page: 0, size: 25 } });
+    root.$digest();
+    element = compile(templates[templatePaths[2]])(scope);
+    root.$digest();
+    var tiles = Array.prototype.map.call(element[0].querySelectorAll('.qm-kpi-card'), function(tile) {
+      return [tile.querySelector('.qm-kpi-label').textContent, tile.querySelector('.qm-kpi-value').textContent];
+    });
+    expect(tiles).toEqual([['Linked quotes', '3'], ['In progress', '0'], ['Failed', '1'], ['Completed', '1'], ['Other', '1']]);
+  });
+
   it('keeps the ticket URL in sync when the server corrects the page', function() {
     start('SupportTicketsCtrl', '/support-tickets?ticketNumber=SUP-1&page=9');
     requests[0].deferred.resolve({ data: { content: [{ quoteRequestId: 'Q-1' }], totalElements: 1, totalPages: 1, page: 0, size: 25 } });
@@ -635,7 +648,7 @@ describe('Unified quote search workspace', function() {
     expect(view.stateClass('FAILED')).toBe('bg-danger');
     start();
     resolve(0, [{ quoteRequestId: 'A', state: 'FAILURE' }, { quoteRequestId: 'B', state: 'FAILED' }, { quoteRequestId: 'C', state: 'COMPLETED' }]);
-    expect(scope.kpis).toEqual({ failed: 2, inProgress: 0, completed: 1 });
+    expect(scope.kpis).toEqual({ total: 3, failed: 2, inProgress: 0, completed: 1, other: 0 });
     var badge = renderTable().querySelector('tbody tr .badge');
     expect(badge.textContent.trim()).toBe('Failure');
     expect(badge.classList.contains('bg-danger')).toBe(true);
@@ -729,18 +742,20 @@ describe('Unified quote search workspace', function() {
       expect(requests.length).toBe(2);
     });
 
-    it('shows the four summary tiles once, and does not repeat statuses in a mix bar, pills or summary line', function() {
+    it('shows five summary tiles that all count the loaded quotes, not the server total', function() {
       start();
       expect(scope.kpis).toBeNull();
+      // The server says 277 quotes match; only these 5 are on screen.
       resolve(0, [{ quoteRequestId: 'A', state: 'FAILED' }, { quoteRequestId: 'B', state: 'COMPLETED' }, { quoteRequestId: 'C', state: 'IN_PROGRESS' },
-        { quoteRequestId: 'D', state: 'FAILED' }, { quoteRequestId: 'E', state: 'RECEIVED' }]);
-      expect(scope.kpis).toEqual({ failed: 2, inProgress: 1, completed: 1 });
+        { quoteRequestId: 'D', state: 'FAILED' }, { quoteRequestId: 'E', state: 'RECEIVED' }], { totalElements: 277, totalPages: 56 });
+      expect(scope.totalElements).toBe(277);
+      expect(scope.kpis).toEqual({ total: 5, failed: 2, inProgress: 1, completed: 1, other: 1 });
       element = compile(templates[templatePaths[1]])(scope);
       root.$digest();
       var tiles = Array.prototype.map.call(element[0].querySelectorAll('.qm-kpi-card'), function(tile) {
         return [tile.querySelector('.qm-kpi-label').textContent, tile.querySelector('.qm-kpi-value').textContent];
       });
-      expect(tiles).toEqual([['Total quotes', '5'], ['In progress', '1'], ['Failed', '2'], ['Completed', '1']]);
+      expect(tiles).toEqual([['Total quotes', '5'], ['In progress', '1'], ['Failed', '2'], ['Completed', '1'], ['Other', '1']]);
       expect(element[0].querySelector('.qm-kpi-note')).toBeNull();
       expect(element[0].textContent).not.toContain('counts every page');
       expect(element[0].textContent).not.toMatch(/All pages|This page/);
@@ -749,12 +764,35 @@ describe('Unified quote search workspace', function() {
       expect(scope.stateMix).toBeUndefined();
     });
 
+    it('with totalElements 277 and size 25, the Total quotes tile shows 25 and the counts come from those 25', function() {
+      start();
+      var states = ['FAILURE', 'IN_PROGRESS', 'COMPLETED', 'RECEIVED', 'PENDING_APPROVAL'];
+      var rows = [];
+      for (var i = 0; i < 25; i++) rows.push({ quoteRequestId: 'Q-' + i, state: states[i % 5] });
+      resolve(0, rows, { totalElements: 277, size: 25, totalPages: 12 });
+      expect(scope.totalElements).toBe(277);
+      expect(scope.pageSize).toBe(25);
+      expect(scope.kpis).toEqual({ total: 25, failed: 5, inProgress: 5, completed: 5, other: 10 });
+      element = compile(templates[templatePaths[1]])(scope);
+      root.$digest();
+      expect(element[0].querySelector('.qm-kpi-card .qm-kpi-value').textContent).toBe('25');
+      expect(element[0].textContent).toContain('of 277');
+    });
+
+    it('puts every state that is not In progress, Failed or Completed under Other, so the four groups add up to the total', function() {
+      start();
+      var states = ['RECEIVED', 'PENDING_APPROVAL', 'ARCHIVED', null, '', 'IN_PROGRESS', 'COMPLETED', 'FAILED', 'FAILURE'];
+      resolve(0, states.map(function(state, index) { return { quoteRequestId: 'Q-' + index, state: state }; }));
+      expect(scope.kpis).toEqual({ total: 9, failed: 2, inProgress: 1, completed: 1, other: 5 });
+      expect(scope.kpis.failed + scope.kpis.inProgress + scope.kpis.completed + scope.kpis.other).toBe(scope.kpis.total);
+    });
+
     it('shows dashes in the tiles while nothing has loaded and after an error, never zeros', function() {
       start();
       element = compile(templates[templatePaths[1]])(scope);
       root.$digest();
       var values = Array.prototype.map.call(element[0].querySelectorAll('.qm-kpi-value'), function(node) { return node.textContent; });
-      expect(values).toEqual(['—', '—', '—', '—']);
+      expect(values).toEqual(['—', '—', '—', '—', '—']);
       requests[0].deferred.reject({ status: 500, data: { code: 'X', message: 'x' } });
       root.$digest();
       expect(scope.kpis).toBeNull();
@@ -784,7 +822,7 @@ describe('Unified quote search workspace', function() {
       expect(hidden(page.querySelector('.qm-omnibar-wrap'))).toBe(true);
       expect(tiles(page).length).toBe(0);
       expect(page.querySelector('#quote-state')).not.toBeNull();
-      expect(page.querySelectorAll('.qm-kpi-card').length).toBe(4);
+      expect(page.querySelectorAll('.qm-kpi-card').length).toBe(5);
       expect(page.querySelector('.qm-mix, .qm-quick-pill, #quote-auto-refresh')).toBeNull();
       expect(page.querySelector('.qm-title').textContent).toBe('Quotes');
       expect(page.querySelector('.qm-greeting')).toBeNull();

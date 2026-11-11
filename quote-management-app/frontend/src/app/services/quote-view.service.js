@@ -118,13 +118,15 @@ angular.module('quoteManagement')
       return responseId || field(response.config && response.config.headers || {}, ['trackingId', 'x-tracking-id']);
     }
 
-    // Counts for the quotes on the page that was loaded; the tiles say so.
+    // Counts for the quotes that were loaded (the 25 on screen). Every quote falls in exactly one of the four groups,
+    // so In progress + Failed + Completed + Other always adds up to the total.
     function summary(rows) {
-      var result = { failed: 0, inProgress: 0, completed: 0 };
+      var result = { total: rows.length, failed: 0, inProgress: 0, completed: 0, other: 0 };
       rows.forEach(function(row) {
         if (row.state === 'FAILED' || row.state === 'FAILURE') result.failed++;
-        if (row.state === 'IN_PROGRESS') result.inProgress++;
-        if (row.state === 'COMPLETED') result.completed++;
+        else if (row.state === 'IN_PROGRESS') result.inProgress++;
+        else if (row.state === 'COMPLETED') result.completed++;
+        else result.other++;
       });
       return result;
     }
