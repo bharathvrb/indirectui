@@ -267,7 +267,7 @@ describe('Quote journey and step retry', function() {
       expect(head.querySelector('.badge').textContent.trim()).toBe('Failed');
       expect(head.querySelector('.qm-id-chip code').textContent).toBe('PARTNER-QUOTE-1-SYNTHETIC');
       var facts = Array.prototype.map.call(head.querySelectorAll('.qm-quote-fact dt'), function(dt) { return dt.textContent; });
-      expect(facts).toEqual(['External ID', 'Support ticket', 'Created by', 'Design status', 'Created at', 'Updated at', 'Completed at', 'Retries']);
+      expect(facts).toEqual(['External ID', 'Support ticket', 'Created by', 'Created at', 'Completed at']);
       expect(head.querySelector('.qm-quote-head-actions #mark-completed')).not.toBeNull();
       expect(head.querySelector('.qm-quote-head-actions .btn-primary').textContent).toContain('Mark completed');
     });

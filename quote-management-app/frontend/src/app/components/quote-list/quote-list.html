@@ -7,6 +7,9 @@
         <p class="qm-subtitle mb-0 mt-1">{{pageMode === 'home' ? 'Filter the list and open a quote to see its status, steps and errors.' : 'Choose what to look up by, then enter its value to open the quote.'}}</p>
       </div>
       <div class="qm-head-actions">
+        <button type="button" id="tour-open" class="btn btn-outline-primary" ng-click="openTour()" ng-if="pageMode === 'home'" aria-haspopup="dialog">
+          <i class="bi bi-play-circle me-1" aria-hidden="true"></i>Watch tour
+        </button>
         <a class="btn btn-outline-primary qm-search-link" href="#!/search" ng-if="pageMode === 'home'"><i class="bi bi-search me-1" aria-hidden="true"></i>Search</a>
         <button type="button" class="btn btn-primary qm-action-btn" ng-click="refresh()" ng-disabled="(lookupOnly || requireTerm) && !searchTerm" ng-if="listEnabled">
           <i class="bi bi-arrow-clockwise me-1" aria-hidden="true" ng-class="{'qm-spin': loading}"></i>Refresh
@@ -157,5 +160,32 @@
                current-page="currentPage" total-pages="totalPages" total-elements="totalElements" page-size="pageSize"
                idle-message="{{lookupOnly ? 'Enter a quote request ID, external ID, or proposal ID to load a quote.' : requireTerm ? 'Enter something to search for.' : 'Fix the highlighted filters to see results.'}}"
                on-page="goToPage(page)" on-retry="refresh()"></quote-table>
+  </div>
+  <div class="recovery-dialog-backdrop" ng-if="tour.open" ng-click="closeTour()">
+    <section id="tour-dialog" class="recovery-dialog qm-tour-dialog" role="dialog" aria-modal="true" aria-labelledby="tour-title"
+             ng-click="$event.stopPropagation()" ng-keydown="tourKeydown($event)">
+      <div class="qm-dialog-head">
+        <i class="bi bi-play-circle-fill" aria-hidden="true"></i>
+        <div>
+          <h2 id="tour-title">Quote Management tour</h2>
+          <p class="small text-muted mb-0">About 90 seconds: signing in, Home, opening a quote and Search.</p>
+        </div>
+      </div>
+      <div class="qm-dialog-body">
+        <!-- Addresses are bound, not written out: a video or image in plain template text starts downloading as soon as the page is compiled. -->
+        <video id="tour-video" class="qm-tour-video" controls playsinline preload="metadata" ng-attr-poster="{{tourFiles.poster}}"
+               aria-label="Quote Management tour video">
+          <source ng-attr-src="{{tourFiles.mp4}}" type="video/mp4">
+          <source ng-attr-src="{{tourFiles.webm}}" type="video/webm">
+          Your browser cannot play this video.
+        </video>
+        <div class="qm-tour-chapters" role="group" aria-label="Jump to a part of the tour">
+          <button type="button" class="qm-recent-chip" ng-repeat="chapter in tourChapters track by chapter.label" ng-click="seekTour(chapter.time)">{{chapter.label}}</button>
+        </div>
+      </div>
+      <div class="qm-dialog-foot">
+        <button type="button" id="tour-close" class="btn btn-primary" ng-click="closeTour()">Close</button>
+      </div>
+    </section>
   </div>
 </div>

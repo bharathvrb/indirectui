@@ -522,10 +522,10 @@ td.qm-empty-inline { display: table-cell; text-align: center; }
 .qm-id-chip button:hover { color: var(--qm-primary); background: var(--qm-primary-soft); }
 .qm-id-chip button .bi-check2 { color: var(--qm-green-text); animation: pop .3s var(--qm-ease); }
 .qm-sub-chip { display: inline-flex; align-items: center; padding: 4px 11px; border-radius: 999px; background: var(--qm-surface); border: 1px solid var(--qm-border-strong); color: var(--qm-text-soft); font-size: var(--fs-caption); font-weight: 600; }
-.qm-quote-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px 28px; margin: 24px 0 0; padding: 20px 0 0; border-top: 1px solid var(--qm-border); }
+.qm-quote-facts { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 18px 20px; margin: 24px 0 0; padding: 20px 0 0; border-top: 1px solid var(--qm-border); }
 .qm-quote-fact { min-width: 0; }
 .qm-quote-fact dt { font-size: var(--fs-label); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--qm-muted); margin-bottom: 4px; }
-.qm-quote-fact dd { margin: 0; font-size: var(--fs-base); font-weight: 600; color: var(--qm-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.qm-quote-fact dd { margin: 0; font-size: var(--fs-base); font-weight: 600; color: var(--qm-text); overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 
 /* ---------- Quote detail: journey ---------- */
 .qm-journey { overflow: hidden; }
@@ -800,6 +800,10 @@ qm-contact-card { display: block; }
 .recovery-dialog .qm-dialog-head > i.is-retry { background: var(--qm-primary-soft); color: var(--qm-primary); }
 .recovery-dialog .qm-dialog-head > i.is-error { background: var(--qm-red-soft); color: var(--qm-red-text); }
 .qm-error-dialog { width: min(100%, 680px); }
+.qm-tour-dialog { width: min(100%, 880px); }
+.qm-tour-dialog .qm-dialog-head > i { background: var(--qm-primary-soft); color: var(--qm-primary); }
+.qm-tour-video { display: block; width: 100%; aspect-ratio: 16 / 9; border-radius: 14px; background: #0a1234; box-shadow: var(--qm-shadow); }
+.qm-tour-chapters { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 6px; }
 .qm-error-dialog-list { margin: 0; }
 .qm-error-dialog .qm-error-detail { overflow-wrap: anywhere; }
 .recovery-dialog h2 { font-size: var(--fs-lg); font-weight: 800; letter-spacing: -.02em; margin: 0; }
