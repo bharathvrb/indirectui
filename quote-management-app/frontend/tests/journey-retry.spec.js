@@ -94,6 +94,14 @@ describe('Quote journey and step retry', function() {
       expect(page.querySelector('#spotlight-steps').getAttribute('aria-controls')).toBe('journey-steps');
     });
 
+    it('shows only the status on each step tile, not the site or item scope', function() {
+      var page = start();
+      var metas = Array.prototype.map.call(page.querySelectorAll('.qm-step-meta'), function(node) { return node.textContent.trim(); });
+      expect(metas.length).toBe(5);
+      expect(metas.every(function(text) { return ['Success', 'Failed', 'Pending'].indexOf(text) !== -1; })).toBe(true);
+      expect(page.querySelector('.qm-steps').textContent).not.toMatch(/Site|Quote item/);
+    });
+
     it('opens and closes from a click on the failure panel or its button, but not from its other buttons', function() {
       var page = start({ retryEnabled: true });
       click(page.querySelector('.qm-spotlight-body'));

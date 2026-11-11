@@ -104,9 +104,7 @@
         <span class="qm-step-icon" aria-hidden="true"><i class="bi {{step.icon}}"></i></span>
         <div class="qm-step-body">
           <span class="qm-step-name" title="{{step.stepName}}"><span ng-repeat="part in step.parts track by $index">{{part}}<wbr></span></span>
-          <span class="qm-step-meta">
-            {{step.statusLabel}}<span ng-if="step.scope && step.scope !== 'QUOTE'"> · {{humanize(step.scope)}}</span>
-          </span>
+          <span class="qm-step-meta">{{step.statusLabel}}</span>
         </div>
         <span class="qm-step-no" aria-hidden="true">{{step.order < 10 ? '0' + step.order : step.order}}</span>
       </li>
