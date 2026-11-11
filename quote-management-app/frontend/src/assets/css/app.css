@@ -549,6 +549,7 @@ td.qm-empty-inline { display: table-cell; text-align: center; }
 .qm-journey-counts .is-success::before { background: var(--qm-green); }
 .qm-journey-counts .is-failure::before { background: var(--qm-red); }
 .qm-journey-counts .is-progress::before { background: var(--qm-amber); }
+.qm-journey-counts .is-notrequired::before { background: transparent; border: 1.5px dashed var(--qm-muted); }
 
 .qm-spotlight { position: relative; display: flex; flex-wrap: wrap; gap: 14px 18px; align-items: flex-start; margin: 20px 24px 0; padding: 18px 20px; border-radius: 16px; border: 1px solid rgba(225, 29, 72, .28); background: linear-gradient(100deg, var(--qm-red-soft), var(--qm-surface) 78%); animation: rise .45s var(--qm-ease) both; overflow: hidden; }
 .qm-spotlight::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: linear-gradient(180deg, #ff5d7e, var(--qm-red)); }
@@ -570,6 +571,9 @@ td.qm-empty-inline { display: table-cell; text-align: center; }
 .qm-step.is-failure { background: var(--qm-red-soft); border-color: rgba(225, 29, 72, .4); }
 .qm-step.is-progress { border-color: var(--qm-amber); background: var(--qm-amber-soft); }
 .qm-step.is-pending { background: var(--qm-surface); }
+.qm-step.is-notrequired { background: var(--qm-surface-soft); border-style: dashed; }
+.qm-step.is-notrequired .qm-step-name { color: var(--qm-text-soft); font-weight: 600; }
+.qm-step.is-notrequired .qm-step-icon { border-style: dashed; color: var(--qm-muted); }
 .qm-step-icon { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; font-size: 0.875rem; background: var(--qm-surface); border: 2px solid var(--qm-border-strong); color: var(--qm-muted); transition: background-color .3s, border-color .3s; }
 .qm-step.is-success .qm-step-icon { background: var(--qm-green-solid); border-color: var(--qm-green-solid); color: #fff; }
 .qm-step.is-failure .qm-step-icon { background: var(--qm-red); border-color: var(--qm-red); color: #fff; animation: pulse-red 2s ease-out infinite; }

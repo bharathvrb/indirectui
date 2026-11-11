@@ -38,7 +38,7 @@
 
   <section class="card mb-4 qm-section-card qm-journey" ng-if="journey.total" aria-labelledby="journey-title">
     <div class="qm-journey-head">
-      <div class="qm-ring" ng-class="'is-' + journey.status" role="img" aria-label="{{journey.done}} of {{journey.total}} steps finished">
+      <div class="qm-ring" ng-class="'is-' + journey.status" role="img" aria-label="{{journey.done}} of {{journey.applicable}} steps finished">
         <svg viewBox="0 0 44 44" aria-hidden="true">
           <circle class="qm-ring-track" cx="22" cy="22" r="18"></circle>
           <circle class="qm-ring-value" cx="22" cy="22" r="18" ng-attr-stroke-dasharray="{{(journey.percent * 1.131).toFixed(1)}} 113.1"></circle>
@@ -49,7 +49,8 @@
         <h2 id="journey-title" class="qm-journey-title">Processing journey</h2>
         <p class="qm-journey-status" ng-switch="journey.status">
           <span ng-switch-when="failure" ng-if="!(isFailed() && journey.spotlight)">Stopped at <strong>{{(journey.spotlight || journey.current).label}}</strong></span>
-          <span ng-switch-when="success">All {{journey.total}} steps completed</span>
+          <span ng-switch-when="success">All {{journey.applicable}} steps completed<span ng-if="journey.notRequired"> ({{journey.notRequired}} not required)</span></span>
+          <span ng-switch-when="notrequired">All steps are not required</span>
           <span ng-switch-when="pending">All steps are pending</span>
           <span ng-switch-default><span ng-if="journey.active">Running: </span><span ng-if="!journey.active">Next: </span><strong>{{journey.current.label}}</strong></span>
         </p>
@@ -59,6 +60,7 @@
         <li class="is-skipped" ng-if="journey.skipped"><b>{{journey.skipped}}</b> skipped</li>
         <li class="is-failure" ng-if="journey.failed"><b>{{journey.failed}}</b> failed</li>
         <li class="is-progress" ng-if="journey.active"><b>{{journey.active}}</b> in progress</li>
+        <li class="is-notrequired" ng-if="journey.notRequired"><b>{{journey.notRequired}}</b> not required</li>
         <li class="is-pending" ng-if="journey.pending"><b>{{journey.pending}}</b> pending</li>
       </ul>
       <button type="button" class="qm-steps-toggle" ng-if="!(isFailed() && journey.spotlight)" ng-click="toggleSteps()" aria-expanded="{{ui.stepsOpen}}" aria-controls="journey-steps">

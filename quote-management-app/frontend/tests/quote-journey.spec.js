@@ -145,35 +145,38 @@ describe('Quote journey model: numbers and counts come from the backend', functi
     expect(without.steps.map(function(step) { return step.order; })).toEqual([1, 2]);
   });
 
-  it('ignores Not required steps: Success plus Not required is a completed journey', function() {
+  it('keeps Not required steps in the list but ignores them for progress: Success plus Not required is completed', function() {
     var result = journey.build([
       step('ADDRESS_VALIDATION', 'SUCCESS'), step('CREATE_CONTACT', 'NOT_REQUIRED'), step('CREATE_CUSTOMER', 'COMPLETED'),
       step('CREATE_SITE', 'Not Required'), step('CREATE_PROPOSAL', 'NOTREQUIRED')
     ]);
     expect(result.status).toBe('success');
     expect(result.percent).toBe(100);
-    expect(result.total).toBe(2);
+    expect(result.total).toBe(5);
+    expect(result.applicable).toBe(2);
     expect(result.done).toBe(2);
     expect(result.notRequired).toBe(3);
     expect(result.current).toBeNull();
-    expect(result.steps.map(function(s) { return s.stepName; })).toEqual(['ADDRESS_VALIDATION', 'CREATE_CUSTOMER']);
+    expect(result.steps.map(function(s) { return s.statusLabel; })).toEqual(['Success', 'Not required', 'Success', 'Not required', 'Not required']);
   });
 
-  it('does not let Not required steps hide a failure, a running step or a pending step', function() {
+  it('works out the percentage from the steps that apply, and Not required steps never hide a failure, a running step or a pending step', function() {
+    var half = journey.build([step('ADDRESS_VALIDATION', 'SUCCESS'), step('CREATE_CONTACT', 'NOT_REQUIRED'), step('CREATE_CUSTOMER', 'PENDING'), step('CREATE_SITE', 'NOT_REQUIRED')]);
+    expect(half.percent).toBe(50);
+    expect(half.status).toBe('progress');
+    expect(half.current.stepName).toBe('CREATE_CUSTOMER');
     var failed = journey.build([step('ADDRESS_VALIDATION', 'SUCCESS'), step('CREATE_CONTACT', 'NOT_REQUIRED'), step('CREATE_CUSTOMER', 'FAILURE')]);
     expect(failed.status).toBe('failure');
     expect(failed.percent).toBe(50);
-    var waiting = journey.build([step('ADDRESS_VALIDATION', 'SUCCESS'), step('CREATE_CONTACT', 'NOT_REQUIRED'), step('CREATE_CUSTOMER', 'PENDING')]);
-    expect(waiting.status).toBe('progress');
-    expect(waiting.current.stepName).toBe('CREATE_CUSTOMER');
     expect(journey.build([step('A', 'NOT_REQUIRED'), step('B', 'PENDING')]).status).toBe('pending');
   });
 
-  it('has no journey when every step is Not required, and still words the status', function() {
+  it('words a journey whose every step is Not required without a percentage', function() {
     var result = journey.build([step('A', 'NOT_REQUIRED'), step('B', 'NOT_REQUIRED')]);
-    expect(result.total).toBe(0);
-    expect(result.status).toBe('empty');
-    expect(result.notRequired).toBe(2);
+    expect(result.total).toBe(2);
+    expect(result.applicable).toBe(0);
+    expect(result.percent).toBe(0);
+    expect(result.status).toBe('notrequired');
     expect(journey.statusInfo('NOT_REQUIRED').label).toBe('Not required');
     expect(journey.statusInfo('Not required').label).toBe('Not required');
   });

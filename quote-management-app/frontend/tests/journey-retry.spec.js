@@ -270,18 +270,21 @@ describe('Quote journey and step retry', function() {
       return data;
     }
 
-    it('treats Success plus Not required as a completed journey and leaves the Not required steps out of it', function() {
+    it('shows Not required steps as steps but leaves them out of the progress: Success plus Not required is completed', function() {
       var page = start({ data: completedWithNotRequired() });
       expect(scope.journey.status).toBe('success');
-      expect(page.querySelector('.qm-journey-status').textContent).toContain('All 2 steps completed');
+      expect(page.querySelector('.qm-journey-status').textContent).toContain('All 2 steps completed (2 not required)');
       expect(page.querySelector('.qm-ring').getAttribute('aria-label')).toBe('2 of 2 steps finished');
       expect(page.querySelector('.qm-ring span').textContent).toBe('100%');
-      var tiles = Array.prototype.map.call(page.querySelectorAll('.qm-step .qm-step-name'), function(node) { return node.textContent.trim(); });
-      expect(tiles).toEqual(['ADDRESS_VALIDATION', 'CREATE_CUSTOMER']);
-      expect(page.querySelector('.qm-journey-counts').textContent).not.toMatch(/not required/i);
+      var tiles = Array.prototype.map.call(page.querySelectorAll('.qm-step'), function(node) {
+        return node.querySelector('.qm-step-name').textContent.trim() + ' ' + node.querySelector('.qm-step-meta').textContent.trim();
+      });
+      expect(tiles).toEqual(['ADDRESS_VALIDATION Success', 'CREATE_CONTACT Not required', 'CREATE_CUSTOMER Success', 'CREATE_SITE Not required']);
+      expect(page.querySelectorAll('.qm-step.is-notrequired').length).toBe(2);
+      expect(page.querySelector('.qm-journey-counts .is-notrequired').textContent).toMatch(/2\s+not required/);
     });
 
-    it('still lists a Not required step in the Processing tab with its own status', function() {
+    it('lists the Not required steps in the Processing tab too', function() {
       var page = start({ data: completedWithNotRequired() });
       scope.setTab('processing'); root.$digest();
       var rows = Array.prototype.map.call(page.querySelectorAll('#detail-panel-processing tbody tr'), function(row) { return row.textContent.replace(/\s+/g, ' '); });

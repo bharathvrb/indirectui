@@ -23,7 +23,7 @@ angular.module('quoteManagement')
       IN_PROGRESS: { tone: 'progress', label: 'In progress', icon: 'bi-arrow-repeat' },
       PENDING: { tone: 'pending', label: 'Pending', icon: 'bi-circle' },
       SKIPPED: { tone: 'skipped', label: 'Skipped', icon: 'bi-skip-forward' },
-      // A step that does not apply to this quote. It is left out of the journey (see build) but still listed in the Processing tab.
+      // A step that does not apply to this quote. It is shown, but progress and completion ignore it (see build).
       NOT_REQUIRED: { tone: 'notrequired', label: 'Not required', icon: 'bi-dash-circle' }
     };
 
@@ -78,12 +78,11 @@ angular.module('quoteManagement')
     }
 
     // steps: normalized processing steps ({ id, stepName, stepStatus, stepOrder, attemptCount, maxRetries, startedAt, completedAt, scope, ... }).
-    // Steps that are Not required are ignored: the journey is made of the steps that apply, so a quote whose
-    // remaining steps are all Success (or Not required) is a completed journey. notRequired says how many were left out.
+    // Not required steps are shown like any other step, but progress ignores them: percent and completion are worked out
+    // from the steps that apply, so a quote whose other steps are all Success is a completed journey.
     function build(steps) {
       var all = angular.isArray(steps) ? steps : [];
-      var applicable = all.filter(function(step) { return normalizeStatus(step.stepStatus) !== 'NOT_REQUIRED'; });
-      var list = applicable.map(function(step, position) {
+      var list = all.map(function(step, position) {
         var info = stepInfo(step.stepName);
         var status = statusInfo(step.stepStatus);
         return angular.extend({}, step, {
@@ -102,16 +101,18 @@ angular.module('quoteManagement')
         step.order = number(step.stepOrder) !== null ? number(step.stepOrder) : step.number;
       });
       var count = function(tone) { return list.filter(function(step) { return step.tone === tone; }).length; };
+      var notRequired = count('notrequired');
+      var applicable = list.length - notRequired;
       var done = count('success') + count('skipped');
       var current = list.filter(function(step) { return step.tone === 'failure'; })[0] ||
         list.filter(function(step) { return step.tone === 'progress'; })[0] ||
         list.filter(function(step) { return step.tone === 'pending'; })[0] || null;
       return {
-        steps: list, total: list.length, notRequired: all.length - applicable.length, done: done, succeeded: count('success'), skipped: count('skipped'),
+        steps: list, total: list.length, applicable: applicable, notRequired: notRequired, done: done, succeeded: count('success'), skipped: count('skipped'),
         failed: count('failure'), active: count('progress'), pending: count('pending'),
-        percent: list.length ? Math.round(done * 100 / list.length) : 0,
+        percent: applicable ? Math.round(done * 100 / applicable) : 0,
         current: current,
-        status: !list.length ? 'empty' : count('failure') ? 'failure' : done === list.length ? 'success' :
+        status: !list.length ? 'empty' : !applicable ? 'notrequired' : count('failure') ? 'failure' : done === applicable ? 'success' :
           count('progress') || done ? 'progress' : 'pending'
       };
     }
