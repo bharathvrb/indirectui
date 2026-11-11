@@ -257,6 +257,39 @@ describe('Quote journey and step retry', function() {
     });
   });
 
+  describe('Not required steps', function() {
+    function completedWithNotRequired() {
+      var data = fixture('COMPLETED');
+      data.stepExecutions = [
+        { id: 1, stepName: 'ADDRESS_VALIDATION', stepStatus: 'SUCCESS' },
+        { id: 2, stepName: 'CREATE_CONTACT', stepStatus: 'NOT_REQUIRED' },
+        { id: 3, stepName: 'CREATE_CUSTOMER', stepStatus: 'COMPLETED' },
+        { id: 4, stepName: 'CREATE_SITE', stepStatus: 'NOT_REQUIRED' }
+      ];
+      data.errorDetails = [];
+      return data;
+    }
+
+    it('treats Success plus Not required as a completed journey and leaves the Not required steps out of it', function() {
+      var page = start({ data: completedWithNotRequired() });
+      expect(scope.journey.status).toBe('success');
+      expect(page.querySelector('.qm-journey-status').textContent).toContain('All 2 steps completed');
+      expect(page.querySelector('.qm-ring').getAttribute('aria-label')).toBe('2 of 2 steps finished');
+      expect(page.querySelector('.qm-ring span').textContent).toBe('100%');
+      var tiles = Array.prototype.map.call(page.querySelectorAll('.qm-step .qm-step-name'), function(node) { return node.textContent.trim(); });
+      expect(tiles).toEqual(['ADDRESS_VALIDATION', 'CREATE_CUSTOMER']);
+      expect(page.querySelector('.qm-journey-counts').textContent).not.toMatch(/not required/i);
+    });
+
+    it('still lists a Not required step in the Processing tab with its own status', function() {
+      var page = start({ data: completedWithNotRequired() });
+      scope.setTab('processing'); root.$digest();
+      var rows = Array.prototype.map.call(page.querySelectorAll('#detail-panel-processing tbody tr'), function(row) { return row.textContent.replace(/\s+/g, ' '); });
+      expect(rows.length).toBe(4);
+      expect(rows.filter(function(text) { return text.indexOf('Not required') !== -1; }).length).toBe(2);
+    });
+  });
+
   describe('quote header', function() {
     it('shows the name, state, IDs, facts and counts in a light header with the actions beside the title', function() {
       var page = start();

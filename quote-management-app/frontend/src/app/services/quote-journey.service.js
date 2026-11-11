@@ -22,7 +22,9 @@ angular.module('quoteManagement')
       FAILURE: { tone: 'failure', label: 'Failed', icon: 'bi-x-lg' },
       IN_PROGRESS: { tone: 'progress', label: 'In progress', icon: 'bi-arrow-repeat' },
       PENDING: { tone: 'pending', label: 'Pending', icon: 'bi-circle' },
-      SKIPPED: { tone: 'skipped', label: 'Skipped', icon: 'bi-skip-forward' }
+      SKIPPED: { tone: 'skipped', label: 'Skipped', icon: 'bi-skip-forward' },
+      // A step that does not apply to this quote. It is left out of the journey (see build) but still listed in the Processing tab.
+      NOT_REQUIRED: { tone: 'notrequired', label: 'Not required', icon: 'bi-dash-circle' }
     };
 
     function normalizeStatus(value) {
@@ -31,6 +33,7 @@ angular.module('quoteManagement')
       if (status === 'COMPLETED' || status === 'COMPLETE' || status === 'DONE') return 'SUCCESS';
       if (status === 'INPROGRESS' || status === 'RUNNING' || status === 'POLLING') return 'IN_PROGRESS';
       if (status === 'NEW' || status === 'NOT_STARTED' || status === '') return 'PENDING';
+      if (status === 'NOTREQUIRED') return 'NOT_REQUIRED';
       return status;
     }
 
@@ -75,8 +78,12 @@ angular.module('quoteManagement')
     }
 
     // steps: normalized processing steps ({ id, stepName, stepStatus, stepOrder, attemptCount, maxRetries, startedAt, completedAt, scope, ... }).
+    // Steps that are Not required are ignored: the journey is made of the steps that apply, so a quote whose
+    // remaining steps are all Success (or Not required) is a completed journey. notRequired says how many were left out.
     function build(steps) {
-      var list = (angular.isArray(steps) ? steps : []).map(function(step, position) {
+      var all = angular.isArray(steps) ? steps : [];
+      var applicable = all.filter(function(step) { return normalizeStatus(step.stepStatus) !== 'NOT_REQUIRED'; });
+      var list = applicable.map(function(step, position) {
         var info = stepInfo(step.stepName);
         var status = statusInfo(step.stepStatus);
         return angular.extend({}, step, {
@@ -100,7 +107,7 @@ angular.module('quoteManagement')
         list.filter(function(step) { return step.tone === 'progress'; })[0] ||
         list.filter(function(step) { return step.tone === 'pending'; })[0] || null;
       return {
-        steps: list, total: list.length, done: done, succeeded: count('success'), skipped: count('skipped'),
+        steps: list, total: list.length, notRequired: all.length - applicable.length, done: done, succeeded: count('success'), skipped: count('skipped'),
         failed: count('failure'), active: count('progress'), pending: count('pending'),
         percent: list.length ? Math.round(done * 100 / list.length) : 0,
         current: current,
