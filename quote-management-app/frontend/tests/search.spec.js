@@ -26,7 +26,7 @@ describe('Unified quote search workspace', function() {
   beforeEach(function() {
     try { localStorage.removeItem('omw-recent-searches'); } catch (error) { /* storage unavailable */ }
     originalConfig = window.APP_CONFIG;
-    window.APP_CONFIG = angular.extend({}, window.APP_CONFIG, { quoteDataLookupOnly: false });
+    window.APP_CONFIG = angular.extend({}, window.APP_CONFIG, { quoteDataLookupOnly: false, defaultCategory: '' });
     requests = [];
     service = {
       getQuotes: jasmine.createSpy('getQuotes').and.callFake(function(params) {
@@ -639,6 +639,79 @@ describe('Unified quote search workspace', function() {
     var badge = renderTable().querySelector('tbody tr .badge');
     expect(badge.textContent.trim()).toBe('Failure');
     expect(badge.classList.contains('bg-danger')).toBe(true);
+  });
+
+  describe('default category', function() {
+    var CATEGORY = 'Enterprise Multi-Site';
+    beforeEach(function() { window.APP_CONFIG.defaultCategory = CATEGORY; });
+
+    it('sends category on the first load of the default list, as an ordinary Category filter', function() {
+      start('QuoteListCtrl', '/quotes');
+      expect(requests.length).toBe(1);
+      expect(requests[0].params).toEqual({ page: 0, size: 25, sort: 'createdAt,desc', category: CATEGORY });
+      expect(scope.filters.category).toBe(CATEGORY);
+      expect(scope.categoryOptions).toContain(CATEGORY);
+      expect(scope.activeFilterChips().map(function(chip) { return chip.label; })).toEqual(['Category: ' + CATEGORY]);
+      expect(location.search().category).toBe(CATEGORY);
+    });
+
+    it('is not added when the address already holds a search or any filter', function() {
+      ['/quotes?state=FAILED', '/quotes?category=Disconnect', '/quotes?designStatus=IN_DESIGN', '/quotes?fromDate=2026-01-01',
+       '/quotes?channelType=DIRECT'].forEach(function(url) {
+        requests.length = 0;
+        start('QuoteListCtrl', url);
+        expect(requests.length).toBe(1);
+        expect(requests[0].params.category).toBe(url === '/quotes?category=Disconnect' ? 'Disconnect' : undefined);
+        scope.$destroy();
+      });
+    });
+
+    it('can be cleared or changed, and stays cleared when the address comes back without it', function() {
+      start('QuoteListCtrl', '/quotes');
+      resolve(0, [{ quoteRequestId: 'A', category: CATEGORY }]);
+      scope.clearFilters();
+      root.$digest();
+      expect(requests.length).toBe(2);
+      expect(requests[1].params.category).toBeUndefined();
+      expect(scope.filters.category).toBe('');
+      scope.filters.category = 'Disconnect';
+      scope.applyFilters();
+      root.$digest();
+      expect(requests[2].params.category).toBe('Disconnect');
+      var withCategory = location.url();
+      location.search({ page: 0, size: 25 });
+      root.$digest();
+      expect(requests.length).toBe(4);
+      expect(requests[3].params.category).toBeUndefined();
+      expect(scope.filters.category).toBe('');
+      location.url(withCategory);
+      root.$digest();
+      expect(requests[4].params.category).toBe('Disconnect');
+    });
+
+    it('is left out when the setting is blank, on Search, and when the default list is off', function() {
+      window.APP_CONFIG.defaultCategory = '  ';
+      start('QuoteListCtrl', '/quotes');
+      expect(requests[0].params.category).toBeUndefined();
+      scope.$destroy();
+      requests.length = 0;
+      window.APP_CONFIG.defaultCategory = CATEGORY;
+      start('QuoteListCtrl', '/search');
+      expect(requests.length).toBe(0);
+      expect(scope.filters.category).toBe('');
+      scope.$destroy();
+      window.APP_CONFIG.defaultListEnabled = false;
+      start('QuoteListCtrl', '/quotes');
+      expect(requests.length).toBe(0);
+      expect(scope.filters.category).toBe('');
+      delete window.APP_CONFIG.defaultListEnabled;
+    });
+
+    it('travels as one query value (the space is encoded)', function() {
+      var http;
+      angular.mock.inject(function($httpParamSerializer) { http = $httpParamSerializer; });
+      expect(http({ page: 0, category: CATEGORY })).toBe('category=Enterprise+Multi-Site&page=0');
+    });
   });
 
   describe('refresh only on request', function() {
