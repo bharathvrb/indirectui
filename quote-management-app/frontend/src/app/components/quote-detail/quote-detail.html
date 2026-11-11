@@ -89,7 +89,7 @@
                 ng-disabled="!canRetry(journey.spotlight)" title="{{retryTitle(journey.spotlight)}}" ng-click="openRetryDialog(journey.spotlight)">
           <i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>{{retryRequested[journey.spotlight.id] ? 'Retry requested' : 'Retry step'}}
         </button>
-        <button type="button" id="spotlight-errors" class="btn btn-sm btn-outline-secondary" ng-click="setTab('errors')">View errors</button>
+        <button type="button" id="spotlight-errors" class="btn btn-sm btn-outline-secondary" ng-click="openErrorDialog(journey.spotlight)" aria-haspopup="dialog">View errors</button>
         <span class="qm-soon" ng-if="!retryEnabled">Retry coming soon</span>
         <button type="button" id="spotlight-steps" class="btn btn-sm btn-outline-secondary qm-steps-toggle-inline" ng-click="toggleSteps()" aria-expanded="{{ui.stepsOpen}}" aria-controls="journey-steps">
           <i class="bi bi-list-check me-1" aria-hidden="true"></i>{{ui.stepsOpen ? 'Hide steps' : 'All steps'}}<i class="bi bi-chevron-down qm-chev ms-1" aria-hidden="true"></i>
@@ -595,6 +595,42 @@
       </div>
     </section>
   </div>
+
+<div class="recovery-dialog-backdrop" ng-if="errorDialog.open" ng-click="closeErrorDialog()">
+  <section id="error-dialog" class="recovery-dialog qm-error-dialog" role="dialog" aria-modal="true" aria-labelledby="error-dialog-title"
+           ng-click="$event.stopPropagation()" ng-keydown="errorDialogKeydown($event)">
+    <div class="qm-dialog-head">
+      <i class="bi bi-bug-fill is-error" aria-hidden="true"></i>
+      <div>
+        <h2 id="error-dialog-title">{{stepLabel(errorDialog.step.stepName)}} errors</h2>
+        <p class="small text-muted mb-0">{{errorDialog.rows.length}} {{errorDialog.rows.length === 1 ? 'error' : 'errors'}} for this step, newest first.</p>
+      </div>
+    </div>
+    <div class="qm-dialog-body">
+      <p class="qm-empty-inline" ng-if="!errorDialog.rows.length">QuoteData sent no error details for this step.</p>
+      <ol class="qm-error-list qm-error-dialog-list" aria-label="Errors for this step">
+        <li class="qm-error" ng-repeat="row in errorDialog.rows track by row._key">
+          <span class="qm-error-icon" aria-hidden="true"><i class="bi bi-bug-fill"></i></span>
+          <div class="qm-error-main">
+            <ul class="qm-tags qm-error-tags">
+              <li><b>Source</b>{{displayValue(row.errorSource)}}</li>
+              <li class="qm-error-code"><b>Code</b><code>{{displayValue(row.errorCode)}}</code></li>
+              <li ng-if="canCopy(row.httpStatusCode)"><b>HTTP status</b>{{row.httpStatusCode}}</li>
+              <li ng-if="canCopy(row.retryAttempt)"><b>Retry attempt</b>{{row.retryAttempt}}</li>
+              <li><b>Created</b>{{row.createdAt ? (row.createdAt | date:'dd MMM yyyy HH:mm:ss') : '—'}}</li>
+            </ul>
+            <p class="qm-error-line"><span class="qm-lbl">Message</span><span class="qm-error-message">{{displayValue(row.errorMessage)}}</span></p>
+            <p class="qm-error-line" ng-if="canCopy(row.errorDetail)"><span class="qm-lbl">Detail</span><span class="qm-error-detail">{{row.errorDetail}}</span></p>
+          </div>
+        </li>
+      </ol>
+    </div>
+    <div class="qm-dialog-foot">
+      <button type="button" class="btn btn-outline-secondary" ng-click="showAllErrors()">All errors</button>
+      <button type="button" id="error-dialog-close" class="btn btn-primary" ng-click="closeErrorDialog()">Close</button>
+    </div>
+  </section>
+</div>
 
 <div class="recovery-dialog-backdrop" ng-if="retry.open" ng-click="closeRetryDialog()">
   <section id="retry-dialog" class="recovery-dialog" role="dialog" aria-modal="true" aria-labelledby="retry-dialog-title"

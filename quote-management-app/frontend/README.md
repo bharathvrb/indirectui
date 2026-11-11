@@ -55,6 +55,8 @@ The Search page asks **Look up by** first, then for the value. The types are Quo
 
 The quote detail page lists the processing steps (`stepExecutions`) as one numbered sequence under their actual names (`ADDRESS_VALIDATION`, `CREATE_CONTACT`, `GENERATE_CONTRACT`, and so on), in the order of the OMW flow, with no grouping. Each step shows only its name, number and status (plus the site or item it applies to, when it has one). Attempt counts and timings stay in the Processing tab. The order is the `FLOW` list in `src/app/services/quote-journey.service.js`; add new step names there. Steps it doesn't know still appear, after the known ones. When the quote has failed, the failure summary (latest failed step, its position such as "Step 6 of 16", error code and message) sits at the top of the list.
 
+The failure panel's **View errors** button opens a pop-up with the errors QuoteData linked to that step (matched by `stepExecutionId`); its **All errors** button opens the Errors tab, which always lists every error of the quote.
+
 Retry appears on the failure summary, on failed rows in the Processing tab and on every row in the Errors tab. To turn it on when the backend API exists:
 
 1. Confirm the QuoteData endpoint. The app currently calls `POST {QUOTEDATA_BASE_URL}/quote/{quoteRequestId}/steps/{stepExecutionId}/retry` with no body; adjust `quote-data-proxy.js` if the real path differs.

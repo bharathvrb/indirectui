@@ -68,6 +68,8 @@ angular.module('quoteManagement')
       // Step retry (UI-11): visible everywhere a step failed; enabled only by features.retryEnabled.
       $scope.retryEnabled = !!($window.APP_CONFIG && $window.APP_CONFIG.features && $window.APP_CONFIG.features.retryEnabled === true);
       $scope.retry = { open: false, step: null, submitting: false, error: null, trackingId: null };
+      // The failure panel's "View errors" pop-up: the errors QuoteData linked to that step (the Errors tab keeps the full list).
+      $scope.errorDialog = { open: false, step: null, rows: [] };
       $scope.retryRequested = Object.create(null);
       $scope.customerFields = [
         ['customerName', 'Customer Name'], ['tradingName', 'Trading Name'], ['organizationType', 'Organization Type'],
@@ -1271,7 +1273,7 @@ angular.module('quoteManagement')
         return $scope.isRetryable(step) ? 'Retry this step' : 'Only failed steps can be retried';
       };
       $scope.openRetryDialog = function(step) {
-        if (!$scope.canRetry(step) || $scope.retry.open) return;
+        if (!$scope.canRetry(step) || $scope.retry.open || $scope.errorDialog.open) return;
         returnFocus = document.activeElement;
         $scope.retry = { open: true, step: step, submitting: false, error: null, trackingId: null };
         focusElement('retry-confirm');
@@ -1284,6 +1286,31 @@ angular.module('quoteManagement')
           if (target) target.focus();
         }));
       };
+      $scope.openErrorDialog = function(step) {
+        if (!step || $scope.errorDialog.open) return;
+        returnFocus = document.activeElement;
+        var rows = $scope.errorRows.filter(function(row) { return String(row.stepExecutionId) === String(step.id); });
+        $scope.errorDialog = { open: true, step: step, rows: rows };
+        focusElement('error-dialog-close');
+      };
+      $scope.closeErrorDialog = function() {
+        if (!$scope.errorDialog.open) return;
+        $scope.errorDialog = { open: false, step: null, rows: [] };
+        focusTimers.push($timeout(function() {
+          var target = returnFocus && document.documentElement.contains(returnFocus) ? returnFocus : document.getElementById('quote-detail-heading');
+          if (target) target.focus();
+        }));
+      };
+      // "All errors" leaves the pop-up and opens the Errors tab, which lists every error of the quote.
+      $scope.showAllErrors = function() {
+        $scope.errorDialog = { open: false, step: null, rows: [] };
+        $scope.errorItemId = null;
+        $scope.selectedSiteId = null;
+        $scope.errorFilters = { source: '', code: '' };
+        $scope.activeTab = 'errors';
+        focusElement('detail-tab-errors');
+      };
+      $scope.errorDialogKeydown = function(event) { trapDialogFocus(event, 'error-dialog', $scope.closeErrorDialog); };
       $scope.retryDialogKeydown = function(event) { trapDialogFocus(event, 'retry-dialog', $scope.closeRetryDialog); };
       $scope.submitRetry = function() {
         var step = $scope.retry.step;
@@ -1458,6 +1485,7 @@ angular.module('quoteManagement')
         $scope.promotionGroupRows = [];
         $scope.processingSteps = [];
         $scope.errorRows = [];
+        $scope.errorDialog = { open: false, step: null, rows: [] };
         $scope.events = [];
         $scope.idRows = [];
         $scope.monitoring = null;

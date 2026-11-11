@@ -796,6 +796,10 @@ qm-contact-card { display: block; }
 .recovery-dialog .qm-dialog-head { display: flex; gap: 14px; align-items: center; padding: 24px 26px 16px; }
 .recovery-dialog .qm-dialog-head > i { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 14px; background: var(--qm-green-soft); color: var(--qm-green-text); font-size: 1.25rem; flex: none; }
 .recovery-dialog .qm-dialog-head > i.is-retry { background: var(--qm-primary-soft); color: var(--qm-primary); }
+.recovery-dialog .qm-dialog-head > i.is-error { background: var(--qm-red-soft); color: var(--qm-red-text); }
+.qm-error-dialog { width: min(100%, 680px); }
+.qm-error-dialog-list { margin: 0; }
+.qm-error-dialog .qm-error-detail { overflow-wrap: anywhere; }
 .recovery-dialog h2 { font-size: var(--fs-lg); font-weight: 800; letter-spacing: -.02em; margin: 0; }
 .recovery-dialog .qm-dialog-body { padding: 0 26px 6px; }
 .recovery-dialog .qm-dialog-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
