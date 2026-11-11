@@ -764,6 +764,20 @@ describe('Unified quote search workspace', function() {
       expect(scope.stateMix).toBeUndefined();
     });
 
+    it('counts any state containing SUCCESS as Completed, in any letter case', function() {
+      start();
+      var states = ['SUCCESS', 'Success', 'SUCCESSFUL', 'success_with_warnings', 'COMPLETED', 'FAILURE', 'RECEIVED', 'UNSUCCESSFUL_ATTEMPT'];
+      resolve(0, states.map(function(state, index) { return { quoteRequestId: 'Q-' + index, state: state }; }));
+      // The word has to start a word: UNSUCCESSFUL_ATTEMPT is not a success.
+      expect(scope.kpis).toEqual({ total: 8, failed: 1, inProgress: 0, completed: 5, other: 2 });
+      expect(view.stateClass('UNSUCCESSFUL')).toBe('bg-secondary');
+      expect(view.stateClass('PARTIAL_SUCCESS')).toBe('bg-success');
+      expect(view.stateClass('SUCCESS')).toBe('bg-success');
+      expect(view.stateClass('Successful')).toBe('bg-success');
+      expect(view.stateLabel('SUCCESS')).toBe('SUCCESS');
+      expect(view.stateClass('RECEIVED')).toBe('bg-primary');
+    });
+
     it('with totalElements 277 and size 25, the Total quotes tile shows 25 and the counts come from those 25', function() {
       start();
       var states = ['FAILURE', 'IN_PROGRESS', 'COMPLETED', 'RECEIVED', 'PENDING_APPROVAL'];
