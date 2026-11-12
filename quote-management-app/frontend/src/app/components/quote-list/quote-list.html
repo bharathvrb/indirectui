@@ -64,31 +64,37 @@
       <div id="quote-search-feedback" class="qm-search-error" role="alert" ng-if="searchError">{{searchError}}</div>
     </div>
     <div class="row g-3" aria-label="Quote summary" ng-if="!lookupOnly && pageMode !== 'search' && listEnabled">
-      <div class="col-6 col-md-4 col-xl">
+      <div class="col-6 col-lg-4 col-xxl-2">
         <div class="qm-kpi-card qm-kpi-card-info">
           <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-collection"></i></span>
           <div><div class="qm-kpi-label">Total quotes</div><div class="qm-kpi-value">{{displayValue(kpis.total)}}</div></div>
         </div>
       </div>
-      <div class="col-6 col-md-4 col-xl">
+      <div class="col-6 col-lg-4 col-xxl-2">
+        <div class="qm-kpi-card qm-kpi-card-received">
+          <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-inbox"></i></span>
+          <div><div class="qm-kpi-label">Received</div><div class="qm-kpi-value">{{displayValue(kpis.received)}}</div></div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-4 col-xxl-2">
         <div class="qm-kpi-card qm-kpi-card-warning">
           <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-hourglass-split"></i></span>
           <div><div class="qm-kpi-label">In progress</div><div class="qm-kpi-value">{{displayValue(kpis.inProgress)}}</div></div>
         </div>
       </div>
-      <div class="col-6 col-md-4 col-xl">
+      <div class="col-6 col-lg-4 col-xxl-2">
         <div class="qm-kpi-card qm-kpi-card-danger">
           <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-exclamation-octagon"></i></span>
           <div><div class="qm-kpi-label">Failed</div><div class="qm-kpi-value">{{displayValue(kpis.failed)}}</div></div>
         </div>
       </div>
-      <div class="col-6 col-md-4 col-xl">
+      <div class="col-6 col-lg-4 col-xxl-2">
         <div class="qm-kpi-card qm-kpi-card-success">
           <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-check2-circle"></i></span>
           <div><div class="qm-kpi-label">Completed</div><div class="qm-kpi-value">{{displayValue(kpis.completed)}}</div></div>
         </div>
       </div>
-      <div class="col-12 col-md-4 col-xl">
+      <div class="col-6 col-lg-4 col-xxl-2">
         <div class="qm-kpi-card qm-kpi-card-neutral">
           <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-three-dots"></i></span>
           <div><div class="qm-kpi-label">Other</div><div class="qm-kpi-value">{{displayValue(kpis.other)}}</div></div>
@@ -165,7 +171,7 @@
     <quote-table rows="quotes" loading="loading" error="error" tracking-id="trackingId" ready="dataReady"
                current-page="currentPage" total-pages="totalPages" total-elements="totalElements" page-size="pageSize"
                idle-message="{{lookupOnly ? 'Enter a quote request ID, external ID, or proposal ID to load a quote.' : requireTerm ? 'Enter something to search for.' : 'Fix the highlighted filters to see results.'}}"
-               on-page="goToPage(page)" on-retry="refresh()"></quote-table>
+               on-page="goToPage(page)" on-retry="refresh()" latest-only="latestOnly"></quote-table>
   </div>
   <div class="recovery-dialog-backdrop" ng-if="tour.open" ng-click="closeTour()">
     <section id="tour-dialog" class="recovery-dialog qm-tour-dialog" role="dialog" aria-modal="true" aria-labelledby="tour-title"

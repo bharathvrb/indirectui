@@ -29,6 +29,9 @@ angular.module('quoteManagement')
       if ($scope.pageMode === 'home') $scope.lookupOnly = false;
       // Search never lists without something to look for. Home can be switched off with defaultListEnabled: false.
       $scope.requireTerm = $scope.pageMode === 'search';
+      // Home shows only the newest 25 quotes: one request, no further pages. Reloading or pressing Refresh asks the backend again.
+      $scope.latestOnly = $scope.pageMode === 'home';
+      var HOME_PAGE_SIZE = 25;
       $scope.listEnabled = !($scope.pageMode === 'home' && window.APP_CONFIG && window.APP_CONFIG.defaultListEnabled === false);
       // What each Search type is called, and what the field says while it is chosen.
       var typeLabels = { quoteRequestId: 'quote request ID', externalId: 'external ID', proposalId: 'proposal ID', text: 'search text' };
@@ -161,8 +164,8 @@ angular.module('quoteManagement')
 
       function readQuery() {
         var query = $location.search();
-        $scope.currentPage = view.integer(query.page, 0);
-        $scope.pageSize = view.integer(query.size, 25, 1);
+        $scope.currentPage = $scope.latestOnly ? 0 : view.integer(query.page, 0);
+        $scope.pageSize = $scope.latestOnly ? HOME_PAGE_SIZE : view.integer(query.size, 25, 1);
         $scope.searchTerm = view.text(query.search);
         $scope.searchBy = searchTypes.indexOf(query.searchBy) !== -1 ? query.searchBy : '';
         $scope.filters = {
@@ -186,7 +189,7 @@ angular.module('quoteManagement')
 
       function locationQuery() {
         var source = $location.search();
-        var query = { page: view.integer(source.page, 0), size: view.integer(source.size, 25, 1) };
+        var query = $scope.latestOnly ? { page: 0, size: HOME_PAGE_SIZE } : { page: view.integer(source.page, 0), size: view.integer(source.size, 25, 1) };
         if (searchTypes.indexOf(source.searchBy) !== -1) query.searchBy = source.searchBy;
         ['search'].concat(filterKeys).forEach(function(key) {
           if (view.text(source[key])) query[key] = view.text(source[key]);
@@ -284,6 +287,7 @@ angular.module('quoteManagement')
         commit(true);
       };
       $scope.goToPage = function(page) {
+        if ($scope.latestOnly) return;
         if (view.integer(page, null) === null || page >= $scope.totalPages || page === $scope.currentPage) return;
         $scope.currentPage = page;
         commit(false);
