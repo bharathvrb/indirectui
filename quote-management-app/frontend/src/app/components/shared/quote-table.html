@@ -3,7 +3,10 @@
     <h2 class="qm-card-title qm-results-heading" tabindex="-1"><i class="bi bi-table" aria-hidden="true"></i>Results</h2>
     <span class="small text-muted" role="status" aria-live="polite">
       <span ng-if="$ctrl.loading"><i class="bi bi-arrow-repeat qm-spin me-1" aria-hidden="true"></i>Loading…</span>
-      <span ng-if="$ctrl.ready && !$ctrl.loading && !$ctrl.error">
+      <span ng-if="$ctrl.ready && !$ctrl.loading && !$ctrl.error && $ctrl.latestOnly">
+        {{$ctrl.rows.length === 1 ? '1 quote' : $ctrl.rows.length + ' quotes'}}, newest first
+      </span>
+      <span ng-if="$ctrl.ready && !$ctrl.loading && !$ctrl.error && !$ctrl.latestOnly">
         {{$ctrl.firstRow()}}–{{$ctrl.lastRow()}} of {{$ctrl.totalElements | number}}
       </span>
     </span>
@@ -75,7 +78,7 @@
     </table>
   </div>
   <div class="card-footer d-flex flex-wrap justify-content-between align-items-center gap-3"
-       ng-if="$ctrl.ready && !$ctrl.loading && !$ctrl.error && $ctrl.totalPages > 1">
+       ng-if="$ctrl.ready && !$ctrl.loading && !$ctrl.error && !$ctrl.latestOnly && $ctrl.totalPages > 1">
     <span class="small text-muted">Page {{$ctrl.currentPage + 1}} of {{$ctrl.totalPages | number}} · {{$ctrl.pageSize}} per page</span>
     <nav aria-label="Quote results pages">
       <ul class="pagination pagination-sm flex-wrap mb-0">

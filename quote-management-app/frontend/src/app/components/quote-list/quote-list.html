@@ -64,31 +64,37 @@
       <div id="quote-search-feedback" class="qm-search-error" role="alert" ng-if="searchError">{{searchError}}</div>
     </div>
     <div class="row g-3" aria-label="Quote summary" ng-if="!lookupOnly && pageMode !== 'search' && listEnabled">
-      <div class="col-6 col-md-4 col-xl">
+      <div class="col-6 col-lg-4 col-xxl-2">
         <div class="qm-kpi-card qm-kpi-card-info">
           <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-collection"></i></span>
           <div><div class="qm-kpi-label">Total quotes</div><div class="qm-kpi-value">{{displayValue(kpis.total)}}</div></div>
         </div>
       </div>
-      <div class="col-6 col-md-4 col-xl">
+      <div class="col-6 col-lg-4 col-xxl-2">
+        <div class="qm-kpi-card qm-kpi-card-received">
+          <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-inbox"></i></span>
+          <div><div class="qm-kpi-label">Received</div><div class="qm-kpi-value">{{displayValue(kpis.received)}}</div></div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-4 col-xxl-2">
         <div class="qm-kpi-card qm-kpi-card-warning">
           <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-hourglass-split"></i></span>
           <div><div class="qm-kpi-label">In progress</div><div class="qm-kpi-value">{{displayValue(kpis.inProgress)}}</div></div>
         </div>
       </div>
-      <div class="col-6 col-md-4 col-xl">
+      <div class="col-6 col-lg-4 col-xxl-2">
         <div class="qm-kpi-card qm-kpi-card-danger">
           <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-exclamation-octagon"></i></span>
           <div><div class="qm-kpi-label">Failed</div><div class="qm-kpi-value">{{displayValue(kpis.failed)}}</div></div>
         </div>
       </div>
-      <div class="col-6 col-md-4 col-xl">
+      <div class="col-6 col-lg-4 col-xxl-2">
         <div class="qm-kpi-card qm-kpi-card-success">
           <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-check2-circle"></i></span>
           <div><div class="qm-kpi-label">Completed</div><div class="qm-kpi-value">{{displayValue(kpis.completed)}}</div></div>
         </div>
       </div>
-      <div class="col-12 col-md-4 col-xl">
+      <div class="col-6 col-lg-4 col-xxl-2">
         <div class="qm-kpi-card qm-kpi-card-neutral">
           <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-three-dots"></i></span>
           <div><div class="qm-kpi-label">Other</div><div class="qm-kpi-value">{{displayValue(kpis.other)}}</div></div>
@@ -107,27 +113,27 @@
       <div class="row g-3 qm-filter-grid">
         <div class="col-6 col-lg-3">
           <label for="quote-state" class="form-label">State</label>
-          <select id="quote-state" class="form-select" ng-model="filters.state" ng-change="applyFilters()" ng-disabled="isExactLookup()"
-                  ng-options="state as (state ? getStateLabel(state) : 'All states') for state in [''].concat(stateOptions)">
-          </select>
+          <input id="quote-state" type="text" class="form-control" list="quote-state-list" autocomplete="off" placeholder="All states" ng-model="filters.state"
+                 ng-model-options="{ updateOn: 'change blur' }" ng-change="applyFilters()" ng-disabled="isExactLookup()">
+          <datalist id="quote-state-list"><option ng-repeat="option in stateOptions track by option" value="{{option}}" label="{{getStateLabel(option)}}"></option></datalist>
         </div>
         <div class="col-6 col-lg-3">
           <label for="quote-design" class="form-label">Design status</label>
-          <select id="quote-design" class="form-select" ng-model="filters.designStatus" ng-change="applyFilters()" ng-disabled="isExactLookup()"
-                  ng-options="status as (status || 'All design statuses') for status in [''].concat(designStatusOptions)">
-          </select>
+          <input id="quote-design" type="text" class="form-control" list="quote-design-list" autocomplete="off" placeholder="All design statuses" ng-model="filters.designStatus"
+                 ng-model-options="{ updateOn: 'change blur' }" ng-change="applyFilters()" ng-disabled="isExactLookup()">
+          <datalist id="quote-design-list"><option ng-repeat="option in designStatusOptions track by option" value="{{option}}"></option></datalist>
         </div>
         <div class="col-6 col-lg-3">
           <label for="quote-category" class="form-label">Category</label>
-          <select id="quote-category" class="form-select" ng-model="filters.category" ng-change="applyFilters()" ng-disabled="isExactLookup()"
-                  ng-options="category as (category || 'All categories') for category in [''].concat(categoryOptions)">
-          </select>
+          <input id="quote-category" type="text" class="form-control" list="quote-category-list" autocomplete="off" placeholder="All categories" ng-model="filters.category"
+                 ng-model-options="{ updateOn: 'change blur' }" ng-change="applyFilters()" ng-disabled="isExactLookup()">
+          <datalist id="quote-category-list"><option ng-repeat="option in categoryOptions track by option" value="{{option}}"></option></datalist>
         </div>
         <div class="col-6 col-lg-3">
           <label for="quote-channel" class="form-label">Channel</label>
-          <select id="quote-channel" class="form-select" ng-model="filters.channelType" ng-change="applyFilters()" ng-disabled="isExactLookup()"
-                  ng-options="channel as (channel || 'All channels') for channel in [''].concat(channelTypeOptions)">
-          </select>
+          <input id="quote-channel" type="text" class="form-control" list="quote-channel-list" autocomplete="off" placeholder="All channels" ng-model="filters.channelType"
+                 ng-model-options="{ updateOn: 'change blur' }" ng-change="applyFilters()" ng-disabled="isExactLookup()">
+          <datalist id="quote-channel-list"><option ng-repeat="option in channelTypeOptions track by option" value="{{option}}"></option></datalist>
         </div>
         <div class="col-6 col-lg-3">
           <label for="quote-from" class="form-label">Created from</label>
@@ -142,7 +148,7 @@
                  ng-change="applyFilters()" aria-describedby="quote-date-feedback" ng-attr-aria-invalid="{{!!validationError}}">
         </div>
         <div class="col-12 col-lg-6 d-flex align-items-end">
-          <p class="small text-muted mb-2"><i class="bi bi-sort-down me-1" aria-hidden="true"></i>Newest created first · {{pageSize || 25}} rows per page</p>
+          <p class="small text-muted mb-2"><i class="bi bi-sort-down me-1" aria-hidden="true"></i>Newest first · 25 quotes. Pick a suggestion or type a value exactly as QuoteData has it, then press Enter.</p>
         </div>
       </div>
       <div id="quote-date-feedback" class="mt-2">
@@ -165,7 +171,7 @@
     <quote-table rows="quotes" loading="loading" error="error" tracking-id="trackingId" ready="dataReady"
                current-page="currentPage" total-pages="totalPages" total-elements="totalElements" page-size="pageSize"
                idle-message="{{lookupOnly ? 'Enter a quote request ID, external ID, or proposal ID to load a quote.' : requireTerm ? 'Enter something to search for.' : 'Fix the highlighted filters to see results.'}}"
-               on-page="goToPage(page)" on-retry="refresh()"></quote-table>
+               on-page="goToPage(page)" on-retry="refresh()" latest-only="latestOnly"></quote-table>
   </div>
   <div class="recovery-dialog-backdrop" ng-if="tour.open" ng-click="closeTour()">
     <section id="tour-dialog" class="recovery-dialog qm-tour-dialog" role="dialog" aria-modal="true" aria-labelledby="tour-title"

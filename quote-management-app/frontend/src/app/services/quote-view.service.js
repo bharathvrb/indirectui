@@ -122,14 +122,15 @@ angular.module('quoteManagement')
     // The word must start a word, so UNSUCCESSFUL is not mistaken for it.
     function isCompleted(state) { return state === 'COMPLETED' || /(^|[^A-Z])SUCCESS/.test(state); }
 
-    // Counts for the quotes that were loaded (the 25 on screen). Every quote falls in exactly one of the four groups,
-    // so In progress + Failed + Completed + Other always adds up to the total.
+    // Counts for the quotes that were loaded (the 25 on screen). Every quote falls in exactly one of the five groups,
+    // so Received + In progress + Failed + Completed + Other always adds up to the total.
     function summary(rows) {
-      var result = { total: rows.length, failed: 0, inProgress: 0, completed: 0, other: 0 };
+      var result = { total: rows.length, received: 0, failed: 0, inProgress: 0, completed: 0, other: 0 };
       rows.forEach(function(row) {
         if (row.state === 'FAILED' || row.state === 'FAILURE') result.failed++;
         else if (row.state === 'IN_PROGRESS') result.inProgress++;
         else if (isCompleted(row.state)) result.completed++;
+        else if (row.state === 'RECEIVED') result.received++;
         else result.other++;
       });
       return result;

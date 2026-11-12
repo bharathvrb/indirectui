@@ -82,7 +82,7 @@ const overlay = () => {
   // 3. Filter
   await cap('Filter by state, design status, category, channel or created date', '3');
   await to(page.locator('#quote-state')); await sleep(700);
-  await page.evaluate(() => { const e = document.getElementById('quote-state'); const i = Array.from(e.options).findIndex(o => /failed/i.test(o.textContent)); e.selectedIndex = i; e.dispatchEvent(new Event('change', { bubbles: true })); }); await sleep(2600);
+  await page.fill('#quote-state', 'FAILED'); await page.keyboard.press('Enter'); await sleep(2600);
   await scrollTo(520); await sleep(1800);
 
   // 4. Open a quote

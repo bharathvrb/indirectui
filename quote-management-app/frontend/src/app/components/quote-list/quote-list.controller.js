@@ -12,7 +12,7 @@ angular.module('quoteManagement')
       $scope.categoryOptions = [];
       $scope.channelTypeOptions = [];
       $scope.designStatusOptions = [];
-      $scope.stateOptions = ['RECEIVED', 'IN_PROGRESS', 'PENDING_APPROVAL', 'COMPLETED', 'FAILED'];
+      $scope.stateOptions = ['RECEIVED', 'IN_PROGRESS', 'PENDING_APPROVAL', 'COMPLETED', 'FAILED', 'FAILURE'];
       $scope.displayValue = view.displayValue;
       $scope.getStateLabel = view.stateLabel;
       $scope.validationError = null;
@@ -29,6 +29,9 @@ angular.module('quoteManagement')
       if ($scope.pageMode === 'home') $scope.lookupOnly = false;
       // Search never lists without something to look for. Home can be switched off with defaultListEnabled: false.
       $scope.requireTerm = $scope.pageMode === 'search';
+      // Home shows only the newest 25 quotes: one request, no further pages. Reloading or pressing Refresh asks the backend again.
+      $scope.latestOnly = $scope.pageMode === 'home';
+      var HOME_PAGE_SIZE = 25;
       $scope.listEnabled = !($scope.pageMode === 'home' && window.APP_CONFIG && window.APP_CONFIG.defaultListEnabled === false);
       // What each Search type is called, and what the field says while it is chosen.
       var typeLabels = { quoteRequestId: 'quote request ID', externalId: 'external ID', proposalId: 'proposal ID', text: 'search text' };
@@ -38,15 +41,58 @@ angular.module('quoteManagement')
 
       function capitalize(text) { return text.charAt(0).toUpperCase() + text.slice(1); }
 
+      // The filter boxes suggest the values QuoteData has sent, and accept any value typed in full. The lists are learned
+      // from the quotes loaded so far and kept in this browser (they only ever hold values QuoteData itself returned),
+      // so they do not shrink to what happens to be among the 25 on screen.
+      var FILTER_VALUES_KEY = 'omw-filter-values';
+      function readStoredValues() {
+        try {
+          var saved = JSON.parse(window.localStorage.getItem(FILTER_VALUES_KEY));
+          return saved && typeof saved === 'object' ? saved : {};
+        } catch (error) { return {}; }
+      }
+      function storeValues() {
+        var saved = {};
+        filterKeys.forEach(function(key) { saved[key] = $scope[key + 'Options'].slice(0, 100); });
+        try { window.localStorage.setItem(FILTER_VALUES_KEY, JSON.stringify(saved)); } catch (error) { /* storage unavailable */ }
+      }
+      function addOption(options, value) {
+        if (typeof value === 'string' && value.length <= 120 && value.trim() && options.indexOf(value) === -1) {
+          options.push(value);
+          return true;
+        }
+        return false;
+      }
+      (function loadStoredOptions() {
+        var saved = readStoredValues();
+        filterKeys.forEach(function(key) {
+          (angular.isArray(saved[key]) ? saved[key] : []).forEach(function(value) { addOption($scope[key + 'Options'], value); });
+          $scope[key + 'Options'].sort();
+        });
+      }());
+
       function rememberOptions(rows) {
+        var learned = false;
         filterKeys.forEach(function(key) {
           var options = $scope[key + 'Options'];
           var values = rows.map(function(row) { return row[key]; });
           values.push($scope.filters[key]);
-          values.forEach(function(value) {
-            if (value && options.indexOf(value) === -1) options.push(value);
-          });
+          values.forEach(function(value) { if (addOption(options, value)) learned = true; });
           options.sort();
+        });
+        if (learned) storeValues();
+      }
+
+      // A value typed into a filter box is matched to the spelling QuoteData uses (letter case, and the friendly name for a
+      // state such as "Failed"); anything else is sent as typed, because the backend may know values this browser has not seen.
+      function canonicalFilters() {
+        filterKeys.forEach(function(key) {
+          var typed = view.text($scope.filters[key]);
+          var lower = typed.toLowerCase();
+          var match = typed && $scope[key + 'Options'].filter(function(option) {
+            return option.toLowerCase() === lower || (key === 'state' && view.stateLabel(option).toLowerCase() === lower);
+          })[0];
+          $scope.filters[key] = match || typed;
         });
       }
 
@@ -161,8 +207,8 @@ angular.module('quoteManagement')
 
       function readQuery() {
         var query = $location.search();
-        $scope.currentPage = view.integer(query.page, 0);
-        $scope.pageSize = view.integer(query.size, 25, 1);
+        $scope.currentPage = $scope.latestOnly ? 0 : view.integer(query.page, 0);
+        $scope.pageSize = $scope.latestOnly ? HOME_PAGE_SIZE : view.integer(query.size, 25, 1);
         $scope.searchTerm = view.text(query.search);
         $scope.searchBy = searchTypes.indexOf(query.searchBy) !== -1 ? query.searchBy : '';
         $scope.filters = {
@@ -186,7 +232,7 @@ angular.module('quoteManagement')
 
       function locationQuery() {
         var source = $location.search();
-        var query = { page: view.integer(source.page, 0), size: view.integer(source.size, 25, 1) };
+        var query = $scope.latestOnly ? { page: 0, size: HOME_PAGE_SIZE } : { page: view.integer(source.page, 0), size: view.integer(source.size, 25, 1) };
         if (searchTypes.indexOf(source.searchBy) !== -1) query.searchBy = source.searchBy;
         ['search'].concat(filterKeys).forEach(function(key) {
           if (view.text(source[key])) query[key] = view.text(source[key]);
@@ -241,6 +287,7 @@ angular.module('quoteManagement')
 
       function commit(force) {
         cancelSearch();
+        canonicalFilters();
         if (!validate()) {
           loader.reset();
           lastQuery = null;
@@ -284,6 +331,7 @@ angular.module('quoteManagement')
         commit(true);
       };
       $scope.goToPage = function(page) {
+        if ($scope.latestOnly) return;
         if (view.integer(page, null) === null || page >= $scope.totalPages || page === $scope.currentPage) return;
         $scope.currentPage = page;
         commit(false);

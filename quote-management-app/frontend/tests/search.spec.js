@@ -24,7 +24,7 @@ describe('Unified quote search workspace', function() {
   });
 
   beforeEach(function() {
-    try { localStorage.removeItem('omw-recent-searches'); } catch (error) { /* storage unavailable */ }
+    try { localStorage.removeItem('omw-recent-searches'); localStorage.removeItem('omw-filter-values'); } catch (error) { /* storage unavailable */ }
     originalConfig = window.APP_CONFIG;
     window.APP_CONFIG = angular.extend({}, window.APP_CONFIG, { quoteDataLookupOnly: false, defaultCategory: '' });
     requests = [];
@@ -206,7 +206,7 @@ describe('Unified quote search workspace', function() {
   });
 
   it('moves focus to the results heading after a page change, then cleans up its timer', function() {
-    start('QuoteListCtrl', '/quotes?page=0');
+    start('QuoteListCtrl', '/quotes?page=0', {}); // paging is exercised without a page mode: Home itself shows one page only
     resolve(0, [{ quoteRequestId: 'Q-1' }], { totalElements: 60, totalPages: 3 });
     var table = renderTable();
     document.body.appendChild(element[0]);
@@ -217,7 +217,7 @@ describe('Unified quote search workspace', function() {
     expect(document.activeElement).toBe(table.querySelector('.qm-results-heading'));
   });
 
-  it('counts the loaded quotes in the Support tickets tiles too, with Other, not the server total', function() {
+  it('counts the loaded quotes in the Support tickets tiles too, with Received and Other, not the server total', function() {
     start('SupportTicketsCtrl', '/support-tickets?ticketNumber=SUP-1');
     requests[0].deferred.resolve({ data: { content: [{ quoteRequestId: 'A', state: 'FAILURE' }, { quoteRequestId: 'B', state: 'RECEIVED' }, { quoteRequestId: 'C', state: 'COMPLETED' }],
       totalElements: 60, totalPages: 20, page: 0, size: 25 } });
@@ -227,7 +227,7 @@ describe('Unified quote search workspace', function() {
     var tiles = Array.prototype.map.call(element[0].querySelectorAll('.qm-kpi-card'), function(tile) {
       return [tile.querySelector('.qm-kpi-label').textContent, tile.querySelector('.qm-kpi-value').textContent];
     });
-    expect(tiles).toEqual([['Linked quotes', '3'], ['In progress', '0'], ['Failed', '1'], ['Completed', '1'], ['Other', '1']]);
+    expect(tiles).toEqual([['Linked quotes', '3'], ['Received', '1'], ['In progress', '0'], ['Failed', '1'], ['Completed', '1'], ['Other', '0']]);
   });
 
   it('keeps the ticket URL in sync when the server corrects the page', function() {
@@ -379,27 +379,104 @@ describe('Unified quote search workspace', function() {
     expect(scope.dataReady).toBe(false);
   });
 
-  it('shows explicit all-values labels for empty filter selections', function() {
-    start();
-    element = compile(templates[templatePaths[1]])(scope);
-    root.$digest();
-    var labels = {
-      'quote-state': 'All states', 'quote-design': 'All design statuses',
-      'quote-category': 'All categories', 'quote-channel': 'All channels'
-    };
-    Object.keys(labels).forEach(function(id) {
-      expect(element[0].querySelector('#' + id).selectedOptions[0].textContent).toBe(labels[id]);
+  describe('filter boxes', function() {
+    function mount() {
+      element = compile(templates[templatePaths[1]])(scope);
+      root.$digest();
+      return element[0];
+    }
+    function type(id, value) {
+      var input = angular.element(element[0].querySelector('#' + id));
+      input.val(value).triggerHandler('input');
+      input.triggerHandler('change');
+      root.$digest();
+    }
+    beforeEach(function() { try { localStorage.removeItem('omw-filter-values'); } catch (error) { /* storage unavailable */ } });
+
+    it('are text boxes with an all-values placeholder and a list of suggestions, not fixed menus', function() {
+      start('QuoteListCtrl', '/quotes');
+      var page = mount();
+      var placeholders = { 'quote-state': 'All states', 'quote-design': 'All design statuses', 'quote-category': 'All categories', 'quote-channel': 'All channels' };
+      Object.keys(placeholders).forEach(function(id) {
+        var input = page.querySelector('#' + id);
+        expect(input.tagName).toBe('INPUT');
+        expect(input.getAttribute('placeholder')).toBe(placeholders[id]);
+        expect(page.querySelector('datalist#' + id + '-list')).not.toBeNull();
+        expect(input.getAttribute('list')).toBe(id + '-list');
+      });
+      var states = Array.prototype.map.call(page.querySelectorAll('#quote-state-list option'), function(option) { return option.getAttribute('value') + '=' + option.getAttribute('label'); });
+      expect(states).toContain('FAILED=Failed');
+      expect(states).toContain('FAILURE=Failure');
+      scope.filters.state = 'FAILED';
+      scope.clearFilters();
+      root.$digest();
+      expect(page.querySelector('#quote-state').value).toBe('');
     });
-    scope.filters.state = 'FAILED';
-    root.$digest();
-    expect(element[0].querySelector('#quote-state').selectedOptions[0].textContent).toBe('Failed');
-    scope.clearFilters();
-    root.$digest();
-    expect(element[0].querySelector('#quote-state').selectedOptions[0].textContent).toBe('All states');
+
+    it('send what was typed once it is committed, matched to the spelling QuoteData uses, and drop it when cleared', function() {
+      start('QuoteListCtrl', '/quotes');
+      resolve(0, [{ quoteRequestId: 'Q-1', category: 'Disconnect', channelType: 'DIRECT', designStatus: 'IN_DESIGN', state: 'FAILURE' }]);
+      mount();
+      type('quote-state', 'failed');
+      expect(requests[1].params.state).toBe('FAILED');
+      expect(scope.filters.state).toBe('FAILED');
+      type('quote-state', 'Failure');
+      expect(requests[2].params.state).toBe('FAILURE');
+      type('quote-category', '  disconnect ');
+      expect(requests[3].params.category).toBe('Disconnect');
+      type('quote-design', 'in_design');
+      expect(requests[4].params.designStatus).toBe('IN_DESIGN');
+      type('quote-channel', 'Wholesale-Partner');
+      expect(requests[5].params.channelType).toBe('Wholesale-Partner'); // a value this browser has not seen is still sent
+      type('quote-state', '');
+      type('quote-category', '');
+      expect(requests[requests.length - 1].params.state).toBeUndefined();
+      expect(requests[requests.length - 1].params.category).toBeUndefined();
+      expect(requests[requests.length - 1].params.channelType).toBe('Wholesale-Partner');
+    });
+
+    it('always start from page 0 with 25 rows, whatever filter is committed', function() {
+      start('QuoteListCtrl', '/quotes');
+      resolve(0, [{ quoteRequestId: 'Q-1' }]);
+      mount();
+      type('quote-state', 'COMPLETED');
+      expect(requests[1].params.page).toBe(0);
+      expect(requests[1].params.size).toBe(25);
+      expect(requests[1].params.sort).toBe('createdAt,desc');
+    });
+
+    it('keep suggesting values seen earlier, so a filtered list does not leave a single choice', function() {
+      start('QuoteListCtrl', '/quotes');
+      resolve(0, [{ quoteRequestId: 'A', category: 'Disconnect' }, { quoteRequestId: 'B', category: 'NEW_QUOTE', channelType: 'DIRECT', designStatus: 'IN_DESIGN' }]);
+      scope.$destroy();
+      requests.length = 0;
+      // A later visit loads a list that holds one category only.
+      window.APP_CONFIG.defaultCategory = 'Enterprise Multi-Site';
+      start('QuoteListCtrl', '/quotes');
+      resolve(0, [{ quoteRequestId: 'C', category: 'Enterprise Multi-Site' }]);
+      expect(scope.categoryOptions).toEqual(['Disconnect', 'Enterprise Multi-Site', 'NEW_QUOTE']);
+      expect(scope.channelTypeOptions).toEqual(['DIRECT']);
+      expect(scope.designStatusOptions).toEqual(['IN_DESIGN']);
+    });
+
+    it('cope with unavailable or corrupted stored suggestions', function() {
+      localStorage.setItem('omw-filter-values', '{not json');
+      start('QuoteListCtrl', '/quotes');
+      expect(scope.categoryOptions).toEqual([]);
+      localStorage.setItem('omw-filter-values', JSON.stringify({ category: ['Kept', 5, null, '', 'x'.repeat(500)], state: 'oops' }));
+      scope.$destroy();
+      start('QuoteListCtrl', '/quotes');
+      expect(scope.categoryOptions).toEqual(['Kept']);
+      spyOn(Storage.prototype, 'setItem').and.throwError('blocked');
+      scope.$destroy();
+      start('QuoteListCtrl', '/quotes');
+      expect(function() { resolve(requests.length - 1, [{ quoteRequestId: 'Z', category: 'Fresh' }]); }).not.toThrow();
+      expect(scope.categoryOptions).toContain('Fresh');
+    });
   });
 
   it('maps the QuoteData page field and corrects the URL without another request', function() {
-    start('QuoteListCtrl', '/quotes?page=9&state=FAILED');
+    start('QuoteListCtrl', '/quotes?page=9&state=FAILED', {}); // paging is exercised without a page mode: Home itself shows one page only
     resolve(0, [{ quoteRequestId: 'Q-26', state: 'FAILED' }], { page: 1, totalElements: 51, totalPages: 3 });
     expect(scope.currentPage).toBe(1);
     expect(scope.totalElements).toBe(51);
@@ -505,7 +582,7 @@ describe('Unified quote search workspace', function() {
   });
 
   it('flushes a pending search on refresh without sending a second debounced request', function() {
-    start('QuoteListCtrl', '/quotes?page=2');
+    start('QuoteListCtrl', '/quotes?page=2', {}); // paging is exercised without a page mode: Home itself shows one page only
     scope.searchTerm = 'fresh';
     scope.onSearchChange();
     scope.refresh();
@@ -648,10 +725,77 @@ describe('Unified quote search workspace', function() {
     expect(view.stateClass('FAILED')).toBe('bg-danger');
     start();
     resolve(0, [{ quoteRequestId: 'A', state: 'FAILURE' }, { quoteRequestId: 'B', state: 'FAILED' }, { quoteRequestId: 'C', state: 'COMPLETED' }]);
-    expect(scope.kpis).toEqual({ total: 3, failed: 2, inProgress: 0, completed: 1, other: 0 });
+    expect(scope.kpis).toEqual({ total: 3, received: 0, failed: 2, inProgress: 0, completed: 1, other: 0 });
     var badge = renderTable().querySelector('tbody tr .badge');
     expect(badge.textContent.trim()).toBe('Failure');
     expect(badge.classList.contains('bg-danger')).toBe(true);
+  });
+
+  describe('Home shows one page of 25', function() {
+    function mount() {
+      element = compile(templates[templatePaths[1]])(scope);
+      root.$digest();
+      return element[0];
+    }
+    function twentyFive() {
+      var rows = [];
+      for (var i = 0; i < 25; i++) rows.push({ quoteRequestId: 'Q-' + i, state: i < 4 ? 'FAILED' : 'COMPLETED' });
+      return rows;
+    }
+
+    it('asks for page 0 with 25 rows once, even when the address asks for another page or size', function() {
+      start('QuoteListCtrl', '/quotes?page=7&size=100');
+      expect(requests.length).toBe(1);
+      expect(requests[0].params.page).toBe(0);
+      expect(requests[0].params.size).toBe(25);
+      expect(scope.latestOnly).toBe(true);
+      expect(scope.currentPage).toBe(0);
+      expect(scope.pageSize).toBe(25);
+    });
+
+    it('shows no page controls and no "of N" count, though the server holds more quotes', function() {
+      start('QuoteListCtrl', '/quotes');
+      resolve(0, twentyFive(), { totalElements: 277, size: 25, totalPages: 12 });
+      var page = mount();
+      expect(page.querySelectorAll('quote-table tbody tr').length).toBe(25);
+      expect(page.querySelector('quote-table .pagination')).toBeNull();
+      expect(page.querySelector('quote-table .card-footer')).toBeNull();
+      expect(page.querySelector('quote-table [role="status"]').textContent).toContain('25 quotes, newest first');
+      expect(page.querySelector('quote-table').textContent).not.toMatch(/of 277|Page 1 of/);
+      expect(page.querySelector('.qm-kpi-card .qm-kpi-value').textContent).toBe('25');
+    });
+
+    it('cannot be paged, and makes no further request when asked to', function() {
+      start('QuoteListCtrl', '/quotes');
+      resolve(0, twentyFive(), { totalElements: 277, size: 25, totalPages: 12 });
+      scope.goToPage(1);
+      root.$digest();
+      expect(requests.length).toBe(1);
+      expect(scope.currentPage).toBe(0);
+    });
+
+    it('calls the backend again on every Refresh and on a fresh load, never from a stored copy', function() {
+      start('QuoteListCtrl', '/quotes');
+      resolve(0, twentyFive(), { totalElements: 277, size: 25, totalPages: 12 });
+      scope.refresh();
+      expect(requests.length).toBe(2);
+      expect(requests[1].params).toEqual(requests[0].params);
+      resolve(1, twentyFive(), { totalElements: 277, size: 25, totalPages: 12 });
+      scope.refresh();
+      expect(requests.length).toBe(3);
+      scope.$destroy();
+      start('QuoteListCtrl', '/quotes');
+      expect(requests.length).toBe(4);
+    });
+
+    it('still pages the Support tickets list, where several pages of quotes are expected', function() {
+      start('SupportTicketsCtrl', '/support-tickets?ticketNumber=SUP-1');
+      requests[0].deferred.resolve({ data: { content: [{ quoteRequestId: 'Q-1' }], totalElements: 60, totalPages: 3, page: 0, size: 25 } });
+      root.$digest();
+      element = compile(templates[templatePaths[2]])(scope);
+      root.$digest();
+      expect(element[0].querySelector('quote-table .pagination')).not.toBeNull();
+    });
   });
 
   describe('default category', function() {
@@ -742,20 +886,20 @@ describe('Unified quote search workspace', function() {
       expect(requests.length).toBe(2);
     });
 
-    it('shows five summary tiles that all count the loaded quotes, not the server total', function() {
+    it('shows six summary tiles that all count the loaded quotes, not the server total', function() {
       start();
       expect(scope.kpis).toBeNull();
       // The server says 277 quotes match; only these 5 are on screen.
       resolve(0, [{ quoteRequestId: 'A', state: 'FAILED' }, { quoteRequestId: 'B', state: 'COMPLETED' }, { quoteRequestId: 'C', state: 'IN_PROGRESS' },
         { quoteRequestId: 'D', state: 'FAILED' }, { quoteRequestId: 'E', state: 'RECEIVED' }], { totalElements: 277, totalPages: 56 });
       expect(scope.totalElements).toBe(277);
-      expect(scope.kpis).toEqual({ total: 5, failed: 2, inProgress: 1, completed: 1, other: 1 });
+      expect(scope.kpis).toEqual({ total: 5, received: 1, failed: 2, inProgress: 1, completed: 1, other: 0 });
       element = compile(templates[templatePaths[1]])(scope);
       root.$digest();
       var tiles = Array.prototype.map.call(element[0].querySelectorAll('.qm-kpi-card'), function(tile) {
         return [tile.querySelector('.qm-kpi-label').textContent, tile.querySelector('.qm-kpi-value').textContent];
       });
-      expect(tiles).toEqual([['Total quotes', '5'], ['In progress', '1'], ['Failed', '2'], ['Completed', '1'], ['Other', '1']]);
+      expect(tiles).toEqual([['Total quotes', '5'], ['Received', '1'], ['In progress', '1'], ['Failed', '2'], ['Completed', '1'], ['Other', '0']]);
       expect(element[0].querySelector('.qm-kpi-note')).toBeNull();
       expect(element[0].textContent).not.toContain('counts every page');
       expect(element[0].textContent).not.toMatch(/All pages|This page/);
@@ -769,7 +913,7 @@ describe('Unified quote search workspace', function() {
       var states = ['SUCCESS', 'Success', 'SUCCESSFUL', 'success_with_warnings', 'COMPLETED', 'FAILURE', 'RECEIVED', 'UNSUCCESSFUL_ATTEMPT'];
       resolve(0, states.map(function(state, index) { return { quoteRequestId: 'Q-' + index, state: state }; }));
       // The word has to start a word: UNSUCCESSFUL_ATTEMPT is not a success.
-      expect(scope.kpis).toEqual({ total: 8, failed: 1, inProgress: 0, completed: 5, other: 2 });
+      expect(scope.kpis).toEqual({ total: 8, received: 1, failed: 1, inProgress: 0, completed: 5, other: 1 });
       expect(view.stateClass('UNSUCCESSFUL')).toBe('bg-secondary');
       expect(view.stateClass('PARTIAL_SUCCESS')).toBe('bg-success');
       expect(view.stateClass('SUCCESS')).toBe('bg-success');
@@ -786,19 +930,20 @@ describe('Unified quote search workspace', function() {
       resolve(0, rows, { totalElements: 277, size: 25, totalPages: 12 });
       expect(scope.totalElements).toBe(277);
       expect(scope.pageSize).toBe(25);
-      expect(scope.kpis).toEqual({ total: 25, failed: 5, inProgress: 5, completed: 5, other: 10 });
+      expect(scope.kpis).toEqual({ total: 25, received: 5, failed: 5, inProgress: 5, completed: 5, other: 5 });
       element = compile(templates[templatePaths[1]])(scope);
       root.$digest();
       expect(element[0].querySelector('.qm-kpi-card .qm-kpi-value').textContent).toBe('25');
-      expect(element[0].textContent).toContain('of 277');
+      // Home shows the newest 25 only; the server's count is not shown there.
+      expect(element[0].textContent).not.toContain('of 277');
     });
 
-    it('puts every state that is not In progress, Failed or Completed under Other, so the four groups add up to the total', function() {
+    it('puts every state that is not Received, In progress, Failed or Completed under Other, so the five groups add up to the total', function() {
       start();
       var states = ['RECEIVED', 'PENDING_APPROVAL', 'ARCHIVED', null, '', 'IN_PROGRESS', 'COMPLETED', 'FAILED', 'FAILURE'];
       resolve(0, states.map(function(state, index) { return { quoteRequestId: 'Q-' + index, state: state }; }));
-      expect(scope.kpis).toEqual({ total: 9, failed: 2, inProgress: 1, completed: 1, other: 5 });
-      expect(scope.kpis.failed + scope.kpis.inProgress + scope.kpis.completed + scope.kpis.other).toBe(scope.kpis.total);
+      expect(scope.kpis).toEqual({ total: 9, received: 1, failed: 2, inProgress: 1, completed: 1, other: 4 });
+      expect(scope.kpis.received + scope.kpis.failed + scope.kpis.inProgress + scope.kpis.completed + scope.kpis.other).toBe(scope.kpis.total);
     });
 
     it('shows dashes in the tiles while nothing has loaded and after an error, never zeros', function() {
@@ -806,7 +951,7 @@ describe('Unified quote search workspace', function() {
       element = compile(templates[templatePaths[1]])(scope);
       root.$digest();
       var values = Array.prototype.map.call(element[0].querySelectorAll('.qm-kpi-value'), function(node) { return node.textContent; });
-      expect(values).toEqual(['—', '—', '—', '—', '—']);
+      expect(values).toEqual(['—', '—', '—', '—', '—', '—']);
       requests[0].deferred.reject({ status: 500, data: { code: 'X', message: 'x' } });
       root.$digest();
       expect(scope.kpis).toBeNull();
@@ -836,7 +981,7 @@ describe('Unified quote search workspace', function() {
       expect(hidden(page.querySelector('.qm-omnibar-wrap'))).toBe(true);
       expect(tiles(page).length).toBe(0);
       expect(page.querySelector('#quote-state')).not.toBeNull();
-      expect(page.querySelectorAll('.qm-kpi-card').length).toBe(5);
+      expect(page.querySelectorAll('.qm-kpi-card').length).toBe(6);
       expect(page.querySelector('.qm-mix, .qm-quick-pill, #quote-auto-refresh')).toBeNull();
       expect(page.querySelector('.qm-title').textContent).toBe('Quotes');
       expect(page.querySelector('.qm-greeting')).toBeNull();
@@ -1176,7 +1321,7 @@ describe('Unified quote search workspace', function() {
   });
 
   it('restores Back/Forward URL filters and pages on Home with exactly one request per navigation', function() {
-    start('QuoteListCtrl', '/quotes?state=FAILED&page=2');
+    start('QuoteListCtrl', '/quotes?state=FAILED&page=2', {}); // paging is exercised without a page mode: Home itself shows one page only
     var firstUrl = location.url();
     scope.filters.state = 'COMPLETED';
     scope.applyFilters();
@@ -1216,7 +1361,7 @@ describe('Unified quote search workspace', function() {
   });
 
   it('cancels pending search text when navigation restores another URL', function() {
-    start();
+    start('QuoteListCtrl', '/quotes', {});
     scope.searchTerm = 'discarded';
     scope.onSearchChange();
     location.url('/quotes?search=restored&page=3');
@@ -1239,7 +1384,7 @@ describe('Unified quote search workspace', function() {
   });
 
   it('requests a server page without slicing the current rows or duplicating URL requests', function() {
-    start();
+    start('QuoteListCtrl', '/quotes', {}); // paged lists (Home itself shows one page only)
     resolve(0, [{ quoteRequestId: 'Q-1' }], { totalElements: 260, totalPages: 11 });
     scope.goToPage(10);
     root.$digest();
@@ -1358,7 +1503,7 @@ describe('Unified quote search workspace', function() {
   });
 
   it('bounds pagination to seven page numbers with accessible first/last controls', function() {
-    start('QuoteListCtrl', '/quotes?page=500');
+    start('QuoteListCtrl', '/quotes?page=500', {}); // paging is exercised without a page mode: Home itself shows one page only
     resolve(0, [{ quoteRequestId: 'Q-MIDDLE' }], { totalElements: 25000, totalPages: 1000 });
     var table = renderTable();
     expect(table.querySelectorAll('nav button').length).toBe(11);

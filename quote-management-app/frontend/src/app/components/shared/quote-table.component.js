@@ -5,7 +5,8 @@ angular.module('quoteManagement')
     bindings: {
       rows: '<', loading: '<', error: '<', trackingId: '<', ready: '<',
       currentPage: '<', totalPages: '<', totalElements: '<', pageSize: '<',
-      emptyMessage: '@', idleMessage: '@', onPage: '&', onRetry: '&'
+      // latestOnly: show just this one page (the newest quotes) with no page controls.
+      latestOnly: '<?', emptyMessage: '@', idleMessage: '@', onPage: '&', onRetry: '&'
     },
     templateUrl: 'app/components/shared/quote-table.html',
     controller: ['QuoteViewService', '$element', '$timeout', function(QuoteViewService, $element, $timeout) {
