@@ -1014,6 +1014,7 @@ angular.module('quoteManagement')
         if (value === 'PENDING_APPROVAL') return 'bg-info text-dark';
         if (value === 'COMPLETED') return 'bg-success';
         if (value === 'FAILED' || value === 'FAILURE') return 'bg-danger';
+        if (/(^|[^A-Z])SUCCESS/.test(value)) return 'bg-success'; // counted as Completed in the summary tiles
         return 'bg-secondary';
       };
 

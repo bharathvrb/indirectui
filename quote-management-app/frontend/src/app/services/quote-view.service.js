@@ -118,6 +118,10 @@ angular.module('quoteManagement')
       return responseId || field(response.config && response.config.headers || {}, ['trackingId', 'x-tracking-id']);
     }
 
+    // A state that contains the word SUCCESS (SUCCESS, SUCCESSFUL, PARTIAL_SUCCESS, ...) counts as Completed, as COMPLETED does.
+    // The word must start a word, so UNSUCCESSFUL is not mistaken for it.
+    function isCompleted(state) { return state === 'COMPLETED' || /(^|[^A-Z])SUCCESS/.test(state); }
+
     // Counts for the quotes that were loaded (the 25 on screen). Every quote falls in exactly one of the four groups,
     // so In progress + Failed + Completed + Other always adds up to the total.
     function summary(rows) {
@@ -125,7 +129,7 @@ angular.module('quoteManagement')
       rows.forEach(function(row) {
         if (row.state === 'FAILED' || row.state === 'FAILURE') result.failed++;
         else if (row.state === 'IN_PROGRESS') result.inProgress++;
-        else if (row.state === 'COMPLETED') result.completed++;
+        else if (isCompleted(row.state)) result.completed++;
         else result.other++;
       });
       return result;
@@ -238,7 +242,8 @@ angular.module('quoteManagement')
           RECEIVED: 'bg-primary', IN_PROGRESS: 'bg-warning text-dark',
           PENDING_APPROVAL: 'bg-info text-dark', COMPLETED: 'bg-success', FAILED: 'bg-danger', FAILURE: 'bg-danger'
         };
-        return classes[normalizeState(value)] || 'bg-secondary';
+        var state = normalizeState(value);
+        return classes[state] || (isCompleted(state) ? classes.COMPLETED : 'bg-secondary');
       }
     };
   }]);
