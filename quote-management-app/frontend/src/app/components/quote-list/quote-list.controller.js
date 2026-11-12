@@ -12,7 +12,7 @@ angular.module('quoteManagement')
       $scope.categoryOptions = [];
       $scope.channelTypeOptions = [];
       $scope.designStatusOptions = [];
-      $scope.stateOptions = ['RECEIVED', 'IN_PROGRESS', 'PENDING_APPROVAL', 'COMPLETED', 'FAILED'];
+      $scope.stateOptions = ['RECEIVED', 'IN_PROGRESS', 'PENDING_APPROVAL', 'COMPLETED', 'FAILED', 'FAILURE'];
       $scope.displayValue = view.displayValue;
       $scope.getStateLabel = view.stateLabel;
       $scope.validationError = null;
@@ -41,15 +41,58 @@ angular.module('quoteManagement')
 
       function capitalize(text) { return text.charAt(0).toUpperCase() + text.slice(1); }
 
+      // The filter boxes suggest the values QuoteData has sent, and accept any value typed in full. The lists are learned
+      // from the quotes loaded so far and kept in this browser (they only ever hold values QuoteData itself returned),
+      // so they do not shrink to what happens to be among the 25 on screen.
+      var FILTER_VALUES_KEY = 'omw-filter-values';
+      function readStoredValues() {
+        try {
+          var saved = JSON.parse(window.localStorage.getItem(FILTER_VALUES_KEY));
+          return saved && typeof saved === 'object' ? saved : {};
+        } catch (error) { return {}; }
+      }
+      function storeValues() {
+        var saved = {};
+        filterKeys.forEach(function(key) { saved[key] = $scope[key + 'Options'].slice(0, 100); });
+        try { window.localStorage.setItem(FILTER_VALUES_KEY, JSON.stringify(saved)); } catch (error) { /* storage unavailable */ }
+      }
+      function addOption(options, value) {
+        if (typeof value === 'string' && value.length <= 120 && value.trim() && options.indexOf(value) === -1) {
+          options.push(value);
+          return true;
+        }
+        return false;
+      }
+      (function loadStoredOptions() {
+        var saved = readStoredValues();
+        filterKeys.forEach(function(key) {
+          (angular.isArray(saved[key]) ? saved[key] : []).forEach(function(value) { addOption($scope[key + 'Options'], value); });
+          $scope[key + 'Options'].sort();
+        });
+      }());
+
       function rememberOptions(rows) {
+        var learned = false;
         filterKeys.forEach(function(key) {
           var options = $scope[key + 'Options'];
           var values = rows.map(function(row) { return row[key]; });
           values.push($scope.filters[key]);
-          values.forEach(function(value) {
-            if (value && options.indexOf(value) === -1) options.push(value);
-          });
+          values.forEach(function(value) { if (addOption(options, value)) learned = true; });
           options.sort();
+        });
+        if (learned) storeValues();
+      }
+
+      // A value typed into a filter box is matched to the spelling QuoteData uses (letter case, and the friendly name for a
+      // state such as "Failed"); anything else is sent as typed, because the backend may know values this browser has not seen.
+      function canonicalFilters() {
+        filterKeys.forEach(function(key) {
+          var typed = view.text($scope.filters[key]);
+          var lower = typed.toLowerCase();
+          var match = typed && $scope[key + 'Options'].filter(function(option) {
+            return option.toLowerCase() === lower || (key === 'state' && view.stateLabel(option).toLowerCase() === lower);
+          })[0];
+          $scope.filters[key] = match || typed;
         });
       }
 
@@ -244,6 +287,7 @@ angular.module('quoteManagement')
 
       function commit(force) {
         cancelSearch();
+        canonicalFilters();
         if (!validate()) {
           loader.reset();
           lastQuery = null;

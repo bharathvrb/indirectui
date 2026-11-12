@@ -24,7 +24,7 @@ describe('Unified quote search workspace', function() {
   });
 
   beforeEach(function() {
-    try { localStorage.removeItem('omw-recent-searches'); } catch (error) { /* storage unavailable */ }
+    try { localStorage.removeItem('omw-recent-searches'); localStorage.removeItem('omw-filter-values'); } catch (error) { /* storage unavailable */ }
     originalConfig = window.APP_CONFIG;
     window.APP_CONFIG = angular.extend({}, window.APP_CONFIG, { quoteDataLookupOnly: false, defaultCategory: '' });
     requests = [];
@@ -379,23 +379,100 @@ describe('Unified quote search workspace', function() {
     expect(scope.dataReady).toBe(false);
   });
 
-  it('shows explicit all-values labels for empty filter selections', function() {
-    start();
-    element = compile(templates[templatePaths[1]])(scope);
-    root.$digest();
-    var labels = {
-      'quote-state': 'All states', 'quote-design': 'All design statuses',
-      'quote-category': 'All categories', 'quote-channel': 'All channels'
-    };
-    Object.keys(labels).forEach(function(id) {
-      expect(element[0].querySelector('#' + id).selectedOptions[0].textContent).toBe(labels[id]);
+  describe('filter boxes', function() {
+    function mount() {
+      element = compile(templates[templatePaths[1]])(scope);
+      root.$digest();
+      return element[0];
+    }
+    function type(id, value) {
+      var input = angular.element(element[0].querySelector('#' + id));
+      input.val(value).triggerHandler('input');
+      input.triggerHandler('change');
+      root.$digest();
+    }
+    beforeEach(function() { try { localStorage.removeItem('omw-filter-values'); } catch (error) { /* storage unavailable */ } });
+
+    it('are text boxes with an all-values placeholder and a list of suggestions, not fixed menus', function() {
+      start('QuoteListCtrl', '/quotes');
+      var page = mount();
+      var placeholders = { 'quote-state': 'All states', 'quote-design': 'All design statuses', 'quote-category': 'All categories', 'quote-channel': 'All channels' };
+      Object.keys(placeholders).forEach(function(id) {
+        var input = page.querySelector('#' + id);
+        expect(input.tagName).toBe('INPUT');
+        expect(input.getAttribute('placeholder')).toBe(placeholders[id]);
+        expect(page.querySelector('datalist#' + id + '-list')).not.toBeNull();
+        expect(input.getAttribute('list')).toBe(id + '-list');
+      });
+      var states = Array.prototype.map.call(page.querySelectorAll('#quote-state-list option'), function(option) { return option.getAttribute('value') + '=' + option.getAttribute('label'); });
+      expect(states).toContain('FAILED=Failed');
+      expect(states).toContain('FAILURE=Failure');
+      scope.filters.state = 'FAILED';
+      scope.clearFilters();
+      root.$digest();
+      expect(page.querySelector('#quote-state').value).toBe('');
     });
-    scope.filters.state = 'FAILED';
-    root.$digest();
-    expect(element[0].querySelector('#quote-state').selectedOptions[0].textContent).toBe('Failed');
-    scope.clearFilters();
-    root.$digest();
-    expect(element[0].querySelector('#quote-state').selectedOptions[0].textContent).toBe('All states');
+
+    it('send what was typed once it is committed, matched to the spelling QuoteData uses, and drop it when cleared', function() {
+      start('QuoteListCtrl', '/quotes');
+      resolve(0, [{ quoteRequestId: 'Q-1', category: 'Disconnect', channelType: 'DIRECT', designStatus: 'IN_DESIGN', state: 'FAILURE' }]);
+      mount();
+      type('quote-state', 'failed');
+      expect(requests[1].params.state).toBe('FAILED');
+      expect(scope.filters.state).toBe('FAILED');
+      type('quote-state', 'Failure');
+      expect(requests[2].params.state).toBe('FAILURE');
+      type('quote-category', '  disconnect ');
+      expect(requests[3].params.category).toBe('Disconnect');
+      type('quote-design', 'in_design');
+      expect(requests[4].params.designStatus).toBe('IN_DESIGN');
+      type('quote-channel', 'Wholesale-Partner');
+      expect(requests[5].params.channelType).toBe('Wholesale-Partner'); // a value this browser has not seen is still sent
+      type('quote-state', '');
+      type('quote-category', '');
+      expect(requests[requests.length - 1].params.state).toBeUndefined();
+      expect(requests[requests.length - 1].params.category).toBeUndefined();
+      expect(requests[requests.length - 1].params.channelType).toBe('Wholesale-Partner');
+    });
+
+    it('always start from page 0 with 25 rows, whatever filter is committed', function() {
+      start('QuoteListCtrl', '/quotes');
+      resolve(0, [{ quoteRequestId: 'Q-1' }]);
+      mount();
+      type('quote-state', 'COMPLETED');
+      expect(requests[1].params.page).toBe(0);
+      expect(requests[1].params.size).toBe(25);
+      expect(requests[1].params.sort).toBe('createdAt,desc');
+    });
+
+    it('keep suggesting values seen earlier, so a filtered list does not leave a single choice', function() {
+      start('QuoteListCtrl', '/quotes');
+      resolve(0, [{ quoteRequestId: 'A', category: 'Disconnect' }, { quoteRequestId: 'B', category: 'NEW_QUOTE', channelType: 'DIRECT', designStatus: 'IN_DESIGN' }]);
+      scope.$destroy();
+      requests.length = 0;
+      // A later visit loads a list that holds one category only.
+      window.APP_CONFIG.defaultCategory = 'Enterprise Multi-Site';
+      start('QuoteListCtrl', '/quotes');
+      resolve(0, [{ quoteRequestId: 'C', category: 'Enterprise Multi-Site' }]);
+      expect(scope.categoryOptions).toEqual(['Disconnect', 'Enterprise Multi-Site', 'NEW_QUOTE']);
+      expect(scope.channelTypeOptions).toEqual(['DIRECT']);
+      expect(scope.designStatusOptions).toEqual(['IN_DESIGN']);
+    });
+
+    it('cope with unavailable or corrupted stored suggestions', function() {
+      localStorage.setItem('omw-filter-values', '{not json');
+      start('QuoteListCtrl', '/quotes');
+      expect(scope.categoryOptions).toEqual([]);
+      localStorage.setItem('omw-filter-values', JSON.stringify({ category: ['Kept', 5, null, '', 'x'.repeat(500)], state: 'oops' }));
+      scope.$destroy();
+      start('QuoteListCtrl', '/quotes');
+      expect(scope.categoryOptions).toEqual(['Kept']);
+      spyOn(Storage.prototype, 'setItem').and.throwError('blocked');
+      scope.$destroy();
+      start('QuoteListCtrl', '/quotes');
+      expect(function() { resolve(requests.length - 1, [{ quoteRequestId: 'Z', category: 'Fresh' }]); }).not.toThrow();
+      expect(scope.categoryOptions).toContain('Fresh');
+    });
   });
 
   it('maps the QuoteData page field and corrects the URL without another request', function() {

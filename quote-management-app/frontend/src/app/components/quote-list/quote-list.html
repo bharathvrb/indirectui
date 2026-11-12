@@ -113,27 +113,27 @@
       <div class="row g-3 qm-filter-grid">
         <div class="col-6 col-lg-3">
           <label for="quote-state" class="form-label">State</label>
-          <select id="quote-state" class="form-select" ng-model="filters.state" ng-change="applyFilters()" ng-disabled="isExactLookup()"
-                  ng-options="state as (state ? getStateLabel(state) : 'All states') for state in [''].concat(stateOptions)">
-          </select>
+          <input id="quote-state" type="text" class="form-control" list="quote-state-list" autocomplete="off" placeholder="All states" ng-model="filters.state"
+                 ng-model-options="{ updateOn: 'change blur' }" ng-change="applyFilters()" ng-disabled="isExactLookup()">
+          <datalist id="quote-state-list"><option ng-repeat="option in stateOptions track by option" value="{{option}}" label="{{getStateLabel(option)}}"></option></datalist>
         </div>
         <div class="col-6 col-lg-3">
           <label for="quote-design" class="form-label">Design status</label>
-          <select id="quote-design" class="form-select" ng-model="filters.designStatus" ng-change="applyFilters()" ng-disabled="isExactLookup()"
-                  ng-options="status as (status || 'All design statuses') for status in [''].concat(designStatusOptions)">
-          </select>
+          <input id="quote-design" type="text" class="form-control" list="quote-design-list" autocomplete="off" placeholder="All design statuses" ng-model="filters.designStatus"
+                 ng-model-options="{ updateOn: 'change blur' }" ng-change="applyFilters()" ng-disabled="isExactLookup()">
+          <datalist id="quote-design-list"><option ng-repeat="option in designStatusOptions track by option" value="{{option}}"></option></datalist>
         </div>
         <div class="col-6 col-lg-3">
           <label for="quote-category" class="form-label">Category</label>
-          <select id="quote-category" class="form-select" ng-model="filters.category" ng-change="applyFilters()" ng-disabled="isExactLookup()"
-                  ng-options="category as (category || 'All categories') for category in [''].concat(categoryOptions)">
-          </select>
+          <input id="quote-category" type="text" class="form-control" list="quote-category-list" autocomplete="off" placeholder="All categories" ng-model="filters.category"
+                 ng-model-options="{ updateOn: 'change blur' }" ng-change="applyFilters()" ng-disabled="isExactLookup()">
+          <datalist id="quote-category-list"><option ng-repeat="option in categoryOptions track by option" value="{{option}}"></option></datalist>
         </div>
         <div class="col-6 col-lg-3">
           <label for="quote-channel" class="form-label">Channel</label>
-          <select id="quote-channel" class="form-select" ng-model="filters.channelType" ng-change="applyFilters()" ng-disabled="isExactLookup()"
-                  ng-options="channel as (channel || 'All channels') for channel in [''].concat(channelTypeOptions)">
-          </select>
+          <input id="quote-channel" type="text" class="form-control" list="quote-channel-list" autocomplete="off" placeholder="All channels" ng-model="filters.channelType"
+                 ng-model-options="{ updateOn: 'change blur' }" ng-change="applyFilters()" ng-disabled="isExactLookup()">
+          <datalist id="quote-channel-list"><option ng-repeat="option in channelTypeOptions track by option" value="{{option}}"></option></datalist>
         </div>
         <div class="col-6 col-lg-3">
           <label for="quote-from" class="form-label">Created from</label>
@@ -148,7 +148,7 @@
                  ng-change="applyFilters()" aria-describedby="quote-date-feedback" ng-attr-aria-invalid="{{!!validationError}}">
         </div>
         <div class="col-12 col-lg-6 d-flex align-items-end">
-          <p class="small text-muted mb-2"><i class="bi bi-sort-down me-1" aria-hidden="true"></i>Newest created first · {{pageSize || 25}} rows per page</p>
+          <p class="small text-muted mb-2"><i class="bi bi-sort-down me-1" aria-hidden="true"></i>Newest first · 25 quotes. Pick a suggestion or type a value exactly as QuoteData has it, then press Enter.</p>
         </div>
       </div>
       <div id="quote-date-feedback" class="mt-2">
