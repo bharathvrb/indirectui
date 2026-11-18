@@ -946,6 +946,22 @@ describe('Unified quote search workspace', function() {
       expect(scope.kpis.received + scope.kpis.failed + scope.kpis.inProgress + scope.kpis.completed + scope.kpis.other).toBe(scope.kpis.total);
     });
 
+    it('shows plain counts only: no percentages, bars or attention pill, and tints Failed only when something failed', function() {
+      start();
+      resolve(0, [{ quoteRequestId: 'A', state: 'FAILED' }, { quoteRequestId: 'B', state: 'COMPLETED' }, { quoteRequestId: 'C', state: 'RECEIVED' }]);
+      element = compile(templates[templatePaths[1]])(scope);
+      root.$digest();
+      var page = element[0];
+      expect(page.querySelector('.qm-overview').textContent).not.toMatch(/%|need attention|No failures/);
+      expect(page.querySelector('.qm-overview-bar, .qm-kpi-meter, .qm-kpi-share, .qm-overview-pill')).toBeNull();
+      expect(page.querySelector('.qm-kpi-card-failed').classList.contains('is-alert')).toBe(true);
+      expect(page.querySelector('.qm-kpi-card-completed').classList.contains('is-alert')).toBe(false);
+      expect(page.querySelector('.qm-overview-total .qm-kpi-value').textContent).toBe('3');
+      scope.kpis.failed = 0;
+      root.$digest();
+      expect(page.querySelector('.qm-kpi-card-failed').classList.contains('is-alert')).toBe(false);
+    });
+
     it('shows dashes in the tiles while nothing has loaded and after an error, never zeros', function() {
       start();
       element = compile(templates[templatePaths[1]])(scope);
