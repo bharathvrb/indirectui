@@ -571,7 +571,6 @@ td.qm-empty-inline { display: table-cell; text-align: center; }
 .qm-spotlight-meta { margin-top: 7px !important; color: var(--qm-muted); font-size: var(--fs-caption) !important; }
 .qm-spotlight-stage { font-weight: 600; color: var(--qm-text-soft); }
 .qm-spotlight-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.qm-soon { font-size: var(--fs-caption); font-weight: 600; color: var(--qm-muted); padding: 4px 10px; border-radius: 999px; background: var(--qm-surface-sunken); }
 
 .qm-steps { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; margin: 0; padding: 20px 24px 24px; list-style: none; }
 .qm-step { position: relative; display: flex; align-items: flex-start; gap: 12px; min-width: 0; padding: 13px 16px; border: 1px solid var(--qm-border); border-radius: 14px; background: var(--qm-surface-soft); transition: border-color .2s, box-shadow .2s, transform .25s var(--qm-ease), background-color .2s; animation: rise .45s var(--qm-ease) both; }

@@ -25,7 +25,6 @@
           <button type="button" id="retry-quote" class="btn btn-outline-primary" ng-disabled="!canRetry()" ng-click="openRetryDialog()" aria-haspopup="dialog">
             <i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>{{retryRequested ? 'Retry requested' : 'Retry'}}
           </button>
-          <span class="qm-soon" ng-if="!retryEnabled">Coming soon</span>
         </span>
         <button id="mark-completed" class="btn btn-primary" ng-if="isFailed() && canUpdateQuotes" ng-click="openCompleteDialog()">
           <i class="bi bi-check2-circle me-1"></i>Mark completed

@@ -359,14 +359,14 @@ describe('Quote journey, quote retry and Mark completed', function() {
   });
 
   describe('when retry is not enabled (default)', function() {
-    it('shows one disabled "Coming soon" Retry button for the quote, none on steps or errors, and never calls the API', function() {
+    it('shows one disabled Retry button for the quote, with no "Coming soon" label, none on steps or errors, and never calls the API', function() {
       var page = start();
       expect(scope.retryEnabled).toBe(false);
       var retry = page.querySelector('#retry-quote');
       expect(retry.disabled).toBe(true);
       expect(retry.textContent.trim()).toBe('Retry');
       expect(page.querySelector('.qm-retry-wrap').getAttribute('title')).toBe('Coming soon');
-      expect(page.querySelector('.qm-retry-wrap .qm-soon').textContent).toBe('Coming soon');
+      expect(page.querySelector('.qm-retry-wrap').textContent).not.toContain('Coming soon');
       expect(page.querySelector('#spotlight-retry')).toBeNull();
       scope.setTab('processing'); root.$digest();
       expect(page.querySelectorAll('#detail-panel-processing button').length).toBe(0);
@@ -388,7 +388,6 @@ describe('Quote journey, quote retry and Mark completed', function() {
     it('enables the quote Retry button only for a failed quote the user can update', function() {
       var page = start({ retryEnabled: true });
       expect(page.querySelector('#retry-quote').disabled).toBe(false);
-      expect(page.querySelector('.qm-retry-wrap .qm-soon')).toBeNull();
       expect(scope.retryTitle()).toBe('Retry this quote');
       scope.canUpdateQuotes = false;
       expect(scope.canRetry()).toBe(false);

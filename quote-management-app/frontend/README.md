@@ -43,7 +43,7 @@ Restart the server after changing settings.
 | `APP_CONFIG.quoteDataLookupOnly` | Applies to the **Search** page (`/search`). `true` (default): it finds one quote by quote request ID, external ID or proposal ID. `false`: it also offers an *Other fields* tile, a free-text search sent as `search=` (confirm that QuoteData supports it first). |
 | `APP_CONFIG.contractDownloadUrl` | Optional contract download endpoint (`documentType`, `dmaasId` query). Blank shows IDs with copy buttons only. |
 | `APP_CONFIG.supportUrl` | Optional HTTPS support link shown in the menu and on error pages. |
-| `APP_CONFIG.features.retryEnabled` | `false` (default): Retry buttons are visible but disabled with "Coming soon". `true`: a failed quote can be retried (see Quote retry and Mark completed). |
+| `APP_CONFIG.features.retryEnabled` | `false` (default): the quote Retry button is visible but disabled (its hover text says "Coming soon"). `true`: a failed quote can be retried (see Quote retry and Mark completed). |
 | `AUTH_CONFIG.clientId`, `tenantId`, `loginScopes`, `loginPrompt`, `redirectUri` | Entra ID (MSAL) sign-in. Currently the ONP UI LOWER - INT registration; its SPA redirect URIs must include `http://127.0.0.1:8081/`. |
 
 `config.js` is public: never put secrets in it.
@@ -66,7 +66,7 @@ The failure panel's **View errors** button opens a pop-up with the errors QuoteD
 
 ### Quote retry
 
-Retry is one button at the top of the quote page, beside Reload and Mark completed. It shows while the quote has failed (state `FAILED`/`FAILURE`) and the user may update quotes; there are no Retry buttons on individual steps or errors. Until the backend exists the button is visible but disabled with "Coming soon". To turn it on when the backend API exists:
+Retry is one button at the top of the quote page, beside Reload and Mark completed. It shows while the quote has failed (state `FAILED`/`FAILURE`) and the user may update quotes; there are no Retry buttons on individual steps or errors. Until the backend exists the button is visible but disabled (hover text "Coming soon"), with no label beside it. To turn it on when the backend API exists:
 
 1. Confirm the QuoteData endpoint. The app currently calls `POST {QUOTEDATA_BASE_URL}/quote/{quoteRequestId}/retry` with no body (an assumption); adjust `RETRY_ROUTE` and the forwarded path in `quote-data-proxy.js` if the real path differs.
 2. Set `QUOTEDATA_RETRY_ENABLED=true` in `server.properties`.
@@ -169,7 +169,7 @@ The look lives in `src/assets/css/app.css`: a blue and white theme with black te
 | UI-01/02 Quote list and ticket search | `quote-list`, `support-tickets`, shared `quote-table` component |
 | UI-03 Header, failure summary, IDs | `quote-detail` header, failure summary, system IDs, processing pipeline |
 | UI-04–UI-10, UI-16/17 Tabs | Customer (CSV export), Sites, Products, Promotions, Processing, Errors, Events, Payload, Contracts |
-| UI-11 Retry | One Retry button for the whole failed quote; disabled "Coming soon" until `features.retryEnabled` and `QUOTEDATA_RETRY_ENABLED` are on |
+| UI-11 Retry | One Retry button for the whole failed quote; disabled until `features.retryEnabled` and `QUOTEDATA_RETRY_ENABLED` are on |
 | UI-12 Complete | Mark completed dialog that lists each step and sends one PATCH setting the quote to SUCCESS and its steps to COMPLETED (403/404/409 handling; no resolution note) |
 | UI-13–15 Case links, access, empty/error states | Route guard with return URL, Access denied / Quote not found / Quote archived pages, tracking IDs |
 
