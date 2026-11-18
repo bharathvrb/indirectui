@@ -371,6 +371,16 @@ angular.module('quoteManagement')
         return filterChips;
       };
       $scope.hasActiveFilters = function() { return $scope.activeFilterChips().length > 0; };
+      // The chips under the Filters button list what the person applied. The standing default category is not one of them:
+      // it already sits in the Category box inside the panel, so it is left out until the person changes it.
+      var shownChips = [];
+      $scope.shownFilterChips = function() {
+        var chips = $scope.activeFilterChips().filter(function(chip) {
+          return !(chip.key === 'category' && defaultCategory && $scope.filters.category === defaultCategory);
+        });
+        if (!angular.equals(chips, shownChips)) shownChips = chips;
+        return shownChips;
+      };
       $scope.removeFilterChip = function(key) {
         if (key === 'search') {
           $scope.searchTerm = '';
