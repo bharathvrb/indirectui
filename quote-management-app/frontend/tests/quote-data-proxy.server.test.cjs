@@ -593,7 +593,9 @@ test('completion validates JSON, shape, step list, body size and encoding before
         completion({ stepExecutions: [step({ stepName: 'x'.repeat(201) })] }), completion({ stepExecutions: [step({ stepName: 5 })] }),
         completion({ stepExecutions: [step({ id: 1 }), step({ id: 1 })] }), completion({ stepExecutions: [null] }),
         completion({ stepExecutions: many(501) }),
-        { ...completion(), url: 'https://untrusted.invalid' }, { quoteRequestId: 'synthetic-quote', state: 'SUCCESS' }
+        { ...completion(), url: 'https://untrusted.invalid' }, { quoteRequestId: 'synthetic-quote', state: 'SUCCESS' },
+        completion({ comment: '' }), completion({ comment: '   ' }), completion({ comment: 5 }), completion({ comment: null }),
+        completion({ comment: ['text'] }), completion({ comment: 'x'.repeat(1001) })
     ]) {
         check(await request(app, completionRoute, { method: 'PATCH', headers, body }), 400, 'INVALID_REQUEST');
     }
@@ -618,6 +620,17 @@ test('completion validates JSON, shape, step list, body size and encoding before
     // What goes upstream is rebuilt from the checked values, so nothing else can ride along.
     const sent = JSON.parse(backend.backendCalls[0].raw);
     assert.deepEqual(Object.keys(sent), ['quoteRequestId', 'state', 'stepExecutions']);
+});
+
+test('an optional completion comment is trimmed and forwarded as the only extra field', async t => {
+    const backend = await upstream(t);
+    const app = await start(t, backend);
+    const headers = { cookie: await login(app) };
+    check(await request(app, completionRoute, { method: 'PATCH', headers, body: completion({ comment: '  Synthetic fix applied  ' }) }), 200);
+    check(await request(app, completionRoute, { method: 'PATCH', headers, body: completion({ comment: '界'.repeat(1000) }) }), 200);
+    assert.deepEqual(JSON.parse(backend.backendCalls[0].raw), completion({ comment: 'Synthetic fix applied' }));
+    assert.equal(JSON.parse(backend.backendCalls[1].raw).comment.length, 1000);
+    assert.deepEqual(Object.keys(JSON.parse(backend.backendCalls[0].raw)), ['quoteRequestId', 'state', 'stepExecutions', 'comment']);
 });
 
 test('the completion goes upstream as one PATCH with the primary step ids and an empty or JSON answer is accepted', async t => {

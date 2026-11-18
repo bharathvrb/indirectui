@@ -824,7 +824,7 @@ qm-contact-card { display: block; }
 .recovery-dialog .qm-dialog-meta > div { padding: 11px 13px; border-radius: 12px; background: var(--qm-surface-soft); border: 1px solid var(--qm-border); min-width: 0; }
 .recovery-dialog .qm-dialog-meta span { display: block; font-size: var(--fs-label); font-weight: 700; color: var(--qm-muted); text-transform: uppercase; letter-spacing: .08em; }
 .recovery-dialog .qm-dialog-meta code { font-size: var(--fs-caption); }
-.recovery-dialog textarea { min-height: 128px; resize: vertical; }
+.recovery-dialog textarea { min-height: 84px; resize: vertical; }
 .qm-retry-wrap { display: inline-flex; align-items: center; gap: 8px; }
 .qm-complete-steps { list-style: none; margin: 0; padding: 0; max-height: 240px; overflow-y: auto; border: 1px solid var(--qm-border); border-radius: 12px; }
 .qm-complete-steps li { display: flex; align-items: center; gap: 8px; padding: 8px 12px; font-size: var(--fs-caption); border-bottom: 1px solid var(--qm-border); }

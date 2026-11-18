@@ -81,8 +81,11 @@ For a failed quote, **Mark completed** opens a dialog that lists every step and 
 ```
 PATCH /api/quotedata/v1/quote/{quoteRequestId}
 { "quoteRequestId": "…", "state": "SUCCESS",
-  "stepExecutions": [ { "id": 3834, "stepName": "CREATE_AMENDMENT_PROPOSAL", "stepStatus": "COMPLETED" }, … ] }
+  "stepExecutions": [ { "id": 3834, "stepName": "CREATE_AMENDMENT_PROPOSAL", "stepStatus": "COMPLETED" }, … ],
+  "comment": "…" }
 ```
+
+The dialog has an optional **Comment** box (up to 1000 characters). `comment` is added to the body only when the user typed something; without one the body is exactly the contract above. **`comment` is an assumed field name:** QuoteData has not documented a place for it. If the real API uses another name or rejects unknown fields, change it in `completeQuote` (`src/app/services/services.js`) and `completionBody` (`quote-data-proxy.js`), or remove the box from the dialog.
 
 The server forwards it as `PATCH {QUOTEDATA_BASE_URL}/quote/{quoteRequestId}`. QuoteData updates the database by each step's primary `id`, which is the `id` of the step in the get-quotes answer. Every step is sent, except steps whose status is Not required, which stay as they are; steps already completed are sent again, which changes nothing. If QuoteData returned a step without a usable `id` the dialog explains this and the button stays disabled. Afterwards the page reloads the quote so it shows what QuoteData saved. A successful answer may have an empty body.
 
@@ -99,7 +102,7 @@ Only these routes are forwarded, with a `trackingId` header on every request and
 | Browser route | Upstream |
 | --- | --- |
 | `GET /api/quotedata/v1/quote?…` | `GET {QUOTEDATA_BASE_URL}/quote?…` with `quoteRequestId`, `externalId`, `proposalId`, `ticketNumber`, `page`, `size`, `sort`, `search`, `state`, `designStatus`, `category`, `channelType`, `createdFrom`, `createdTo` |
-| `PATCH /api/quotedata/v1/quote/{id}` | `PATCH {QUOTEDATA_BASE_URL}/quote/{id}` with the Mark completed body shown above, checked first: `quoteRequestId` equal to `{id}`, `state` exactly `SUCCESS`, up to 500 `stepExecutions`, each with exactly `id`, `stepName` and `stepStatus: "COMPLETED"`. Nothing else is accepted or forwarded. The body must come with a matching `Origin`. |
+| `PATCH /api/quotedata/v1/quote/{id}` | `PATCH {QUOTEDATA_BASE_URL}/quote/{id}` with the Mark completed body shown above, checked first: `quoteRequestId` equal to `{id}`, `state` exactly `SUCCESS`, up to 500 `stepExecutions`, each with exactly `id`, `stepName` and `stepStatus: "COMPLETED"`, plus an optional `comment` of 1–1000 characters. Nothing else is accepted or forwarded. The body must come with a matching `Origin`. |
 | `POST /api/quotedata/v1/quote/{id}/retry` | `POST {QUOTEDATA_BASE_URL}/quote/{id}/retry`, no body. Only when `QUOTEDATA_RETRY_ENABLED=true`. **Assumed contract; change `RETRY_ROUTE` and the forwarded path in `quote-data-proxy.js` if the real API differs.** |
 
 The service token is cached in memory until 10 seconds before it expires, and concurrent requests share one token request. A QuoteData 401 refreshes the token and retries a GET once; a PATCH or POST is never replayed.
@@ -170,7 +173,7 @@ The look lives in `src/assets/css/app.css`: a blue and white theme with black te
 | UI-03 Header, failure summary, IDs | `quote-detail` header, failure summary, system IDs, processing pipeline |
 | UI-04–UI-10, UI-16/17 Tabs | Customer (CSV export), Sites, Products, Promotions, Processing, Errors, Events, Payload, Contracts |
 | UI-11 Retry | One Retry button for the whole failed quote; disabled until `features.retryEnabled` and `QUOTEDATA_RETRY_ENABLED` are on |
-| UI-12 Complete | Mark completed dialog that lists each step and sends one PATCH setting the quote to SUCCESS and its steps to COMPLETED (403/404/409 handling; no resolution note) |
+| UI-12 Complete | Mark completed dialog that lists each step and sends one PATCH setting the quote to SUCCESS and its steps to COMPLETED, with an optional comment (403/404/409 handling) |
 | UI-13–15 Case links, access, empty/error states | Route guard with return URL, Access denied / Quote not found / Quote archived pages, tracking IDs |
 
 Role-based menus (UI-14) are not implemented: every signed-in user sees the same workspace and QuoteData enforces access.

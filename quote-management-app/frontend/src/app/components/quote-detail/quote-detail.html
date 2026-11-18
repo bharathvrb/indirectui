@@ -575,6 +575,10 @@
         <p class="small text-muted mt-2 mb-0" ng-if="completeContext.plan.notRequired">
           {{completeContext.plan.notRequired}} Not required step<span ng-if="completeContext.plan.notRequired !== 1">s are</span><span ng-if="completeContext.plan.notRequired === 1"> is</span> left as they are.
         </p>
+        <label for="complete-comment" class="form-label mt-3">Comment <span class="text-muted fw-normal">(optional)</span></label>
+        <textarea id="complete-comment" class="form-control" rows="3" maxlength="1000" ng-model="completeForm.comment" ng-readonly="completeSubmitting"
+                  placeholder="What did you fix, and where?"></textarea>
+        <div class="d-flex justify-content-end small text-muted mt-1">{{(completeForm.comment || '').length}} / 1000</div>
         <div class="alert alert-warning py-2 mt-3 mb-0" role="alert" ng-if="completeContext.plan.blocked.length || completeContext.plan.tooMany">
           <span ng-if="completeContext.plan.blocked.length">{{completeContext.plan.blocked.length}} step<span ng-if="completeContext.plan.blocked.length !== 1">s</span> came without a usable id from QuoteData, so this quote cannot be completed from here. Reload the quote and try again.</span>
           <span ng-if="completeContext.plan.tooMany">This quote has too many steps to complete in one request.</span>

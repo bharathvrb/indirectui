@@ -434,13 +434,13 @@ describe('Unified quote detail workspace', function() {
     trigger.focus();
     angular.element(trigger).triggerHandler('click');
     root.$digest(); flushFocus();
+    var comment = document.getElementById('complete-comment');
     var confirm = document.getElementById('complete-confirm');
+    expect(document.activeElement).toBe(comment);
+    scope.completeDialogKeydown(key('Tab', true)); // first: wraps to the last button
     expect(document.activeElement).toBe(confirm);
-    scope.completeDialogKeydown(key('Tab'));
-    var buttons = document.getElementById('complete-dialog').querySelectorAll('button');
-    expect(document.activeElement).toBe(buttons[0]);
-    scope.completeDialogKeydown(key('Tab', true));
-    expect(document.activeElement).toBe(confirm);
+    scope.completeDialogKeydown(key('Tab')); // last: wraps to the comment box
+    expect(document.activeElement).toBe(comment);
     scope.completeDialogKeydown(key('Escape')); root.$digest(); flushFocus();
     expect(scope.completeDialogOpen).toBe(false);
     expect(document.activeElement).toBe(trigger);
