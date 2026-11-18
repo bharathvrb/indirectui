@@ -393,6 +393,50 @@ describe('Unified quote search workspace', function() {
     }
     beforeEach(function() { try { localStorage.removeItem('omw-filter-values'); } catch (error) { /* storage unavailable */ } });
 
+    it('start minimised behind a Filters button and open to all the fields when it is clicked', function() {
+      start('QuoteListCtrl', '/quotes');
+      var page = mount();
+      var toggle = page.querySelector('#filters-toggle');
+      var panel = page.querySelector('#quote-filter-panel');
+      expect(toggle.getAttribute('aria-controls')).toBe('quote-filter-panel');
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
+      expect(toggle.textContent).toContain('Show all filters');
+      expect(panel.classList.contains('is-open')).toBe(false);
+      angular.element(toggle).triggerHandler('click');
+      root.$digest();
+      expect(toggle.getAttribute('aria-expanded')).toBe('true');
+      expect(toggle.textContent).toContain('Hide');
+      expect(panel.classList.contains('is-open')).toBe(true);
+      ['quote-state', 'quote-design', 'quote-category', 'quote-channel', 'quote-from', 'quote-to'].forEach(function(id) {
+        expect(panel.querySelector('#' + id)).not.toBeNull();
+      });
+      angular.element(toggle).triggerHandler('click');
+      root.$digest();
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
+      expect(panel.classList.contains('is-open')).toBe(false);
+    });
+
+    it('keep the applied-filter chips visible while minimised, and keep typed values when closed again', function() {
+      start('QuoteListCtrl', '/quotes?state=FAILED');
+      var page = mount();
+      expect(page.querySelector('#quote-filter-panel').classList.contains('is-open')).toBe(false);
+      var chips = Array.prototype.map.call(page.querySelectorAll('.qm-chip'), function(chip) { return chip.textContent.replace(/\s+/g, ' ').trim(); });
+      expect(chips.join('|')).toContain('State: Failed');
+      expect(page.querySelector('.qm-chip-wrap').closest('#quote-filter-panel')).toBeNull();
+      expect(page.querySelector('#quote-state').value).toBe('FAILED');
+    });
+
+    it('open by themselves while a date error needs fixing, so it is never hidden', function() {
+      start('QuoteListCtrl', '/quotes');
+      var page = mount();
+      scope.validationError = 'Created from must not be after Created to.';
+      root.$digest();
+      expect(page.querySelector('#quote-filter-panel').classList.contains('is-open')).toBe(true);
+      scope.toggleFilters();
+      expect(scope.filterPanel.open).toBe(false);
+      expect(scope.filtersAreOpen()).toBe(true);
+    });
+
     it('are text boxes with an all-values placeholder and a list of suggestions, not fixed menus', function() {
       start('QuoteListCtrl', '/quotes');
       var page = mount();
