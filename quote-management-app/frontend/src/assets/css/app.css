@@ -418,6 +418,33 @@ body.qm-app:not(.is-login) .app-topbar .app-brand { display: none; }
 .qm-kpi-value { font-family: var(--qm-display); font-size: var(--fs-2xl); font-weight: 800; letter-spacing: -.03em; line-height: 1.1; color: var(--qm-text); font-variant-numeric: tabular-nums; animation: value-in .6s var(--qm-ease) both; }
 .qm-kpi-hint { font-size: var(--fs-caption); color: var(--qm-faint); }
 
+/* Home overview: a gradient total tile and five soft status tiles, two, three or six to a row. */
+.qm-overview { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 4px; }
+.qm-overview .qm-kpi-card { border-radius: 18px; }
+.qm-overview .qm-kpi-card::after { display: none; }
+.qm-overview .qm-kpi-card-inProgress .qm-kpi-icon { background: var(--qm-amber-soft); color: var(--qm-amber-text); }
+.qm-overview .qm-kpi-card-failed .qm-kpi-icon { background: var(--qm-red-soft); color: var(--qm-red-text); }
+.qm-overview .qm-kpi-card-completed .qm-kpi-icon { background: var(--qm-green-soft); color: var(--qm-green-text); }
+.qm-overview .qm-kpi-card-other .qm-kpi-icon { background: var(--qm-slate-soft); color: var(--qm-slate-text); }
+.qm-overview .qm-kpi-card.is-alert { border-color: color-mix(in srgb, var(--qm-red) 38%, var(--qm-border)); background: linear-gradient(180deg, var(--qm-red-soft), var(--qm-surface) 85%); }
+.qm-overview .qm-kpi-card.is-alert .qm-kpi-value { color: var(--qm-red-text); }
+.qm-overview .qm-overview-total {
+    color: #fff; border: 0; isolation: isolate; background: var(--qm-gradient);
+    box-shadow: 0 18px 32px -20px rgba(29, 79, 215, .85), inset 0 1px 0 rgba(255, 255, 255, .22);
+}
+.qm-overview .qm-overview-total::before { content: ''; position: absolute; right: -50px; top: -60px; width: 170px; height: 170px; border-radius: 50%; border: 24px solid rgba(255, 255, 255, .08); z-index: -1; pointer-events: none; }
+.qm-overview .qm-overview-total::after { display: block; right: 46px; top: auto; bottom: -80px; width: 120px; height: 120px; border-radius: 50%; background: none; border: 18px solid rgba(255, 255, 255, .06); opacity: 1; z-index: -1; }
+.qm-overview .qm-overview-total:hover::after { transform: none; }
+.qm-overview .qm-overview-total .qm-kpi-icon { background: rgba(255, 255, 255, .18); color: #fff; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .25); }
+.qm-overview .qm-overview-total .qm-kpi-label { color: rgba(255, 255, 255, .86); }
+.qm-overview .qm-overview-total .qm-kpi-value { color: #fff; text-shadow: 0 2px 12px rgba(8, 24, 80, .35); }
+@media (min-width: 576px) {
+    .qm-overview { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (min-width: 1400px) {
+    .qm-overview { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+
 /* Start panel: how to look a quote up (shown before the first search) */
 /* Search: "Look up by" tiles come first, then the value field for the chosen type. */
 .qm-lookup { max-width: 900px; margin-bottom: 18px; }
@@ -450,6 +477,18 @@ body.qm-app:not(.is-login) .app-topbar .app-brand { display: none; }
 .qm-card-title > i { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; background: var(--qm-primary-soft); color: var(--qm-primary); font-size: 0.875rem; }
 
 .qm-filter-card .card-body { padding: 22px 24px; }
+.qm-filter-head { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; text-align: left; cursor: pointer; border-radius: 10px; }
+.qm-filter-head:focus-visible { outline: 2px solid var(--qm-primary); outline-offset: 6px; }
+.qm-filter-head > i { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; background: var(--qm-primary-soft); color: var(--qm-primary); font-size: .875rem; flex: none; }
+.qm-filter-hint { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; padding: 5px 12px; border-radius: 999px; background: var(--qm-surface-sunken); color: var(--qm-muted); font-family: var(--qm-font, inherit); font-size: var(--fs-caption); font-weight: 600; letter-spacing: 0; transition: background-color .25s, color .25s; }
+.qm-filter-hint > i { display: inline; width: auto; height: auto; background: none; color: inherit; font-size: .75rem; }
+.qm-filter-head:hover .qm-filter-hint { background: var(--qm-primary-soft); color: var(--qm-primary-strong); }
+.qm-chev { transition: transform .3s var(--qm-ease); }
+.qm-filter-head[aria-expanded="true"] .qm-chev { transform: rotate(180deg); }
+/* Smooth open and close; closed content is also hidden from keyboard and screen readers. */
+.qm-collapse { display: grid; grid-template-rows: 0fr; visibility: hidden; transition: grid-template-rows .35s var(--qm-ease), visibility 0s linear .35s; }
+.qm-collapse.is-open { grid-template-rows: 1fr; visibility: visible; transition: grid-template-rows .35s var(--qm-ease), visibility 0s; }
+.qm-collapse-inner { min-height: 0; overflow: hidden; margin: -6px; padding: 6px; }
 .qm-filter-card { transition: box-shadow .25s, border-color .25s; }
 .qm-filter-card:focus-within { border-color: color-mix(in srgb, var(--qm-primary) 40%, var(--qm-border)); box-shadow: var(--qm-shadow), 0 0 0 4px var(--qm-primary-ring); }
 .qm-search-row .form-control { min-height: 48px; font-size: var(--fs-base); }
@@ -457,7 +496,7 @@ body.qm-app:not(.is-login) .app-topbar .app-brand { display: none; }
 .qm-search-row .btn-primary { min-height: 48px; padding-left: 24px; padding-right: 24px; }
 .qm-search-row .qm-input-wrap > i { font-size: 1.125rem; left: 16px; }
 .qm-search-row .qm-input-wrap .form-control { padding-left: 44px; }
-.qm-filter-grid { margin-top: 8px; padding-top: 18px; border-top: 1px dashed var(--qm-border); }
+.qm-filter-grid { margin-top: 16px; padding-top: 18px; border-top: 1px dashed var(--qm-border); }
 
 
 
@@ -824,7 +863,7 @@ qm-contact-card { display: block; }
 .recovery-dialog .qm-dialog-meta > div { padding: 11px 13px; border-radius: 12px; background: var(--qm-surface-soft); border: 1px solid var(--qm-border); min-width: 0; }
 .recovery-dialog .qm-dialog-meta span { display: block; font-size: var(--fs-label); font-weight: 700; color: var(--qm-muted); text-transform: uppercase; letter-spacing: .08em; }
 .recovery-dialog .qm-dialog-meta code { font-size: var(--fs-caption); }
-.recovery-dialog textarea { min-height: 128px; resize: vertical; }
+.recovery-dialog textarea { min-height: 84px; resize: vertical; }
 .qm-retry-wrap { display: inline-flex; align-items: center; gap: 8px; }
 .qm-complete-steps { list-style: none; margin: 0; padding: 0; max-height: 240px; overflow-y: auto; border: 1px solid var(--qm-border); border-radius: 12px; }
 .qm-complete-steps li { display: flex; align-items: center; gap: 8px; padding: 8px 12px; font-size: var(--fs-caption); border-bottom: 1px solid var(--qm-border); }

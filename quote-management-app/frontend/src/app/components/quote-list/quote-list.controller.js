@@ -14,6 +14,21 @@ angular.module('quoteManagement')
       $scope.designStatusOptions = [];
       $scope.stateOptions = ['RECEIVED', 'IN_PROGRESS', 'PENDING_APPROVAL', 'COMPLETED', 'FAILED', 'FAILURE'];
       $scope.displayValue = view.displayValue;
+      // The filter fields start hidden; a date error opens them so it is never missed.
+      $scope.filterPanel = { open: false };
+      $scope.filtersAreOpen = function() { return $scope.filterPanel.open || !!$scope.validationError; };
+      $scope.toggleFilters = function() {
+        if ($scope.validationError) return;
+        $scope.filterPanel.open = !$scope.filterPanel.open;
+      };
+      // The five status cards of the overview, in the order they are read: Received to Other adds up to the total.
+      $scope.kpiTiles = [
+        { key: 'received', label: 'Received', icon: 'bi-inbox' },
+        { key: 'inProgress', label: 'In progress', icon: 'bi-hourglass-split' },
+        { key: 'failed', label: 'Failed', icon: 'bi-exclamation-octagon' },
+        { key: 'completed', label: 'Completed', icon: 'bi-check2-circle' },
+        { key: 'other', label: 'Other', icon: 'bi-three-dots' }
+      ];
       $scope.getStateLabel = view.stateLabel;
       $scope.validationError = null;
       $scope.searchError = null;

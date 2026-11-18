@@ -370,7 +370,8 @@ describe('Quote journey, quote retry and Mark completed', function() {
       expect(page.querySelector('#spotlight-retry')).toBeNull();
       scope.setTab('processing'); root.$digest();
       expect(page.querySelectorAll('#detail-panel-processing button').length).toBe(0);
-      expect(page.querySelectorAll('#detail-panel-processing th').length).toBe(7);
+      var headings = Array.prototype.map.call(page.querySelectorAll('#detail-panel-processing th'), function(th) { return th.textContent.trim(); });
+      expect(headings).toEqual(['Step Order', 'Step Name', 'Scope', 'Status', 'Started At', 'Completed At']);
       scope.setTab('errors'); root.$digest();
       expect(page.querySelector('#detail-panel-errors .qm-error-retry')).toBeNull();
       scope.openRetryDialog(); root.$digest();
@@ -495,18 +496,48 @@ describe('Quote journey, quote retry and Mark completed', function() {
       angular.element(page.querySelector('#mark-completed')).triggerHandler('click');
       root.$digest(); flushFocus();
       var dialog = document.getElementById('complete-dialog');
-      expect(dialog.querySelector('textarea')).toBeNull();
+      expect(dialog.querySelector('#complete-comment')).not.toBeNull();
+      expect(dialog.querySelector('label[for="complete-comment"]').textContent.trim()).toBe('Comment');
       expect(dialog.textContent).toContain('5 steps and the quote itself will be set to Completed.');
       expect(dialog.querySelectorAll('.qm-complete-steps li').length).toBe(5);
       expect(dialog.textContent).toContain('1 Not required step is left as they are');
-      expect(document.activeElement.id).toBe('complete-confirm');
+      expect(document.activeElement.id).toBe('complete-comment');
       expect(scope.canSubmitComplete()).toBe(true);
       scope.submitComplete(); scope.submitComplete(); root.$digest();
       expect(service.completeQuote).toHaveBeenCalledTimes(1);
       var call = service.completeQuote.calls.mostRecent().args;
       expect(call[0]).toBe('PARTNER-QUOTE-1-SYNTHETIC');
+      expect(call[2]).toBe('');
       expect(call[1].map(function(step) { return step.id + ':' + step.stepName; }).sort()).toEqual(
         ['1:ADDRESS_VALIDATION', '2:CREATE_CONTACT', '5:CREATE_PROPOSAL', '6:ADD_SITE', '9:CONTRACT_GENERATION']);
+    });
+
+    it('has an optional comment that is trimmed, sent with the completion and counted', function() {
+      start();
+      scope.openCompleteDialog(); root.$digest();
+      var box = document.getElementById('complete-comment');
+      box.value = '  Fixed the address in Amdocs  ';
+      angular.element(box).triggerHandler('input'); root.$digest();
+      expect(scope.completeForm.comment).toBe('Fixed the address in Amdocs'); // the input already trims
+      expect(document.getElementById('complete-dialog').textContent).toContain('27 / 1000');
+      expect(scope.canSubmitComplete()).toBe(true);
+      scope.submitComplete(); root.$digest();
+      expect(service.completeQuote.calls.mostRecent().args[2]).toBe('Fixed the address in Amdocs');
+      expect(document.getElementById('complete-comment').readOnly).toBe(true);
+    });
+
+    it('does not allow a comment of more than 1000 characters and clears it when the dialog closes', function() {
+      start();
+      scope.openCompleteDialog(); root.$digest();
+      scope.completeForm.comment = new Array(1002).join('x');
+      expect(scope.canSubmitComplete()).toBe(false);
+      scope.completeForm.comment = '   ';
+      expect(scope.canSubmitComplete()).toBe(true);
+      scope.completeForm.comment = 'Synthetic comment';
+      scope.closeCompleteDialog(); root.$digest();
+      expect(scope.completeForm.comment).toBe('');
+      scope.openCompleteDialog(); root.$digest();
+      expect(document.getElementById('complete-comment').value).toBe('');
     });
 
     it('turns numeric-string ids into numbers and reloads the quote after a success', function() {
@@ -569,7 +600,7 @@ describe('Quote journey, quote retry and Mark completed', function() {
       scope.openCompleteDialog(); root.$digest();
       expect(scope.canSubmitComplete()).toBe(true);
       scope.submitComplete(); root.$digest();
-      expect(service.completeQuote).toHaveBeenCalledWith('PARTNER-QUOTE-1-SYNTHETIC', []);
+      expect(service.completeQuote).toHaveBeenCalledWith('PARTNER-QUOTE-1-SYNTHETIC', [], '');
     });
 
     [

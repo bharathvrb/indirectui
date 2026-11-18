@@ -13,6 +13,7 @@ const MAX_RESPONSE_BYTES = 20 * 1024 * 1024;
 const MAX_ERROR_BYTES = 16 * 1024;
 const MAX_BODY_BYTES = 65536;
 const MAX_COMPLETION_STEPS = 500;
+const MAX_COMPLETION_COMMENT = 1000;
 const QUERY_KEYS = new Set([
     'quoteRequestId', 'externalId', 'proposalId', 'ticketNumber', 'page', 'size', 'sort', 'search', 'state',
     'designStatus', 'category', 'channelType', 'createdFrom', 'createdTo'
@@ -275,7 +276,14 @@ function routeFor(req, retryEnabled) {
 function completionBody(value, quoteId) {
     const exact = (object, keys) => object && typeof object === 'object' && !Array.isArray(object) &&
         Object.keys(object).length === keys.length && keys.every(key => Object.prototype.hasOwnProperty.call(object, key));
-    if (!exact(value, ['quoteRequestId', 'state', 'stepExecutions']) || value.quoteRequestId !== quoteId ||
+    // The comment is optional: when present it is a 1..1000 character string and is the only extra key allowed.
+    const hasComment = !!value && typeof value === 'object' && Object.prototype.hasOwnProperty.call(value, 'comment');
+    const comment = hasComment && typeof value.comment === 'string' ? value.comment.trim() : '';
+    if (hasComment && (!comment || comment.length > MAX_COMPLETION_COMMENT)) {
+        throw new Error('Invalid completion comment');
+    }
+    if (!exact(value, hasComment ? ['quoteRequestId', 'state', 'stepExecutions', 'comment'] : ['quoteRequestId', 'state', 'stepExecutions']) ||
+        value.quoteRequestId !== quoteId ||
         value.state !== 'SUCCESS' || !Array.isArray(value.stepExecutions) || value.stepExecutions.length > MAX_COMPLETION_STEPS) {
         throw new Error('Invalid completion');
     }
@@ -290,7 +298,7 @@ function completionBody(value, quoteId) {
         ids.add(String(step.id));
         return { id: step.id, stepName: step.stepName, stepStatus: 'COMPLETED' };
     });
-    return JSON.stringify({ quoteRequestId: quoteId, state: 'SUCCESS', stepExecutions: steps });
+    return JSON.stringify(Object.assign({ quoteRequestId: quoteId, state: 'SUCCESS', stepExecutions: steps }, hasComment ? { comment } : {}));
 }
 
 function readCompletion(req, signal, timeoutMs, quoteId) {

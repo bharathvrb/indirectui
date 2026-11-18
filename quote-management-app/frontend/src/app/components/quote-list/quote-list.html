@@ -63,42 +63,14 @@
       </div>
       <div id="quote-search-feedback" class="qm-search-error" role="alert" ng-if="searchError">{{searchError}}</div>
     </div>
-    <div class="row g-3" aria-label="Quote summary" ng-if="!lookupOnly && pageMode !== 'search' && listEnabled">
-      <div class="col-6 col-lg-4 col-xxl-2">
-        <div class="qm-kpi-card qm-kpi-card-info">
-          <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-collection"></i></span>
-          <div><div class="qm-kpi-label">Total quotes</div><div class="qm-kpi-value">{{displayValue(kpis.total)}}</div></div>
-        </div>
+    <div class="qm-overview" role="group" aria-label="Quote summary" ng-if="!lookupOnly && pageMode !== 'search' && listEnabled">
+      <div class="qm-kpi-card qm-kpi-card-info qm-overview-total">
+        <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-collection"></i></span>
+        <div><div class="qm-kpi-label">Total quotes</div><div class="qm-kpi-value">{{displayValue(kpis.total)}}</div></div>
       </div>
-      <div class="col-6 col-lg-4 col-xxl-2">
-        <div class="qm-kpi-card qm-kpi-card-received">
-          <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-inbox"></i></span>
-          <div><div class="qm-kpi-label">Received</div><div class="qm-kpi-value">{{displayValue(kpis.received)}}</div></div>
-        </div>
-      </div>
-      <div class="col-6 col-lg-4 col-xxl-2">
-        <div class="qm-kpi-card qm-kpi-card-warning">
-          <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-hourglass-split"></i></span>
-          <div><div class="qm-kpi-label">In progress</div><div class="qm-kpi-value">{{displayValue(kpis.inProgress)}}</div></div>
-        </div>
-      </div>
-      <div class="col-6 col-lg-4 col-xxl-2">
-        <div class="qm-kpi-card qm-kpi-card-danger">
-          <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-exclamation-octagon"></i></span>
-          <div><div class="qm-kpi-label">Failed</div><div class="qm-kpi-value">{{displayValue(kpis.failed)}}</div></div>
-        </div>
-      </div>
-      <div class="col-6 col-lg-4 col-xxl-2">
-        <div class="qm-kpi-card qm-kpi-card-success">
-          <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-check2-circle"></i></span>
-          <div><div class="qm-kpi-label">Completed</div><div class="qm-kpi-value">{{displayValue(kpis.completed)}}</div></div>
-        </div>
-      </div>
-      <div class="col-6 col-lg-4 col-xxl-2">
-        <div class="qm-kpi-card qm-kpi-card-neutral">
-          <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-three-dots"></i></span>
-          <div><div class="qm-kpi-label">Other</div><div class="qm-kpi-value">{{displayValue(kpis.other)}}</div></div>
-        </div>
+      <div class="qm-kpi-card qm-kpi-card-{{tile.key}}" ng-repeat="tile in kpiTiles track by tile.key" ng-class="{'is-alert': tile.key === 'failed' && kpis.failed > 0}">
+        <span class="qm-kpi-icon" aria-hidden="true"><i class="bi {{tile.icon}}"></i></span>
+        <div><div class="qm-kpi-label">{{tile.label}}</div><div class="qm-kpi-value">{{displayValue(kpis[tile.key])}}</div></div>
       </div>
     </div>
   </section>
@@ -109,7 +81,14 @@
 
   <div class="card qm-filter-card mb-4" ng-if="!lookupOnly && pageMode !== 'search' && listEnabled">
     <div class="card-body">
-      <h2 class="qm-card-title mb-3"><i class="bi bi-funnel" aria-hidden="true"></i>Filters</h2>
+      <h2 class="qm-card-title">
+        <button type="button" id="filters-toggle" class="qm-filter-head" aria-controls="quote-filter-panel" ng-attr-aria-expanded="{{filtersAreOpen()}}" ng-click="toggleFilters()">
+          <i class="bi bi-funnel" aria-hidden="true"></i><span>Filters</span>
+          <span class="qm-filter-hint">{{filtersAreOpen() ? 'Hide' : 'Show all filters'}}<i class="bi bi-chevron-down qm-chev" aria-hidden="true"></i></span>
+        </button>
+      </h2>
+      <!-- Collapsed until asked for. The fields stay in the page (just hidden), so their values and suggestions are kept. -->
+      <div id="quote-filter-panel" class="qm-collapse" ng-class="{'is-open': filtersAreOpen()}"><div class="qm-collapse-inner">
       <div class="row g-3 qm-filter-grid">
         <div class="col-6 col-lg-3">
           <label for="quote-state" class="form-label">State</label>
@@ -151,6 +130,7 @@
           <p class="small text-muted mb-2"><i class="bi bi-sort-down me-1" aria-hidden="true"></i>Newest first · 25 quotes. Pick a suggestion or type a value exactly as QuoteData has it, then press Enter.</p>
         </div>
       </div>
+      </div></div>
       <div id="quote-date-feedback" class="mt-2">
         <div class="text-danger small" role="alert" ng-if="validationError">{{validationError}}</div>
       </div>

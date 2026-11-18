@@ -40,16 +40,20 @@ angular.module('quoteManagement')
 
       // Mark completed: one PATCH sets the quote to SUCCESS and every listed step to COMPLETED.
       // QuoteData updates the database by each step's primary id (the "id" of the step in the get-quotes answer).
-      completeQuote: function(quoteRequestId, steps) {
+      // An optional comment travels in the same body as "comment" (an assumed field name, sent only when the user typed one).
+      completeQuote: function(quoteRequestId, steps, comment) {
+        var body = {
+          quoteRequestId: quoteRequestId,
+          state: 'SUCCESS',
+          stepExecutions: (steps || []).map(function(step) {
+            return { id: step.id, stepName: step.stepName, stepStatus: 'COMPLETED' };
+          })
+        };
+        var text = typeof comment === 'string' ? comment.trim() : '';
+        if (text) body.comment = text;
         return $http.patch(
           QUOTEDATA_BASE + '/quote/' + encodeURIComponent(quoteRequestId),
-          {
-            quoteRequestId: quoteRequestId,
-            state: 'SUCCESS',
-            stepExecutions: (steps || []).map(function(step) {
-              return { id: step.id, stepName: step.stepName, stepStatus: 'COMPLETED' };
-            })
-          },
+          body,
           { headers: trackingHeaders() }
         );
       },

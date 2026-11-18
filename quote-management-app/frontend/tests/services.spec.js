@@ -72,6 +72,19 @@ describe('QuoteService HTTP contract', function() {
     backend.flush();
   });
 
+  it('adds a trimmed comment to the completion only when one was typed', function() {
+    backend.expectPATCH('/api/quotedata/v1/quote/Q-1', {
+      quoteRequestId: 'Q-1', state: 'SUCCESS',
+      stepExecutions: [{ id: 1, stepName: 'ADD_SITE', stepStatus: 'COMPLETED' }], comment: 'Fixed in Amdocs'
+    }, tracked).respond(200, {});
+    service.completeQuote('Q-1', [{ id: 1, stepName: 'ADD_SITE' }], '  Fixed in Amdocs  ');
+    backend.expectPATCH('/api/quotedata/v1/quote/Q-2', {
+      quoteRequestId: 'Q-2', state: 'SUCCESS', stepExecutions: [{ id: 1, stepName: 'ADD_SITE', stepStatus: 'COMPLETED' }]
+    }, tracked).respond(200, {});
+    service.completeQuote('Q-2', [{ id: 1, stepName: 'ADD_SITE' }], '   ');
+    backend.flush();
+  });
+
   it('completes a quote with no steps as an empty list', function() {
     backend.expectPATCH('/api/quotedata/v1/quote/Q-1', { quoteRequestId: 'Q-1', state: 'SUCCESS', stepExecutions: [] }, tracked).respond(200, '');
     service.completeQuote('Q-1');

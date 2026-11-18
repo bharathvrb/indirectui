@@ -47,6 +47,7 @@ angular.module('quoteManagement')
       $scope.completeDialogOpen = false;
       $scope.completeSubmitting = false;
       $scope.completeError = null;
+      $scope.completeForm = { comment: '' };
       $scope.focusItemId = null;
       $scope.copyFeedback = '';
       $scope.navigationNotice = '';
@@ -1247,13 +1248,15 @@ angular.module('quoteManagement')
         $scope.completeDialogOpen = true;
         $scope.completeError = null;
         $scope.completeTrackingId = null;
-        focusElement('complete-confirm');
+        $scope.completeForm.comment = '';
+        focusElement('complete-comment');
       };
 
       $scope.closeCompleteDialog = function() {
         if ($scope.completeSubmitting) return;
         $scope.completeDialogOpen = false;
         $scope.completeError = null;
+        $scope.completeForm.comment = '';
         focusTimers.push($timeout(function() {
           var target = returnFocus && document.documentElement.contains(returnFocus) ? returnFocus : document.getElementById('quote-detail-heading');
           if (target) target.focus();
@@ -1364,7 +1367,7 @@ angular.module('quoteManagement')
       $scope.canSubmitComplete = function() {
         var plan = $scope.completeContext && $scope.completeContext.plan;
         return !!plan && $scope.completeDialogOpen && $scope.isFailed() && $scope.canUpdateQuotes &&
-          !plan.blocked.length && !plan.tooMany && !$scope.completeSubmitting;
+          !plan.blocked.length && !plan.tooMany && ($scope.completeForm.comment || '').trim().length <= 1000 && !$scope.completeSubmitting;
       };
 
       $scope.submitComplete = function() {
@@ -1372,7 +1375,7 @@ angular.module('quoteManagement')
         $scope.completeSubmitting = true;
         $scope.completeError = null;
 
-        QuoteService.completeQuote($scope.quote.quoteRequestId, $scope.completeContext.plan.steps).then(function() {
+        QuoteService.completeQuote($scope.quote.quoteRequestId, $scope.completeContext.plan.steps, ($scope.completeForm.comment || '').trim()).then(function() {
           $scope.completeSubmitting = false;
           $scope.completionSucceeded = true;
           $scope.completionNotice = 'Quote marked Completed. All its steps were set to Completed.';
