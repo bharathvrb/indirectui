@@ -57,15 +57,30 @@ describe('QuoteService HTTP contract', function() {
     expect(rejections).toEqual([400, 400, 400, 400]);
   });
 
-  it('completes a quote with only the resolution note', function() {
-    backend.expectPOST('/api/quotedata/v1/quote/Q%2F1/complete', { resolutionNote: 'Fixed' }, tracked).respond(200, {});
-    service.completeQuote('Q/1', 'Fixed');
+  it('completes a quote with one PATCH that sets the quote to SUCCESS and each step, by primary id, to COMPLETED', function() {
+    backend.expectPATCH('/api/quotedata/v1/quote/Q%2F1', {
+      quoteRequestId: 'Q/1', state: 'SUCCESS',
+      stepExecutions: [
+        { id: 3834, stepName: 'CREATE_AMENDMENT_PROPOSAL', stepStatus: 'COMPLETED' },
+        { id: 3835, stepName: 'ADD_SITE', stepStatus: 'COMPLETED' }
+      ]
+    }, tracked).respond(200, {});
+    service.completeQuote('Q/1', [
+      { id: 3834, stepName: 'CREATE_AMENDMENT_PROPOSAL', stepStatus: 'FAILURE', label: 'ignored' },
+      { id: 3835, stepName: 'ADD_SITE', stepStatus: 'PENDING' }
+    ]);
     backend.flush();
   });
 
-  it('retries a step with a bodiless POST to the step retry route', function() {
-    backend.expectPOST('/api/quotedata/v1/quote/Q%201/steps/42/retry', undefined, tracked).respond(202, {});
-    service.retryStep('Q 1', 42);
+  it('completes a quote with no steps as an empty list', function() {
+    backend.expectPATCH('/api/quotedata/v1/quote/Q-1', { quoteRequestId: 'Q-1', state: 'SUCCESS', stepExecutions: [] }, tracked).respond(200, '');
+    service.completeQuote('Q-1');
+    backend.flush();
+  });
+
+  it('retries a quote with a bodiless POST to the quote retry route', function() {
+    backend.expectPOST('/api/quotedata/v1/quote/Q%201/retry', undefined, tracked).respond(202, {});
+    service.retryQuote('Q 1');
     backend.flush();
   });
 

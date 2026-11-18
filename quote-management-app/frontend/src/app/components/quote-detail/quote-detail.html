@@ -21,6 +21,12 @@
         <button type="button" class="btn btn-outline-secondary" ng-click="loadQuote()" aria-label="Reload quote details">
           <i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>Reload
         </button>
+        <span class="qm-retry-wrap" ng-if="isFailed() && canUpdateQuotes" title="{{retryTitle()}}">
+          <button type="button" id="retry-quote" class="btn btn-outline-primary" ng-disabled="!canRetry()" ng-click="openRetryDialog()" aria-haspopup="dialog">
+            <i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>{{retryRequested ? 'Retry requested' : 'Retry'}}
+          </button>
+          <span class="qm-soon" ng-if="!retryEnabled">Coming soon</span>
+        </span>
         <button id="mark-completed" class="btn btn-primary" ng-if="isFailed() && canUpdateQuotes" ng-click="openCompleteDialog()">
           <i class="bi bi-check2-circle me-1"></i>Mark completed
         </button>
@@ -84,12 +90,7 @@
         </p>
       </div>
       <div class="qm-spotlight-actions">
-        <button type="button" id="spotlight-retry" class="btn btn-sm" ng-class="canRetry(journey.spotlight) ? 'btn-primary' : 'btn-outline-secondary'"
-                ng-disabled="!canRetry(journey.spotlight)" title="{{retryTitle(journey.spotlight)}}" ng-click="openRetryDialog(journey.spotlight)">
-          <i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>{{retryRequested[journey.spotlight.id] ? 'Retry requested' : 'Retry step'}}
-        </button>
         <button type="button" id="spotlight-errors" class="btn btn-sm btn-outline-secondary" ng-click="openErrorDialog(journey.spotlight)" aria-haspopup="dialog">View errors</button>
-        <span class="qm-soon" ng-if="!retryEnabled">Retry coming soon</span>
         <button type="button" id="spotlight-steps" class="btn btn-sm btn-outline-secondary qm-steps-toggle-inline" ng-click="toggleSteps()" aria-expanded="{{ui.stepsOpen}}" aria-controls="journey-steps">
           <i class="bi bi-list-check me-1" aria-hidden="true"></i>{{ui.stepsOpen ? 'Hide steps' : 'All steps'}}<i class="bi bi-chevron-down qm-chev ms-1" aria-hidden="true"></i>
         </button>
@@ -380,12 +381,11 @@
               <th>Attempt / Max</th>
               <th>Started At</th>
               <th>Completed At</th>
-              <th>Retry</th>
             </tr>
           </thead>
           <tbody>
             <tr ng-if="filteredProcessingSteps().length === 0">
-              <td colspan="8" class="qm-empty-inline">Processing steps: No records found</td>
+              <td colspan="7" class="qm-empty-inline">Processing steps: No records found</td>
             </tr>
             <tr ng-repeat="step in filteredProcessingSteps() track by step._key" ng-class="{'table-danger': step.stepStatus === 'FAILURE'}">
               <td>{{displayValue(step.stepOrder)}}</td>
@@ -395,13 +395,6 @@
               <td>{{displayValue(step.attemptCount)}} / {{displayValue(step.maxRetries)}}</td>
               <td>{{step.startedAt ? (step.startedAt | date:'dd MMM yyyy HH:mm:ss') : '—'}}</td>
               <td>{{step.completedAt ? (step.completedAt | date:'dd MMM yyyy HH:mm:ss') : '—'}}</td>
-              <td>
-                <button type="button" class="btn btn-sm" ng-class="canRetry(step) ? 'btn-outline-primary' : 'btn-outline-secondary'"
-                        ng-if="getStepStatusLabel(step.stepStatus) === 'Failed'" ng-disabled="!canRetry(step)"
-                        title="{{retryTitle(step)}}" ng-click="openRetryDialog(step)">
-                  <i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>{{retryRequested[step.id] ? 'Requested' : 'Retry'}}
-                </button>
-              </td>
             </tr>
           </tbody>
         </table>
@@ -456,9 +449,6 @@
             <button class="qm-link-pill" ng-if="row.contactId !== null" ng-click="jumpToContact(row.contactId)"><i class="bi bi-person" aria-hidden="true"></i>Contact</button>
           </div>
         </div>
-        <button type="button" class="btn btn-sm qm-error-retry" ng-class="canRetry(stepForError(row)) ? 'btn-outline-primary' : 'btn-outline-secondary'"
-                ng-disabled="!canRetry(stepForError(row))" title="{{retryTitle(stepForError(row))}}"
-                ng-click="openRetryDialog(stepForError(row))"><i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>Retry</button>
       </li>
     </ol>
   </div>
@@ -566,7 +556,7 @@
         <i class="bi bi-check2-circle" aria-hidden="true"></i>
         <div>
           <h2 id="complete-dialog-title">Mark as completed</h2>
-          <p id="complete-dialog-help" class="small text-muted mb-0">Use this only after you have fixed the failure manually.</p>
+          <p id="complete-dialog-help" class="small text-muted mb-0">Use this only after you have fixed the failure manually. This sets every step to Completed.</p>
         </div>
       </div>
       <div class="qm-dialog-body">
@@ -574,17 +564,31 @@
           <div><span>Quote request ID</span><code>{{displayValue(completeContext.quoteRequestId)}}</code></div>
           <div><span>Ticket Number</span><code>{{displayValue(completeContext.ticketNumber)}}</code></div>
         </div>
-        <label for="resolution-note" class="form-label">Resolution Note <span class="text-danger">*</span></label>
-        <textarea id="resolution-note" class="form-control" rows="4" maxlength="1000" required ng-model="completeForm.note" ng-readonly="completeSubmitting"
-                  placeholder="What did you fix, and where?"></textarea>
-        <div class="d-flex justify-content-end small text-muted mt-1">{{(completeForm.note || '').length}} / 1000</div>
+        <p class="mb-2" id="complete-summary">
+          <b>{{completeContext.plan.steps.length}}</b> step<span ng-if="completeContext.plan.steps.length !== 1">s</span> and the quote itself will be set to <b>Completed</b>.
+        </p>
+        <ul class="qm-complete-steps" aria-label="Steps that will be marked Completed" ng-if="completeContext.plan.steps.length">
+          <li ng-repeat="step in completeContext.plan.steps track by step.id">
+            <span class="qm-complete-step-name">{{step.label}}</span>
+            <span class="badge qm-status {{getStepStatusClass(step.stepStatus)}}">{{getStepStatusLabel(step.stepStatus)}}</span>
+            <i class="bi bi-arrow-right" aria-hidden="true"></i>
+            <span class="badge qm-status bg-success">Completed</span>
+          </li>
+        </ul>
+        <p class="small text-muted mt-2 mb-0" ng-if="completeContext.plan.notRequired">
+          {{completeContext.plan.notRequired}} Not required step<span ng-if="completeContext.plan.notRequired !== 1">s are</span><span ng-if="completeContext.plan.notRequired === 1"> is</span> left as they are.
+        </p>
+        <div class="alert alert-warning py-2 mt-3 mb-0" role="alert" ng-if="completeContext.plan.blocked.length || completeContext.plan.tooMany">
+          <span ng-if="completeContext.plan.blocked.length">{{completeContext.plan.blocked.length}} step<span ng-if="completeContext.plan.blocked.length !== 1">s</span> came without a usable id from QuoteData, so this quote cannot be completed from here. Reload the quote and try again.</span>
+          <span ng-if="completeContext.plan.tooMany">This quote has too many steps to complete in one request.</span>
+        </div>
         <div class="alert alert-danger py-2 mt-3 mb-0" role="alert" ng-if="completeError">{{completeError}}
           <span class="d-block small" ng-if="completeTrackingId">Tracking ID: <code>{{completeTrackingId}}</code></span>
         </div>
       </div>
       <div class="qm-dialog-foot">
         <button type="button" class="btn btn-outline-secondary" ng-click="closeCompleteDialog()" ng-disabled="completeSubmitting">Cancel</button>
-        <button type="button" class="btn btn-primary"
+        <button type="button" id="complete-confirm" class="btn btn-primary"
                 ng-disabled="!canSubmitComplete()"
                 ng-click="submitComplete()">
           <i class="bi me-1" ng-class="completeSubmitting ? 'bi-arrow-repeat qm-spin' : 'bi-check2'" aria-hidden="true"></i>{{completeSubmitting ? 'Submitting...' : 'Confirm'}}
@@ -635,17 +639,18 @@
     <div class="qm-dialog-head">
       <i class="bi bi-arrow-repeat is-retry" aria-hidden="true"></i>
       <div>
-        <h2 id="retry-dialog-title">Retry {{stepLabel(retry.step.stepName)}}?</h2>
-        <p id="retry-dialog-help" class="small text-muted mb-0">QuoteData will be asked to run this step again.</p>
+        <h2 id="retry-dialog-title">Retry this quote?</h2>
+        <p id="retry-dialog-help" class="small text-muted mb-0">QuoteData will be asked to retry this quote.</p>
       </div>
     </div>
     <div class="qm-dialog-body">
-      <div class="qm-dialog-meta is-single">
-        <div><span>Attempts so far</span><code>{{displayValue(retry.step.attemptCount)}} of {{displayValue(retry.step.maxRetries)}}</code></div>
+      <div class="qm-dialog-meta">
+        <div><span>Quote request ID</span><code>{{displayValue(quote.quoteRequestId)}}</code></div>
+        <div><span>Failed steps</span><code>{{retry.failedSteps.length}}</code></div>
       </div>
-      <div class="alert alert-warning py-2 mb-0" ng-if="retry.step.maxRetries !== null && retry.step.attemptCount >= retry.step.maxRetries">
-        Automatic retries are used up. This is a manual retry.
-      </div>
+      <ul class="qm-complete-steps" aria-label="Failed steps" ng-if="retry.failedSteps.length">
+        <li ng-repeat="step in retry.failedSteps track by step.key"><span class="qm-complete-step-name">{{step.label}}</span><span class="badge qm-status bg-danger">Failed</span></li>
+      </ul>
       <div class="alert alert-danger py-2 mt-3 mb-0" role="alert" ng-if="retry.error">{{retry.error}}
         <span class="d-block small" ng-if="retry.trackingId">Tracking ID: <code>{{retry.trackingId}}</code></span>
       </div>
@@ -653,7 +658,7 @@
     <div class="qm-dialog-foot">
       <button type="button" class="btn btn-outline-secondary" ng-click="closeRetryDialog()" ng-disabled="retry.submitting">Cancel</button>
       <button type="button" id="retry-confirm" class="btn btn-primary" ng-click="submitRetry()" ng-disabled="retry.submitting">
-        <i class="bi me-1" ng-class="retry.submitting ? 'bi-arrow-repeat qm-spin' : 'bi-arrow-repeat'" aria-hidden="true"></i>{{retry.submitting ? 'Requesting…' : 'Retry step'}}
+        <i class="bi me-1" ng-class="retry.submitting ? 'bi-arrow-repeat qm-spin' : 'bi-arrow-repeat'" aria-hidden="true"></i>{{retry.submitting ? 'Requesting…' : 'Retry quote'}}
       </button>
     </div>
   </section>

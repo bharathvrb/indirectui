@@ -11,7 +11,7 @@ window.APP_CONFIG = Object.assign({
     quoteDataLookupOnly: true,
     contractDownloadUrl: '',
     supportUrl: '',
-    // Step retry: true shows enabled Retry buttons. The server also needs QUOTEDATA_RETRY_ENABLED=true.
+    // Quote retry: true enables the quote-level Retry button. The server also needs QUOTEDATA_RETRY_ENABLED=true.
     features: { retryEnabled: false }
 }, window.APP_CONFIG || {});
 

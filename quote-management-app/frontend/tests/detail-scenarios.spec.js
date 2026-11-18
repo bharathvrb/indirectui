@@ -13,7 +13,7 @@ describe('Quote detail scenarios', function() {
     service = {
       getQuote: jasmine.createSpy('getQuote').and.callFake(function() { var d = q.defer(); loads.push(d); return d.promise; }),
       completeQuote: jasmine.createSpy('completeQuote').and.callFake(function() { completion = q.defer(); return completion.promise; }),
-      retryStep: jasmine.createSpy('retryStep'),
+      retryQuote: jasmine.createSpy('retryQuote'),
       canDownloadContract: jasmine.createSpy('canDownloadContract').and.returnValue(true),
       downloadContractByDmaasId: jasmine.createSpy('download').and.callFake(function() { var d = q.defer(); downloads.push(d); return d.promise; })
     };
@@ -338,7 +338,6 @@ describe('Quote detail scenarios', function() {
     it('shows the server message or a default message for other failures', function() {
       start(base());
       scope.openCompleteDialog();
-      scope.completeForm.note = 'Fixed';
       scope.submitComplete();
       completion.reject({ status: 500, data: { message: 'Synthetic server message' } });
       root.$digest();

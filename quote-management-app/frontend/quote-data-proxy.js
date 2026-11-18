@@ -11,7 +11,8 @@ const BASE_URL = 'https://quotedata-flx.as-g8.cf.comcast.net/quotedata/v1';
 const MAX_TOKEN_BYTES = 64 * 1024;
 const MAX_RESPONSE_BYTES = 20 * 1024 * 1024;
 const MAX_ERROR_BYTES = 16 * 1024;
-const MAX_BODY_BYTES = 8192;
+const MAX_BODY_BYTES = 65536;
+const MAX_COMPLETION_STEPS = 500;
 const QUERY_KEYS = new Set([
     'quoteRequestId', 'externalId', 'proposalId', 'ticketNumber', 'page', 'size', 'sort', 'search', 'state',
     'designStatus', 'category', 'channelType', 'createdFrom', 'createdTo'
@@ -58,7 +59,7 @@ function serviceConfiguration(options) {
     }
 }
 
-function upstreamRequest(url, { method = 'GET', headers, body, limit, timeoutMs, signal, readErrorCode = false }) {
+function upstreamRequest(url, { method = 'GET', headers, body, limit, timeoutMs, signal, readErrorCode = false, allowEmpty = false }) {
     return new Promise((resolve, reject) => {
         let response;
         let settled = false;
@@ -120,7 +121,7 @@ function upstreamRequest(url, { method = 'GET', headers, body, limit, timeoutMs,
                 if (settled) {
                     return;
                 }
-                if (status === 204) {
+                if (status === 204 || (allowEmpty && !chunks.length)) {
                     return finish(null, { status, body: null });
                 }
                 try {
@@ -211,25 +212,29 @@ function createTokenProvider(config, options) {
     };
 }
 
-const RETRY_ROUTE = /^\/api\/quotedata\/v1\/quote\/[A-Za-z0-9_-]{1,200}\/steps\/[A-Za-z0-9_-]{1,64}\/retry$/;
+const QUOTE_ROUTE = /^\/api\/quotedata\/v1\/quote\/([A-Za-z0-9_-]{1,200})$/;
+const RETRY_ROUTE = /^\/api\/quotedata\/v1\/quote\/([A-Za-z0-9_-]{1,200})\/retry$/;
 
 function routeFor(req, retryEnabled) {
     const [pathname, query = ''] = req.url.split('?');
     let method;
     let suffix;
     let kind;
+    let id;
     if (pathname === '/api/quotedata/v1/quote') {
         method = 'GET';
         suffix = '/quote';
         kind = 'query';
-    } else if (/^\/api\/quotedata\/v1\/quote\/[A-Za-z0-9_-]{1,200}\/complete$/.test(pathname)) {
-        method = 'POST';
+    } else if (QUOTE_ROUTE.test(pathname)) {
+        // Completing a quote: PATCH {base}/quote/{quoteRequestId} marks the quote and all of its steps (see readCompletion).
+        method = 'PATCH';
         suffix = pathname.slice('/api/quotedata/v1'.length);
         kind = 'complete';
+        id = QUOTE_ROUTE.exec(pathname)[1];
     } else if (RETRY_ROUTE.test(pathname)) {
-        // Assumed QuoteData contract: POST {base}/quote/{quoteRequestId}/steps/{stepExecutionId}/retry, no body.
+        // Assumed QuoteData contract: POST {base}/quote/{quoteRequestId}/retry, no body.
         if (!retryEnabled) {
-            throw failure(501, 'RETRY_NOT_AVAILABLE', 'Step retry is not available yet.');
+            throw failure(501, 'RETRY_NOT_AVAILABLE', 'Quote retry is not available yet.');
         }
         method = 'POST';
         suffix = pathname.slice('/api/quotedata/v1'.length);
@@ -241,7 +246,7 @@ function routeFor(req, retryEnabled) {
         throw Object.assign(failure(405, 'METHOD_NOT_ALLOWED', 'This request method is not allowed.'), { allow: method });
     }
     if (req.url.split('?').length > 2 || req.url.includes('#') || Buffer.byteLength(query) > 4096 ||
-        (method === 'POST' && query)) {
+        (method !== 'GET' && query)) {
         throw failure(400, 'INVALID_REQUEST', 'Invalid QuoteData query.');
     }
     try {
@@ -262,10 +267,33 @@ function routeFor(req, retryEnabled) {
     if (kind !== 'complete' && (req.headers['transfer-encoding'] || Number(req.headers['content-length']) > 0)) {
         throw failure(400, 'INVALID_REQUEST', 'This request must not contain a body.');
     }
-    return { path: suffix + (query ? '?' + query : ''), kind };
+    return { path: suffix + (query ? '?' + query : ''), kind, id };
 }
 
-function readCompletion(req, signal, timeoutMs) {
+// The one update the browser may ask for: the quote goes to SUCCESS and each listed step (by its primary id) to COMPLETED.
+// Anything else is refused here, so this route cannot be used to rewrite other fields. Returns the JSON text to send.
+function completionBody(value, quoteId) {
+    const exact = (object, keys) => object && typeof object === 'object' && !Array.isArray(object) &&
+        Object.keys(object).length === keys.length && keys.every(key => Object.prototype.hasOwnProperty.call(object, key));
+    if (!exact(value, ['quoteRequestId', 'state', 'stepExecutions']) || value.quoteRequestId !== quoteId ||
+        value.state !== 'SUCCESS' || !Array.isArray(value.stepExecutions) || value.stepExecutions.length > MAX_COMPLETION_STEPS) {
+        throw new Error('Invalid completion');
+    }
+    const ids = new Set();
+    const steps = value.stepExecutions.map(step => {
+        const idOk = typeof step.id === 'number' ? Number.isSafeInteger(step.id) && step.id > 0 :
+            typeof step.id === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(step.id);
+        if (!exact(step, ['id', 'stepName', 'stepStatus']) || !idOk || ids.has(String(step.id)) ||
+            typeof step.stepName !== 'string' || !step.stepName.trim() || step.stepName.length > 200 || step.stepStatus !== 'COMPLETED') {
+            throw new Error('Invalid completion step');
+        }
+        ids.add(String(step.id));
+        return { id: step.id, stepName: step.stepName, stepStatus: 'COMPLETED' };
+    });
+    return JSON.stringify({ quoteRequestId: quoteId, state: 'SUCCESS', stepExecutions: steps });
+}
+
+function readCompletion(req, signal, timeoutMs, quoteId) {
     if (!/^application\/json(?:\s*;\s*charset=utf-8)?$/i.test(req.headers['content-type'] || '') ||
         (req.headers['content-encoding'] && req.headers['content-encoding'] !== 'identity')) {
         return Promise.reject(failure(400, 'INVALID_REQUEST', 'A JSON completion request is required.'));
@@ -309,15 +337,10 @@ function readCompletion(req, signal, timeoutMs) {
         }
         function onEnd() {
             try {
-                const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
-                if (!body || Array.isArray(body) || Object.keys(body).length !== 1 ||
-                    typeof body.resolutionNote !== 'string' ||
-                    !body.resolutionNote.trim().length || body.resolutionNote.length > 1000) {
-                    throw new Error('Invalid resolution note');
-                }
-                finish(null, JSON.stringify({ resolutionNote: body.resolutionNote.trim() }));
+                finish(null, completionBody(JSON.parse(Buffer.concat(chunks).toString('utf8')), quoteId));
             } catch (error) {
-                finish(failure(400, 'INVALID_REQUEST', 'Provide a resolutionNote of 1–1000 characters.'));
+                finish(failure(400, 'INVALID_REQUEST',
+                    'Provide the quote id, state SUCCESS and each step to complete as { id, stepName, stepStatus: COMPLETED }.'));
             }
         }
         req.on('data', onData);
@@ -375,7 +398,7 @@ function createQuoteDataProxy(options = {}) {
         // Union starts streaming after dispatch, so attach bounded body readers before awaiting SSO.
         const [, body] = await Promise.all([
             identity,
-            route.kind === 'complete' ? readCompletion(req, signal, options.bodyTimeoutMs || 10000) : undefined
+            route.kind === 'complete' ? readCompletion(req, signal, options.bodyTimeoutMs || 10000, route.id) : undefined
         ]);
         if (signal.aborted) {
             return;
@@ -401,7 +424,7 @@ function createQuoteDataProxy(options = {}) {
                         })
                     },
                     body, limit: MAX_RESPONSE_BYTES, timeoutMs: options.upstreamTimeoutMs || 30000,
-                    signal, readErrorCode: true
+                    signal, readErrorCode: true, allowEmpty: route.kind === 'complete'
                 });
             } catch (error) {
                 throw backendFailure(502);
@@ -417,7 +440,7 @@ function createQuoteDataProxy(options = {}) {
                 throw backendFailure(response.status, response.errorCode);
             }
             res.statusCode = response.status;
-            res.end(response.status === 204 ? undefined : JSON.stringify(response.body));
+            res.end(response.status === 204 || response.body === null ? undefined : JSON.stringify(response.body));
             return;
         }
     }

@@ -38,18 +38,26 @@ angular.module('quoteManagement')
         return $http.get(QUOTEDATA_BASE + '/quote', { params: params, headers: trackingHeaders() });
       },
 
-      completeQuote: function(quoteRequestId, resolutionNote) {
-        return $http.post(
-          QUOTEDATA_BASE + '/quote/' + encodeURIComponent(quoteRequestId) + '/complete',
-          { resolutionNote: resolutionNote },
+      // Mark completed: one PATCH sets the quote to SUCCESS and every listed step to COMPLETED.
+      // QuoteData updates the database by each step's primary id (the "id" of the step in the get-quotes answer).
+      completeQuote: function(quoteRequestId, steps) {
+        return $http.patch(
+          QUOTEDATA_BASE + '/quote/' + encodeURIComponent(quoteRequestId),
+          {
+            quoteRequestId: quoteRequestId,
+            state: 'SUCCESS',
+            stepExecutions: (steps || []).map(function(step) {
+              return { id: step.id, stepName: step.stepName, stepStatus: 'COMPLETED' };
+            })
+          },
           { headers: trackingHeaders() }
         );
       },
 
-      // Assumed contract (UI-11); the server forwards it only when QUOTEDATA_RETRY_ENABLED=true.
-      retryStep: function(quoteRequestId, stepExecutionId) {
+      // Assumed contract: retry the whole quote. The server forwards it only when QUOTEDATA_RETRY_ENABLED=true.
+      retryQuote: function(quoteRequestId) {
         return $http.post(
-          QUOTEDATA_BASE + '/quote/' + encodeURIComponent(quoteRequestId) + '/steps/' + encodeURIComponent(stepExecutionId) + '/retry',
+          QUOTEDATA_BASE + '/quote/' + encodeURIComponent(quoteRequestId) + '/retry',
           undefined,
           { headers: trackingHeaders() }
         );
