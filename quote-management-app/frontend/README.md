@@ -85,7 +85,7 @@ PATCH /api/quotedata/v1/quote/{quoteRequestId}
   "comment": "…" }
 ```
 
-The dialog has an optional **Comment** box (up to 1000 characters). `comment` is added to the body only when the user typed something; without one the body is exactly the contract above. **`comment` is an assumed field name:** QuoteData has not documented a place for it. If the real API uses another name or rejects unknown fields, change it in `completeQuote` (`src/app/services/services.js`) and `completionBody` (`quote-data-proxy.js`), or remove the box from the dialog.
+The dialog has a **Comment** box that can be left empty (up to 1000 characters). `comment` is added to the body only when the user typed something; without one the body is exactly the contract above. **`comment` is an assumed field name:** QuoteData has not documented a place for it. If the real API uses another name or rejects unknown fields, change it in `completeQuote` (`src/app/services/services.js`) and `completionBody` (`quote-data-proxy.js`), or remove the box from the dialog.
 
 The server forwards it as `PATCH {QUOTEDATA_BASE_URL}/quote/{quoteRequestId}`. QuoteData updates the database by each step's primary `id`, which is the `id` of the step in the get-quotes answer. Every step is sent, except steps whose status is Not required, which stay as they are; steps already completed are sent again, which changes nothing. If QuoteData returned a step without a usable `id` the dialog explains this and the button stays disabled. Afterwards the page reloads the quote so it shows what QuoteData saved. A successful answer may have an empty body.
 

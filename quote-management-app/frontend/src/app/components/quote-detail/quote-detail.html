@@ -575,7 +575,7 @@
         <p class="small text-muted mt-2 mb-0" ng-if="completeContext.plan.notRequired">
           {{completeContext.plan.notRequired}} Not required step<span ng-if="completeContext.plan.notRequired !== 1">s are</span><span ng-if="completeContext.plan.notRequired === 1"> is</span> left as they are.
         </p>
-        <label for="complete-comment" class="form-label mt-3">Comment <span class="text-muted fw-normal">(optional)</span></label>
+        <label for="complete-comment" class="form-label mt-3">Comment</label>
         <textarea id="complete-comment" class="form-control" rows="3" maxlength="1000" ng-model="completeForm.comment" ng-readonly="completeSubmitting"
                   placeholder="What did you fix, and where?"></textarea>
         <div class="d-flex justify-content-end small text-muted mt-1">{{(completeForm.comment || '').length}} / 1000</div>

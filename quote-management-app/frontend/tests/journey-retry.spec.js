@@ -497,7 +497,7 @@ describe('Quote journey, quote retry and Mark completed', function() {
       root.$digest(); flushFocus();
       var dialog = document.getElementById('complete-dialog');
       expect(dialog.querySelector('#complete-comment')).not.toBeNull();
-      expect(dialog.textContent).toContain('Comment (optional)');
+      expect(dialog.querySelector('label[for="complete-comment"]').textContent.trim()).toBe('Comment');
       expect(dialog.textContent).toContain('5 steps and the quote itself will be set to Completed.');
       expect(dialog.querySelectorAll('.qm-complete-steps li').length).toBe(5);
       expect(dialog.textContent).toContain('1 Not required step is left as they are');
