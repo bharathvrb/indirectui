@@ -377,21 +377,19 @@
               <th>Step Name</th>
               <th>Scope</th>
               <th>Status</th>
-              <th>Attempt / Max</th>
               <th>Started At</th>
               <th>Completed At</th>
             </tr>
           </thead>
           <tbody>
             <tr ng-if="filteredProcessingSteps().length === 0">
-              <td colspan="7" class="qm-empty-inline">Processing steps: No records found</td>
+              <td colspan="6" class="qm-empty-inline">Processing steps: No records found</td>
             </tr>
             <tr ng-repeat="step in filteredProcessingSteps() track by step._key" ng-class="{'table-danger': step.stepStatus === 'FAILURE'}">
               <td>{{displayValue(step.stepOrder)}}</td>
               <td class="fw-semibold">{{displayValue(step.stepName)}}</td>
               <td>{{displayValue(step.scope)}} <span ng-if="step.itemId && step.itemId !== 'QUOTE'" class="text-muted small">({{step.itemId}})</span></td>
               <td><span class="badge qm-status {{getStepStatusClass(step.stepStatus)}}">{{getStepStatusLabel(step.stepStatus)}}</span></td>
-              <td>{{displayValue(step.attemptCount)}} / {{displayValue(step.maxRetries)}}</td>
               <td>{{step.startedAt ? (step.startedAt | date:'dd MMM yyyy HH:mm:ss') : '—'}}</td>
               <td>{{step.completedAt ? (step.completedAt | date:'dd MMM yyyy HH:mm:ss') : '—'}}</td>
             </tr>

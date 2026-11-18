@@ -370,7 +370,8 @@ describe('Quote journey, quote retry and Mark completed', function() {
       expect(page.querySelector('#spotlight-retry')).toBeNull();
       scope.setTab('processing'); root.$digest();
       expect(page.querySelectorAll('#detail-panel-processing button').length).toBe(0);
-      expect(page.querySelectorAll('#detail-panel-processing th').length).toBe(7);
+      var headings = Array.prototype.map.call(page.querySelectorAll('#detail-panel-processing th'), function(th) { return th.textContent.trim(); });
+      expect(headings).toEqual(['Step Order', 'Step Name', 'Scope', 'Status', 'Started At', 'Completed At']);
       scope.setTab('errors'); root.$digest();
       expect(page.querySelector('#detail-panel-errors .qm-error-retry')).toBeNull();
       scope.openRetryDialog(); root.$digest();
