@@ -856,6 +856,38 @@ describe('Unified quote search workspace', function() {
       expect(location.search().category).toBe(CATEGORY);
     });
 
+    it('is not shown as a chip on the page, while any other filter, or a changed category, still is', function() {
+      start('QuoteListCtrl', '/quotes');
+      element = compile(templates[templatePaths[1]])(scope);
+      root.$digest();
+      var page = element[0];
+      expect(scope.shownFilterChips()).toEqual([]);
+      expect(page.querySelector('.qm-chip-wrap')).toBeNull();
+      scope.filters.state = 'FAILED';
+      expect(scope.shownFilterChips().map(function(chip) { return chip.label; })).toEqual(['State: Failed']);
+      scope.filters.category = 'Disconnect';
+      expect(scope.shownFilterChips().map(function(chip) { return chip.label; })).toEqual(['State: Failed', 'Category: Disconnect']);
+      scope.filters.category = CATEGORY;
+      expect(scope.shownFilterChips().map(function(chip) { return chip.label; })).toEqual(['State: Failed']);
+      root.$digest();
+      expect(page.querySelectorAll('.qm-chip').length).toBe(1);
+      expect(page.querySelector('#quote-category').value).toBe(CATEGORY);
+    });
+
+    it('is the starting value of the Category box only: whatever is typed there is what is sent', function() {
+      start('QuoteListCtrl', '/quotes');
+      resolve(0, [{ quoteRequestId: 'A', category: CATEGORY }]);
+      scope.filters.state = 'FAILED';
+      scope.applyFilters(); root.$digest();
+      expect(requests[1].params).toEqual({ page: 0, size: 25, sort: 'createdAt,desc', category: CATEGORY, state: 'FAILED' });
+      scope.filters.category = 'Disconnect';
+      scope.applyFilters(); root.$digest();
+      expect(requests[2].params.category).toBe('Disconnect');
+      scope.filters.category = '';
+      scope.applyFilters(); root.$digest();
+      expect(requests[3].params.category).toBeUndefined();
+    });
+
     it('is not added when the address already holds a search or any filter', function() {
       ['/quotes?state=FAILED', '/quotes?category=Disconnect', '/quotes?designStatus=IN_DESIGN', '/quotes?fromDate=2026-01-01',
        '/quotes?channelType=DIRECT'].forEach(function(url) {
@@ -990,7 +1022,7 @@ describe('Unified quote search workspace', function() {
       expect(scope.kpis.received + scope.kpis.failed + scope.kpis.inProgress + scope.kpis.completed + scope.kpis.other).toBe(scope.kpis.total);
     });
 
-    it('shows plain counts only: no percentages, bars or attention pill, and tints Failed only when something failed', function() {
+    it('shows plain counts only: no percentages, bars or attention pill, and no tile is highlighted, Failed included', function() {
       start();
       resolve(0, [{ quoteRequestId: 'A', state: 'FAILED' }, { quoteRequestId: 'B', state: 'COMPLETED' }, { quoteRequestId: 'C', state: 'RECEIVED' }]);
       element = compile(templates[templatePaths[1]])(scope);
@@ -998,12 +1030,9 @@ describe('Unified quote search workspace', function() {
       var page = element[0];
       expect(page.querySelector('.qm-overview').textContent).not.toMatch(/%|need attention|No failures/);
       expect(page.querySelector('.qm-overview-bar, .qm-kpi-meter, .qm-kpi-share, .qm-overview-pill')).toBeNull();
-      expect(page.querySelector('.qm-kpi-card-failed').classList.contains('is-alert')).toBe(true);
-      expect(page.querySelector('.qm-kpi-card-completed').classList.contains('is-alert')).toBe(false);
+      expect(page.querySelectorAll('.qm-kpi-card.is-alert').length).toBe(0);
+      expect(page.querySelector('.qm-kpi-card-failed').className.split(/\s+/).filter(function(name) { return name.indexOf('ng-') !== 0; })).toEqual(['qm-kpi-card', 'qm-kpi-card-failed']);
       expect(page.querySelector('.qm-overview-total .qm-kpi-value').textContent).toBe('3');
-      scope.kpis.failed = 0;
-      root.$digest();
-      expect(page.querySelector('.qm-kpi-card-failed').classList.contains('is-alert')).toBe(false);
     });
 
     it('shows dashes in the tiles while nothing has loaded and after an error, never zeros', function() {

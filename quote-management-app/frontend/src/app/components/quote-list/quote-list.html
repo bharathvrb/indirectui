@@ -68,7 +68,7 @@
         <span class="qm-kpi-icon" aria-hidden="true"><i class="bi bi-collection"></i></span>
         <div><div class="qm-kpi-label">Total quotes</div><div class="qm-kpi-value">{{displayValue(kpis.total)}}</div></div>
       </div>
-      <div class="qm-kpi-card qm-kpi-card-{{tile.key}}" ng-repeat="tile in kpiTiles track by tile.key" ng-class="{'is-alert': tile.key === 'failed' && kpis.failed > 0}">
+      <div class="qm-kpi-card qm-kpi-card-{{tile.key}}" ng-repeat="tile in kpiTiles track by tile.key">
         <span class="qm-kpi-icon" aria-hidden="true"><i class="bi {{tile.icon}}"></i></span>
         <div><div class="qm-kpi-label">{{tile.label}}</div><div class="qm-kpi-value">{{displayValue(kpis[tile.key])}}</div></div>
       </div>
@@ -134,9 +134,9 @@
       <div id="quote-date-feedback" class="mt-2">
         <div class="text-danger small" role="alert" ng-if="validationError">{{validationError}}</div>
       </div>
-      <div class="qm-chip-wrap mt-3" ng-if="hasActiveFilters()">
+      <div class="qm-chip-wrap mt-3" ng-if="shownFilterChips().length">
         <span class="small text-muted">Filters:</span>
-        <span class="qm-chip" ng-repeat="chip in activeFilterChips() track by chip.key">
+        <span class="qm-chip" ng-repeat="chip in shownFilterChips() track by chip.key">
           {{chip.label}}
           <button type="button" ng-click="removeFilterChip(chip.key)" ng-attr-aria-label="Remove {{chip.label}}">
             <i class="bi bi-x" aria-hidden="true"></i>
