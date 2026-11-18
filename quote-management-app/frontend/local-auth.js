@@ -66,6 +66,9 @@ function matchesPublicOrigin(req) {
     return !!url && typeof req.headers.host === 'string' && req.headers.host.toLowerCase() === url.host.toLowerCase() ? url : null;
 }
 
+// Reads may omit Origin; the methods that write data (POST, PATCH, PUT) must name this site.
+const ORIGIN_REQUIRED_METHODS = new Set(['POST', 'PATCH', 'PUT']);
+
 function isLocalRequest(req) {
     const fetchSite = req.headers['sec-fetch-site'];
     if (fetchSite && fetchSite !== 'same-origin' && fetchSite !== 'none') {
@@ -74,7 +77,7 @@ function isLocalRequest(req) {
     const origin = req.headers.origin;
     const configured = matchesPublicOrigin(req);
     if (configured) {
-        return (origin === undefined && req.method !== 'POST') || origin === configured.origin;
+        return (origin === undefined && !ORIGIN_REQUIRED_METHODS.has(req.method)) || origin === configured.origin;
     }
     if (!isLoopback(req.socket.remoteAddress)) {
         return false;
@@ -96,7 +99,7 @@ function isLocalRequest(req) {
     } catch (error) {
         return false;
     }
-    return (origin === undefined && req.method !== 'POST') || origin === expectedOrigin;
+    return (origin === undefined && !ORIGIN_REQUIRED_METHODS.has(req.method)) || origin === expectedOrigin;
 }
 
 function json(res, status, value) {

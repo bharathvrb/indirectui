@@ -47,7 +47,6 @@ angular.module('quoteManagement')
       $scope.completeDialogOpen = false;
       $scope.completeSubmitting = false;
       $scope.completeError = null;
-      $scope.completeForm = { note: '' };
       $scope.focusItemId = null;
       $scope.copyFeedback = '';
       $scope.navigationNotice = '';
@@ -65,12 +64,13 @@ angular.module('quoteManagement')
       $scope.journey = QuoteJourney.build([]);
       $scope.ui = { compact: false, stepsOpen: false };
       $scope.copiedValue = '';
-      // Step retry (UI-11): visible everywhere a step failed; enabled only by features.retryEnabled.
+      // Quote retry: one Retry button for the whole quote, shown while the quote has failed.
+      // It is enabled only when features.retryEnabled is true (the backend call is not ready yet).
       $scope.retryEnabled = !!($window.APP_CONFIG && $window.APP_CONFIG.features && $window.APP_CONFIG.features.retryEnabled === true);
-      $scope.retry = { open: false, step: null, submitting: false, error: null, trackingId: null };
+      $scope.retry = { open: false, submitting: false, error: null, trackingId: null, failedSteps: [] };
+      $scope.retryRequested = false;
       // The failure panel's "View errors" pop-up: the errors QuoteData linked to that step (the Errors tab keeps the full list).
       $scope.errorDialog = { open: false, step: null, rows: [] };
-      $scope.retryRequested = Object.create(null);
       $scope.customerFields = [
         ['customerName', 'Customer Name'], ['tradingName', 'Trading Name'], ['organizationType', 'Organization Type'],
         ['channelType', 'Channel Type'], ['customerType', 'Customer Type'], ['customerSubType', 'Customer Sub-Type'],
@@ -1209,22 +1209,51 @@ angular.module('quoteManagement')
         return !$scope.completionSucceeded && $scope.quote && /(^|_)FAIL(ED|URE)($|_)/.test(normalizeState($scope.quote.state));
       };
 
+      // What "Mark completed" sends: every step QuoteData returned, except those that are Not required,
+      // each identified by its primary id. A step QuoteData sent without a usable id cannot be updated, so it blocks the action.
+      function payloadId(id) {
+        if (typeof id === 'number') return isFinite(id) && id > 0 && Math.floor(id) === id && id <= 9007199254740991 ? id : null;
+        if (typeof id !== 'string') return null;
+        if (/^[1-9][0-9]{0,15}$/.test(id) && Number(id) <= 9007199254740991) return Number(id);
+        return /^[A-Za-z0-9_-]{1,64}$/.test(id) ? id : null;
+      }
+      function buildCompletionPlan() {
+        var plan = { steps: [], notRequired: 0, alreadyCompleted: 0, blocked: [], tooMany: false };
+        var seen = Object.create(null);
+        $scope.processingSteps.forEach(function(step) {
+          var status = QuoteJourney.normalizeStatus(step.stepStatus);
+          if (status === 'NOT_REQUIRED') { plan.notRequired++; return; }
+          var id = payloadId(step.id);
+          var name = typeof step.stepName === 'string' ? step.stepName.trim() : '';
+          if (id === null || !name || name.length > 200 || seen[String(id)]) {
+            plan.blocked.push(step);
+            return;
+          }
+          seen[String(id)] = true;
+          if (status === 'SUCCESS') plan.alreadyCompleted++;
+          plan.steps.push({ id: id, stepName: name, stepStatus: step.stepStatus, label: $scope.stepLabel(name), willChange: status !== 'SUCCESS' });
+        });
+        plan.tooMany = plan.steps.length > 500;
+        plan.toComplete = plan.steps.length - plan.alreadyCompleted;
+        return plan;
+      }
+
       $scope.openCompleteDialog = function() {
         if (!$scope.isFailed() || !$scope.canUpdateQuotes || $scope.completeSubmitting) return;
         returnFocus = document.activeElement;
-        $scope.completeContext = { quoteRequestId: $scope.quote.quoteRequestId, ticketNumber: $scope.quote.supportTicketNumber };
+        $scope.completeContext = {
+          quoteRequestId: $scope.quote.quoteRequestId, ticketNumber: $scope.quote.supportTicketNumber, plan: buildCompletionPlan()
+        };
         $scope.completeDialogOpen = true;
         $scope.completeError = null;
         $scope.completeTrackingId = null;
-        $scope.completeForm.note = '';
-        focusElement('resolution-note');
+        focusElement('complete-confirm');
       };
 
       $scope.closeCompleteDialog = function() {
         if ($scope.completeSubmitting) return;
         $scope.completeDialogOpen = false;
         $scope.completeError = null;
-        $scope.completeForm.note = '';
         focusTimers.push($timeout(function() {
           var target = returnFocus && document.documentElement.contains(returnFocus) ? returnFocus : document.getElementById('quote-detail-heading');
           if (target) target.focus();
@@ -1257,32 +1286,25 @@ angular.module('quoteManagement')
         copyTimer = $timeout(function() { $scope.copyFeedback = ''; }, 3500);
       }
 
-      function stepById(id) {
-        if (id === null || id === undefined) return null;
-        return $scope.processingSteps.filter(function(step) { return String(step.id) === String(id); })[0] || null;
-      }
-      $scope.stepForError = function(row) { return row ? stepById(row.stepExecutionId) : null; };
-      $scope.isRetryable = function(step) {
-        return !!step && normalizeStepStatus(step.stepStatus) === 'FAILURE' && step.id !== null && step.id !== undefined &&
-          !$scope.completionSucceeded && !$scope.retryRequested[String(step.id)];
+      $scope.canRetry = function() {
+        return !!($scope.retryEnabled && $scope.canUpdateQuotes && $scope.isFailed() && !$scope.retry.submitting && !$scope.retryRequested);
       };
-      $scope.canRetry = function(step) {
-        return $scope.retryEnabled && !!$scope.canUpdateQuotes && $scope.isRetryable(step) && !$scope.retry.submitting;
-      };
-      $scope.retryTitle = function(step) {
+      $scope.retryTitle = function() {
         if (!$scope.retryEnabled) return 'Coming soon';
-        if (step && $scope.retryRequested[String(step.id)]) return 'Retry requested';
-        return $scope.isRetryable(step) ? 'Retry this step' : 'Only failed steps can be retried';
+        return $scope.retryRequested ? 'Retry requested' : 'Retry this quote';
       };
-      $scope.openRetryDialog = function(step) {
-        if (!$scope.canRetry(step) || $scope.retry.open || $scope.errorDialog.open) return;
+      $scope.openRetryDialog = function() {
+        if (!$scope.canRetry() || $scope.retry.open || $scope.errorDialog.open || $scope.completeDialogOpen) return;
         returnFocus = document.activeElement;
-        $scope.retry = { open: true, step: step, submitting: false, error: null, trackingId: null };
+        var failedSteps = $scope.processingSteps.filter(function(step) {
+          return QuoteJourney.normalizeStatus(step.stepStatus) === 'FAILURE';
+        }).map(function(step) { return { key: step._key, label: $scope.stepLabel(step.stepName) }; });
+        $scope.retry = { open: true, submitting: false, error: null, trackingId: null, failedSteps: failedSteps };
         focusElement('retry-confirm');
       };
       $scope.closeRetryDialog = function() {
         if ($scope.retry.submitting) return;
-        $scope.retry = { open: false, step: null, submitting: false, error: null, trackingId: null };
+        $scope.retry = { open: false, submitting: false, error: null, trackingId: null, failedSteps: [] };
         focusTimers.push($timeout(function() {
           var target = returnFocus && document.documentElement.contains(returnFocus) ? returnFocus : document.getElementById('quote-detail-heading');
           if (target) target.focus();
@@ -1315,35 +1337,34 @@ angular.module('quoteManagement')
       $scope.errorDialogKeydown = function(event) { trapDialogFocus(event, 'error-dialog', $scope.closeErrorDialog); };
       $scope.retryDialogKeydown = function(event) { trapDialogFocus(event, 'retry-dialog', $scope.closeRetryDialog); };
       $scope.submitRetry = function() {
-        var step = $scope.retry.step;
-        if (!$scope.retry.open || $scope.retry.submitting || !$scope.retryEnabled || !$scope.isRetryable(step)) return;
+        if (!$scope.retry.open || $scope.retry.submitting || !$scope.canRetry()) return;
         $scope.retry.submitting = true;
         $scope.retry.error = null;
-        QuoteService.retryStep($scope.quote.quoteRequestId, step.id).then(function() {
-          $scope.retryRequested[String(step.id)] = true;
+        QuoteService.retryQuote($scope.quote.quoteRequestId).then(function() {
+          $scope.retryRequested = true;
           $scope.retry.submitting = false;
           $scope.closeRetryDialog();
-          notify('Retry requested for ' + $scope.stepLabel(step.stepName) + '.');
+          notify('Retry requested for this quote.');
           $scope.loadQuote();
         }, function(err) {
           $scope.retry.submitting = false;
           $scope.retry.trackingId = extractTrackingId(err);
           var status = err && err.status;
-          $scope.retry.error = status === 403 ? 'You are not allowed to retry this step.'
-            : status === 404 ? 'This step was not found. Reload the quote and try again.'
-            : status === 409 ? 'This step is no longer failed or is already being retried.'
+          $scope.retry.error = status === 403 ? 'You are not allowed to retry this quote.'
+            : status === 404 ? 'This quote was not found. Reload the quote and try again.'
+            : status === 409 ? 'This quote is no longer failed or is already being retried.'
             : status === 501 ? 'Retry is not available yet.'
             : status === 0 ? 'Cannot reach the Quote Management server. Check your connection and try again.'
             : err && err.data && typeof err.data.message === 'string' ? err.data.message
-            : 'Unable to retry this step.';
+            : 'Unable to retry this quote.';
           if (status === 409) $scope.loadQuote();
         });
       };
 
       $scope.canSubmitComplete = function() {
-        var note = ($scope.completeForm.note || '').trim();
-        return $scope.completeDialogOpen && $scope.isFailed() && $scope.canUpdateQuotes &&
-          note.length >= 1 && note.length <= 1000 && !$scope.completeSubmitting;
+        var plan = $scope.completeContext && $scope.completeContext.plan;
+        return !!plan && $scope.completeDialogOpen && $scope.isFailed() && $scope.canUpdateQuotes &&
+          !plan.blocked.length && !plan.tooMany && !$scope.completeSubmitting;
       };
 
       $scope.submitComplete = function() {
@@ -1351,25 +1372,24 @@ angular.module('quoteManagement')
         $scope.completeSubmitting = true;
         $scope.completeError = null;
 
-        QuoteService.completeQuote($scope.quote.quoteRequestId, ($scope.completeForm.note || '').trim()).then(function() {
+        QuoteService.completeQuote($scope.quote.quoteRequestId, $scope.completeContext.plan.steps).then(function() {
           $scope.completeSubmitting = false;
           $scope.completionSucceeded = true;
-          $scope.completionNotice = 'Quote marked Completed.';
+          $scope.completionNotice = 'Quote marked Completed. All its steps were set to Completed.';
           $scope.closeCompleteDialog();
           restoreFocusAfterLoad = true;
           $scope.loadQuote();
         }, function(err) {
           $scope.completeSubmitting = false;
           $scope.completeTrackingId = extractTrackingId(err);
-          if (err.status === 403) {
-            $scope.completeError = 'You are not allowed to complete this quote.';
-          } else if (err.status === 409) {
-            $scope.completeError = 'This quote is already completed or not in a failed state.';
-            $scope.loadQuote();
-          } else {
-            var message = err.data && err.data.message ? err.data.message : 'Unable to complete this quote.';
-            $scope.completeError = message;
-          }
+          var status = err && err.status;
+          $scope.completeError = status === 403 ? 'You are not allowed to complete this quote.'
+            : status === 404 ? 'This quote was not found. Reload the quote and try again.'
+            : status === 409 ? 'This quote changed while you were working on it. Reload it and try again.'
+            : status === 0 ? 'Cannot reach the Quote Management server. Check your connection and try again.'
+            : err && err.data && typeof err.data.message === 'string' && err.data.message ? err.data.message
+            : 'Unable to complete this quote.';
+          if (status === 409) $scope.loadQuote();
         });
       };
 

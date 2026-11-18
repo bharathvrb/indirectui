@@ -1,6 +1,6 @@
-describe('Quote journey and step retry', function() {
+describe('Quote journey, quote retry and Mark completed', function() {
   'use strict';
-  var root, scope, q, timeout, compile, service, loads, retries, element, template, originalConfig;
+  var root, scope, q, timeout, compile, service, loads, retries, completions, element, template, originalConfig;
 
   beforeAll(function(done) {
     var xhr = new XMLHttpRequest();
@@ -46,11 +46,11 @@ describe('Quote journey and step retry', function() {
   function start(options) {
     options = options || {};
     window.APP_CONFIG = angular.extend({}, originalConfig, { features: { retryEnabled: !!options.retryEnabled } });
-    loads = []; retries = [];
+    loads = []; retries = []; completions = [];
     service = {
       getQuote: jasmine.createSpy('getQuote').and.callFake(function() { var d = q.defer(); loads.push(d); return d.promise; }),
-      retryStep: jasmine.createSpy('retryStep').and.callFake(function() { var d = q.defer(); retries.push(d); return d.promise; }),
-      completeQuote: jasmine.createSpy('completeQuote'),
+      retryQuote: jasmine.createSpy('retryQuote').and.callFake(function() { var d = q.defer(); retries.push(d); return d.promise; }),
+      completeQuote: jasmine.createSpy('completeQuote').and.callFake(function() { var d = q.defer(); completions.push(d); return d.promise; }),
       canDownloadContract: function() { return false; }
     };
     angular.mock.module('quoteManagement', function($provide) {
@@ -109,7 +109,6 @@ describe('Quote journey and step retry', function() {
       click(page.querySelector('#spotlight-steps'));
       expect(isOpen(page)).toBe(false);
       click(page.querySelector('#spotlight-errors'));
-      click(page.querySelector('#spotlight-retry'));
       expect(isOpen(page)).toBe(false);
       click(page.querySelector('.qm-spotlight'));
       expect(isOpen(page)).toBe(true);
@@ -252,7 +251,7 @@ describe('Quote journey and step retry', function() {
       var page = start({ retryEnabled: true });
       angular.element(page.querySelector('#spotlight-errors')).triggerHandler('click');
       root.$digest();
-      scope.openRetryDialog(failedStep());
+      scope.openRetryDialog();
       expect(scope.retry.open).toBe(false);
     });
   });
@@ -306,6 +305,7 @@ describe('Quote journey and step retry', function() {
       expect(facts).toEqual(['External ID', 'Support ticket', 'Created by', 'Created at', 'Completed at']);
       expect(head.querySelector('.qm-quote-head-actions #mark-completed')).not.toBeNull();
       expect(head.querySelector('.qm-quote-head-actions .btn-primary').textContent).toContain('Mark completed');
+      expect(head.querySelector('.qm-quote-head-actions #retry-quote')).not.toBeNull();
     });
 
     it('keeps the "Stopped at" line when a step failed but the quote itself is not failed', function() {
@@ -321,6 +321,7 @@ describe('Quote journey and step retry', function() {
     it('hides Mark completed when the quote is not failed', function() {
       var page = start({ data: fixture('COMPLETED') });
       expect(page.querySelector('#mark-completed')).toBeNull();
+      expect(page.querySelector('#retry-quote')).toBeNull();
       expect(page.querySelector('.qm-quote-head .badge').textContent.trim()).toBe('Completed');
     });
   });
@@ -358,72 +359,56 @@ describe('Quote journey and step retry', function() {
   });
 
   describe('when retry is not enabled (default)', function() {
-    it('shows disabled "Coming soon" retry controls on failed steps and never calls the API', function() {
+    it('shows one disabled Retry button for the quote, with no "Coming soon" label, none on steps or errors, and never calls the API', function() {
       var page = start();
       expect(scope.retryEnabled).toBe(false);
-      var spotlight = page.querySelector('#spotlight-retry');
-      expect(spotlight.disabled).toBe(true);
-      expect(spotlight.getAttribute('title')).toBe('Coming soon');
-      expect(page.querySelector('.qm-soon').textContent).toContain('Retry coming soon');
+      var retry = page.querySelector('#retry-quote');
+      expect(retry.disabled).toBe(true);
+      expect(retry.textContent.trim()).toBe('Retry');
+      expect(page.querySelector('.qm-retry-wrap').getAttribute('title')).toBe('Coming soon');
+      expect(page.querySelector('.qm-retry-wrap').textContent).not.toContain('Coming soon');
+      expect(page.querySelector('#spotlight-retry')).toBeNull();
       scope.setTab('processing'); root.$digest();
-      var processing = page.querySelectorAll('#detail-panel-processing button[title="Coming soon"]');
-      expect(processing.length).toBe(1);
-      expect(processing[0].disabled).toBe(true);
-      scope.openRetryDialog(failedStep()); root.$digest();
+      expect(page.querySelectorAll('#detail-panel-processing button').length).toBe(0);
+      expect(page.querySelectorAll('#detail-panel-processing th').length).toBe(7);
+      scope.setTab('errors'); root.$digest();
+      expect(page.querySelector('#detail-panel-errors .qm-error-retry')).toBeNull();
+      scope.openRetryDialog(); root.$digest();
+      angular.element(retry).triggerHandler('click'); root.$digest();
       expect(scope.retry.open).toBe(false);
-      expect(service.retryStep).not.toHaveBeenCalled();
+      expect(service.retryQuote).not.toHaveBeenCalled();
     });
 
-    it('shows a retry control on every error row, all disabled', function() {
-      var page = start();
-      scope.setTab('errors'); root.$digest();
-      var buttons = page.querySelectorAll('#detail-panel-errors .qm-error-retry');
-      var retry = Array.prototype.filter.call(buttons, function(b) { return /Retry/.test(b.textContent); });
-      expect(retry.length).toBe(2);
-      retry.forEach(function(button) { expect(button.disabled).toBe(true); });
+    it('is hidden from users who cannot update quotes', function() {
+      expect(start({ canUpdate: false }).querySelector('#retry-quote')).toBeNull();
     });
   });
 
   describe('when retry is enabled', function() {
-    it('enables retry only for failed steps the user can update', function() {
+    it('enables the quote Retry button only for a failed quote the user can update', function() {
       var page = start({ retryEnabled: true });
-      expect(page.querySelector('#spotlight-retry').disabled).toBe(false);
-      expect(scope.retryTitle(failedStep())).toBe('Retry this step');
-      expect(scope.canRetry(scope.processingSteps.filter(function(s) { return s.id === 1; })[0])).toBe(false);
-      expect(scope.retryTitle(scope.processingSteps.filter(function(s) { return s.id === 1; })[0])).toBe('Only failed steps can be retried');
-      expect(scope.canRetry(null)).toBe(false);
-      scope.setTab('processing'); root.$digest();
-      var buttons = page.querySelectorAll('#detail-panel-processing button[title="Retry this step"]');
-      expect(buttons.length).toBe(1);
-      expect(buttons[0].disabled).toBe(false);
-      scope.setTab('errors'); root.$digest();
-      var linked = page.querySelectorAll('#detail-panel-errors button[title="Retry this step"]');
-      var unlinked = page.querySelectorAll('#detail-panel-errors button[title="Only failed steps can be retried"]');
-      expect(linked.length).toBe(1);
-      expect(unlinked.length).toBe(1);
-      expect(unlinked[0].disabled).toBe(true);
-    });
-
-    it('disables retry without update permission or after the quote was completed', function() {
-      start({ retryEnabled: true, canUpdate: false });
-      expect(scope.canRetry(failedStep())).toBe(false);
+      expect(page.querySelector('#retry-quote').disabled).toBe(false);
+      expect(scope.retryTitle()).toBe('Retry this quote');
+      scope.canUpdateQuotes = false;
+      expect(scope.canRetry()).toBe(false);
       scope.canUpdateQuotes = true;
-      expect(scope.canRetry(failedStep())).toBe(true);
+      expect(scope.canRetry()).toBe(true);
       scope.completionSucceeded = true;
-      expect(scope.canRetry(failedStep())).toBe(false);
+      expect(scope.canRetry()).toBe(false);
     });
 
-    it('confirms in a dialog that names the step, attempts and exhausted retries, with focus management', function() {
+    it('confirms in a dialog that lists the failed steps, with focus management', function() {
       var page = start({ retryEnabled: true });
-      var trigger = page.querySelector('#spotlight-retry');
+      var trigger = page.querySelector('#retry-quote');
       trigger.focus();
       angular.element(trigger).triggerHandler('click');
       root.$digest(); flushFocus();
       var dialog = document.getElementById('retry-dialog');
       expect(dialog.getAttribute('role')).toBe('dialog');
-      expect(dialog.textContent).toContain('Retry CREATE_PROPOSAL?');
-      expect(dialog.textContent).toContain('3 of 3');
-      expect(dialog.textContent).toContain('Automatic retries are used up');
+      expect(dialog.textContent).toContain('Retry this quote?');
+      expect(dialog.textContent).toContain('PARTNER-QUOTE-1-SYNTHETIC');
+      expect(dialog.querySelectorAll('.qm-complete-steps li').length).toBe(1);
+      expect(dialog.querySelector('.qm-complete-steps').textContent).toContain('CREATE_PROPOSAL');
       expect(document.activeElement.id).toBe('retry-confirm');
       scope.retryDialogKeydown(key('Tab')); // confirm is last: wraps to first
       expect(document.activeElement.textContent.trim()).toBe('Cancel');
@@ -435,58 +420,51 @@ describe('Quote journey and step retry', function() {
       expect(scope.retry.open).toBe(false);
       expect(document.getElementById('retry-dialog')).toBeNull();
       expect(document.activeElement).toBe(trigger);
-      expect(service.retryStep).not.toHaveBeenCalled();
+      expect(service.retryQuote).not.toHaveBeenCalled();
     });
 
-    it('omits the exhausted-retries warning when attempts remain', function() {
-      var data = fixture(); data.stepExecutions[2].attemptCount = 1;
-      start({ retryEnabled: true, data: data });
-      scope.openRetryDialog(failedStep()); root.$digest();
-      expect(document.getElementById('retry-dialog').textContent).not.toContain('Automatic retries are used up');
-    });
-
-    it('sends one retry request even on double submit, then confirms and reloads the quote', function() {
-      start({ retryEnabled: true });
-      var step = failedStep();
-      scope.openRetryDialog(step); root.$digest();
+    it('sends one retry request for the quote even on double submit, then confirms and reloads the quote', function() {
+      var page = start({ retryEnabled: true });
+      scope.openRetryDialog(); root.$digest();
       scope.submitRetry(); scope.submitRetry(); root.$digest();
-      expect(service.retryStep).toHaveBeenCalledTimes(1);
-      expect(service.retryStep).toHaveBeenCalledWith('PARTNER-QUOTE-1-SYNTHETIC', 5);
+      expect(service.retryQuote).toHaveBeenCalledTimes(1);
+      expect(service.retryQuote).toHaveBeenCalledWith('PARTNER-QUOTE-1-SYNTHETIC');
       expect(document.getElementById('retry-confirm').disabled).toBe(true);
       expect(document.getElementById('retry-confirm').textContent).toContain('Requesting');
       retries[0].resolve({ status: 202 }); root.$digest();
       expect(scope.retry.open).toBe(false);
-      expect(scope.copyFeedback).toBe('Retry requested for CREATE_PROPOSAL.');
+      expect(scope.copyFeedback).toBe('Retry requested for this quote.');
       expect(service.getQuote).toHaveBeenCalledTimes(2);
-      expect(scope.retryRequested['5']).toBe(true);
-      expect(scope.canRetry(step)).toBe(false);
-      expect(scope.retryTitle(step)).toBe('Retry requested');
+      expect(scope.retryRequested).toBe(true);
+      expect(scope.canRetry()).toBe(false);
+      expect(scope.retryTitle()).toBe('Retry requested');
       loads[1].resolve({ data: fixture() }); root.$digest();
-      expect(scope.canRetry(failedStep())).toBe(false); // still marked as requested after the reload
+      expect(page.querySelector('#retry-quote').disabled).toBe(true);
+      expect(page.querySelector('#retry-quote').textContent.trim()).toBe('Retry requested');
       timeout.flush(3500);
       expect(scope.copyFeedback).toBe('');
     });
 
     it('cannot be cancelled while the request is in flight', function() {
       start({ retryEnabled: true });
-      scope.openRetryDialog(failedStep()); root.$digest();
+      scope.openRetryDialog(); root.$digest();
       scope.submitRetry(); root.$digest();
       scope.closeRetryDialog(); root.$digest();
       expect(scope.retry.open).toBe(true);
     });
 
     [
-      [403, null, 'You are not allowed to retry this step.', false],
-      [404, null, 'This step was not found. Reload the quote and try again.', false],
-      [409, null, 'This step is no longer failed or is already being retried.', true],
-      [501, { code: 'RETRY_NOT_AVAILABLE', message: 'Step retry is not available yet.' }, 'Retry is not available yet.', false],
+      [403, null, 'You are not allowed to retry this quote.', false],
+      [404, null, 'This quote was not found. Reload the quote and try again.', false],
+      [409, null, 'This quote is no longer failed or is already being retried.', true],
+      [501, { code: 'RETRY_NOT_AVAILABLE', message: 'Quote retry is not available yet.' }, 'Retry is not available yet.', false],
       [0, null, 'Cannot reach the Quote Management server. Check your connection and try again.', false],
       [502, { code: 'UPSTREAM_FAILED', message: 'QuoteData is unavailable.', trackingId: 'TRACE-RETRY' }, 'QuoteData is unavailable.', false],
-      [500, null, 'Unable to retry this step.', false]
+      [500, null, 'Unable to retry this quote.', false]
     ].forEach(function(entry) {
       it('explains a ' + entry[0] + ' retry failure and allows another attempt', function() {
         start({ retryEnabled: true });
-        scope.openRetryDialog(failedStep()); root.$digest();
+        scope.openRetryDialog(); root.$digest();
         scope.submitRetry(); root.$digest();
         retries[0].reject({ status: entry[0], data: entry[1], headers: function() { return null; }, config: { headers: { trackingId: 'TRACE-CLIENT' } } });
         root.$digest();
@@ -496,23 +474,125 @@ describe('Quote journey and step retry', function() {
         expect(scope.retry.trackingId).toBe(entry[1] && entry[1].trackingId || 'TRACE-CLIENT');
         expect(document.getElementById('retry-dialog').textContent).toContain(entry[2]);
         expect(service.getQuote).toHaveBeenCalledTimes(entry[3] ? 2 : 1);
-        expect(scope.retryRequested['5']).toBeUndefined();
+        expect(scope.retryRequested).toBe(false);
         if (!entry[3]) {
           scope.submitRetry(); root.$digest();
-          expect(service.retryStep).toHaveBeenCalledTimes(2);
+          expect(service.retryQuote).toHaveBeenCalledTimes(2);
         }
       });
     });
+  });
 
-    it('retries the failed step linked to an error row', function() {
-      start({ retryEnabled: true });
-      var row = scope.errorRows.filter(function(r) { return r.stepExecutionId === 5; })[0];
-      expect(scope.stepForError(row).id).toBe(5);
-      expect(scope.stepForError(scope.errorRows.filter(function(r) { return r.stepExecutionId === null; })[0])).toBeNull();
-      expect(scope.stepForError(null)).toBeNull();
-      scope.openRetryDialog(scope.stepForError(row)); root.$digest();
-      scope.submitRetry(); root.$digest();
-      expect(service.retryStep).toHaveBeenCalledWith('PARTNER-QUOTE-1-SYNTHETIC', 5);
+  describe('Mark completed', function() {
+    function withNotRequired() {
+      var data = fixture();
+      data.stepExecutions.push({ id: 11, stepName: 'ADD_PROMOTION', stepStatus: 'Not Required' });
+      return data;
+    }
+
+    it('lists every step with what it becomes, leaving Not required steps out, and sends them with their primary ids', function() {
+      var page = start({ data: withNotRequired() });
+      angular.element(page.querySelector('#mark-completed')).triggerHandler('click');
+      root.$digest(); flushFocus();
+      var dialog = document.getElementById('complete-dialog');
+      expect(dialog.querySelector('textarea')).toBeNull();
+      expect(dialog.textContent).toContain('5 steps and the quote itself will be set to Completed.');
+      expect(dialog.querySelectorAll('.qm-complete-steps li').length).toBe(5);
+      expect(dialog.textContent).toContain('1 Not required step is left as they are');
+      expect(document.activeElement.id).toBe('complete-confirm');
+      expect(scope.canSubmitComplete()).toBe(true);
+      scope.submitComplete(); scope.submitComplete(); root.$digest();
+      expect(service.completeQuote).toHaveBeenCalledTimes(1);
+      var call = service.completeQuote.calls.mostRecent().args;
+      expect(call[0]).toBe('PARTNER-QUOTE-1-SYNTHETIC');
+      expect(call[1].map(function(step) { return step.id + ':' + step.stepName; }).sort()).toEqual(
+        ['1:ADDRESS_VALIDATION', '2:CREATE_CONTACT', '5:CREATE_PROPOSAL', '6:ADD_SITE', '9:CONTRACT_GENERATION']);
+    });
+
+    it('turns numeric-string ids into numbers and reloads the quote after a success', function() {
+      var data = fixture();
+      data.stepExecutions.forEach(function(step) { step.id = String(step.id); });
+      start({ data: data });
+      scope.openCompleteDialog(); root.$digest();
+      scope.submitComplete(); root.$digest();
+      expect(service.completeQuote.calls.mostRecent().args[1].map(function(step) { return step.id; }).sort(function(a, b) { return a - b; })).toEqual([1, 2, 5, 6, 9]);
+      completions[0].resolve({ status: 200 }); root.$digest();
+      expect(scope.completionSucceeded).toBe(true);
+      expect(scope.completionNotice).toBe('Quote marked Completed. All its steps were set to Completed.');
+      expect(scope.completeDialogOpen).toBe(false);
+      expect(service.getQuote).toHaveBeenCalledTimes(2);
+      expect(scope.isFailed()).toBe(false);
+    });
+
+    it('blocks completion and says why when QuoteData sent a step without a usable id or name', function() {
+      var data = fixture();
+      delete data.stepExecutions[3].id;
+      start({ data: data });
+      scope.openCompleteDialog(); root.$digest();
+      expect(scope.canSubmitComplete()).toBe(false);
+      expect(document.getElementById('complete-dialog').textContent).toContain('1 step came without a usable id from QuoteData');
+      expect(document.getElementById('complete-confirm').disabled).toBe(true);
+      scope.submitComplete(); root.$digest();
+      expect(service.completeQuote).not.toHaveBeenCalled();
+    });
+
+    it('blocks completion when two steps share an id', function() {
+      var duplicate = fixture(); duplicate.stepExecutions[1].id = 1;
+      start({ data: duplicate });
+      scope.openCompleteDialog(); root.$digest();
+      expect(scope.completeContext.plan.blocked.length).toBe(1);
+      expect(scope.canSubmitComplete()).toBe(false);
+    });
+
+    it('blocks completion for a step without a name', function() {
+      var nameless = fixture(); nameless.stepExecutions[0].stepName = '   ';
+      start({ data: nameless });
+      scope.openCompleteDialog(); root.$digest();
+      expect(scope.completeContext.plan.blocked.length).toBe(1);
+      expect(scope.canSubmitComplete()).toBe(false);
+    });
+
+    it('blocks completion for more than 500 steps', function() {
+      var big = fixture();
+      big.stepExecutions = [];
+      for (var i = 1; i <= 501; i++) big.stepExecutions.push({ id: i, stepName: 'STEP_' + i, stepStatus: 'PENDING' });
+      start({ data: big });
+      scope.openCompleteDialog(); root.$digest();
+      expect(scope.completeContext.plan.tooMany).toBe(true);
+      expect(scope.canSubmitComplete()).toBe(false);
+      expect(document.getElementById('complete-dialog').textContent).toContain('too many steps');
+    });
+
+    it('completes a failed quote whose steps list is empty, with an empty list', function() {
+      var data = fixture(); data.stepExecutions = [];
+      start({ data: data });
+      scope.openCompleteDialog(); root.$digest();
+      expect(scope.canSubmitComplete()).toBe(true);
+      scope.submitComplete(); root.$digest();
+      expect(service.completeQuote).toHaveBeenCalledWith('PARTNER-QUOTE-1-SYNTHETIC', []);
+    });
+
+    [
+      [403, null, 'You are not allowed to complete this quote.', false],
+      [404, null, 'This quote was not found. Reload the quote and try again.', false],
+      [409, null, 'This quote changed while you were working on it. Reload it and try again.', true],
+      [0, null, 'Cannot reach the Quote Management server. Check your connection and try again.', false],
+      [400, { code: 'INVALID_REQUEST', message: 'The request is not valid.' }, 'The request is not valid.', false],
+      [500, null, 'Unable to complete this quote.', false]
+    ].forEach(function(entry) {
+      it('explains a ' + entry[0] + ' completion failure and keeps the quote failed', function() {
+        start();
+        scope.openCompleteDialog(); root.$digest();
+        scope.submitComplete(); root.$digest();
+        completions[0].reject({ status: entry[0], data: entry[1], headers: function() { return null; }, config: { headers: { trackingId: 'TRACE-CLIENT' } } });
+        root.$digest();
+        expect(scope.completeError).toBe(entry[2]);
+        expect(scope.completeDialogOpen).toBe(true);
+        expect(scope.completeSubmitting).toBe(false);
+        expect(scope.completionSucceeded).toBeFalsy();
+        expect(scope.completeTrackingId).toBe('TRACE-CLIENT');
+        expect(service.getQuote).toHaveBeenCalledTimes(entry[3] ? 2 : 1);
+      });
     });
   });
 });

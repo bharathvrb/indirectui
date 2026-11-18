@@ -24,7 +24,7 @@ Always serve `dist/`, not `src/`: vendor libraries (Angular, Bootstrap, icons, M
 | `QUOTEDATA_CLIENT_ID`, `QUOTEDATA_CLIENT_SECRET`, `QUOTEDATA_SCOPE` | QuoteData service account (OAuth `client_credentials`). Required for any data. |
 | `QUOTEDATA_TOKEN_URL` | Token endpoint. Default `https://sat-ci.codebig2.net/v2/ws/token.oauth2`. Must be HTTPS. |
 | `QUOTEDATA_BASE_URL` | QuoteData base including `/quotedata/v1`. Default `https://quotedata-flx.as-g8.cf.comcast.net/quotedata/v1`. |
-| `QUOTEDATA_RETRY_ENABLED` | `true` forwards step retries to QuoteData (see Step retry). Anything else answers `501 RETRY_NOT_AVAILABLE`. |
+| `QUOTEDATA_RETRY_ENABLED` | `true` forwards quote retries to QuoteData (see Quote retry and Mark completed). Anything else answers `501 RETRY_NOT_AVAILABLE`. |
 | `QUOTEDATA_ALLOW_HTTP` | Set `true` only if the QuoteData host serves plain HTTP; then use an `http://` base URL. The token URL stays HTTPS-only. |
 | `SSO_CLIENT_ID`, `SSO_TENANT_ID` | Used to verify SSO users' ID tokens. Must match `AUTH_CONFIG` in `src/config.js`. Without them SSO users get `503 SSO_AUTH_NOT_CONFIGURED`. |
 | `LOCAL_LOGIN_USERNAME`, `LOCAL_LOGIN_PASSWORD` | Username/password sign-in, available in every environment including `NODE_ENV=production` (set both, or neither to turn it off). |
@@ -43,7 +43,7 @@ Restart the server after changing settings.
 | `APP_CONFIG.quoteDataLookupOnly` | Applies to the **Search** page (`/search`). `true` (default): it finds one quote by quote request ID, external ID or proposal ID. `false`: it also offers an *Other fields* tile, a free-text search sent as `search=` (confirm that QuoteData supports it first). |
 | `APP_CONFIG.contractDownloadUrl` | Optional contract download endpoint (`documentType`, `dmaasId` query). Blank shows IDs with copy buttons only. |
 | `APP_CONFIG.supportUrl` | Optional HTTPS support link shown in the menu and on error pages. |
-| `APP_CONFIG.features.retryEnabled` | `false` (default): Retry buttons are visible but disabled with "Coming soon". `true`: failed steps can be retried (see Step retry). |
+| `APP_CONFIG.features.retryEnabled` | `false` (default): the quote Retry button is visible but disabled (its hover text says "Coming soon"). `true`: a failed quote can be retried (see Quote retry and Mark completed). |
 | `AUTH_CONFIG.clientId`, `tenantId`, `loginScopes`, `loginPrompt`, `redirectUri` | Entra ID (MSAL) sign-in. Currently the ONP UI LOWER - INT registration; its SPA redirect URIs must include `http://127.0.0.1:8081/`. |
 
 `config.js` is public: never put secrets in it.
@@ -58,19 +58,33 @@ The Search page asks **Look up by** first, then for the value. The types are Quo
 
 The video shows the screens as they were when it was recorded, with demo data only. After a visible change to those screens, record it again with `tools/record-tour.cjs` (the header of that file lists the steps) and update `tourChapters` in `quote-list.controller.js`.
 
-## Processing journey and step retry
+## Processing journey, quote retry and Mark completed
 
 The quote detail page lists the processing steps (`stepExecutions`) as one numbered sequence under their actual names (`ADDRESS_VALIDATION`, `CREATE_CONTACT`, `GENERATE_CONTRACT`, and so on), in the order of the OMW flow, with no grouping. Each step shows only its name, number and status. Attempt counts, timings and the site or item a step applies to stay in the Processing tab. Steps whose status is Not required are shown with that status (a dashed, muted tile and a "not required" count) but progress ignores them: the percentage and completion are worked out from the steps that apply, so a quote whose other steps are all Success or Completed shows a completed journey. The order is the `FLOW` list in `src/app/services/quote-journey.service.js`; add new step names there. Steps it doesn't know still appear, after the known ones. When the quote has failed, the failure summary (latest failed step, its position such as "Step 6 of 16", error code and message) sits at the top of the list.
 
 The failure panel's **View errors** button opens a pop-up with the errors QuoteData linked to that step (matched by `stepExecutionId`); its **All errors** button opens the Errors tab, which always lists every error of the quote.
 
-Retry appears on the failure summary, on failed rows in the Processing tab and on every row in the Errors tab. To turn it on when the backend API exists:
+### Quote retry
 
-1. Confirm the QuoteData endpoint. The app currently calls `POST {QUOTEDATA_BASE_URL}/quote/{quoteRequestId}/steps/{stepExecutionId}/retry` with no body; adjust `quote-data-proxy.js` if the real path differs.
+Retry is one button at the top of the quote page, beside Reload and Mark completed. It shows while the quote has failed (state `FAILED`/`FAILURE`) and the user may update quotes; there are no Retry buttons on individual steps or errors. Until the backend exists the button is visible but disabled (hover text "Coming soon"), with no label beside it. To turn it on when the backend API exists:
+
+1. Confirm the QuoteData endpoint. The app currently calls `POST {QUOTEDATA_BASE_URL}/quote/{quoteRequestId}/retry` with no body (an assumption); adjust `RETRY_ROUTE` and the forwarded path in `quote-data-proxy.js` if the real path differs.
 2. Set `QUOTEDATA_RETRY_ENABLED=true` in `server.properties`.
 3. Set `features: { retryEnabled: true }` in `src/config.js`, then restart (`npm start` rebuilds).
 
-Users confirm each retry in a dialog. The page then reloads the quote, and that step can't be retried again until the page is opened again. 403, 404, 409, 501 and network errors show specific messages with the tracking ID.
+Users confirm the retry in a dialog that lists the failed steps. The page then reloads the quote, and the button stays disabled ("Retry requested") until the page is opened again. 403, 404, 409, 501 and network errors show specific messages with the tracking ID.
+
+### Mark completed
+
+For a failed quote, **Mark completed** opens a dialog that lists every step and what it will become, then sends one request through the proxy:
+
+```
+PATCH /api/quotedata/v1/quote/{quoteRequestId}
+{ "quoteRequestId": "…", "state": "SUCCESS",
+  "stepExecutions": [ { "id": 3834, "stepName": "CREATE_AMENDMENT_PROPOSAL", "stepStatus": "COMPLETED" }, … ] }
+```
+
+The server forwards it as `PATCH {QUOTEDATA_BASE_URL}/quote/{quoteRequestId}`. QuoteData updates the database by each step's primary `id`, which is the `id` of the step in the get-quotes answer. Every step is sent, except steps whose status is Not required, which stay as they are; steps already completed are sent again, which changes nothing. If QuoteData returned a step without a usable `id` the dialog explains this and the button stays disabled. Afterwards the page reloads the quote so it shows what QuoteData saved. A successful answer may have an empty body.
 
 ## Sign-in
 
@@ -85,10 +99,10 @@ Only these routes are forwarded, with a `trackingId` header on every request and
 | Browser route | Upstream |
 | --- | --- |
 | `GET /api/quotedata/v1/quote?…` | `GET {QUOTEDATA_BASE_URL}/quote?…` with `quoteRequestId`, `externalId`, `proposalId`, `ticketNumber`, `page`, `size`, `sort`, `search`, `state`, `designStatus`, `category`, `channelType`, `createdFrom`, `createdTo` |
-| `POST /api/quotedata/v1/quote/{id}/complete` | Same path upstream, body `{ "resolutionNote": "…" }` (1–1000 chars). **Assumed contract; confirm with the QuoteData owner.** |
-| `POST /api/quotedata/v1/quote/{id}/steps/{stepExecutionId}/retry` | Same path upstream, no body. Only when `QUOTEDATA_RETRY_ENABLED=true`. **Assumed contract; change `RETRY_ROUTE` and the forwarded path in `quote-data-proxy.js` if the real API differs.** |
+| `PATCH /api/quotedata/v1/quote/{id}` | `PATCH {QUOTEDATA_BASE_URL}/quote/{id}` with the Mark completed body shown above, checked first: `quoteRequestId` equal to `{id}`, `state` exactly `SUCCESS`, up to 500 `stepExecutions`, each with exactly `id`, `stepName` and `stepStatus: "COMPLETED"`. Nothing else is accepted or forwarded. The body must come with a matching `Origin`. |
+| `POST /api/quotedata/v1/quote/{id}/retry` | `POST {QUOTEDATA_BASE_URL}/quote/{id}/retry`, no body. Only when `QUOTEDATA_RETRY_ENABLED=true`. **Assumed contract; change `RETRY_ROUTE` and the forwarded path in `quote-data-proxy.js` if the real API differs.** |
 
-The service token is cached in memory until 10 seconds before it expires, and concurrent requests share one token request. A QuoteData 401 refreshes the token and retries a GET once; a POST is never replayed.
+The service token is cached in memory until 10 seconds before it expires, and concurrent requests share one token request. A QuoteData 401 refreshes the token and retries a GET once; a PATCH or POST is never replayed.
 
 | Error code | Meaning / fix |
 | --- | --- |
@@ -98,7 +112,7 @@ The service token is cached in memory until 10 seconds before it expires, and co
 | `502 SERVICE_TOKEN_FAILED` | Token endpoint unreachable or rejected the credentials. Check the secret/scope and network access to the token host. |
 | `502 UPSTREAM_UNAUTHORIZED` | QuoteData rejected the service token; the service account lacks access. |
 | `403 UPSTREAM_FORBIDDEN`, `404 QUOTE_NOT_FOUND`, `409 QUOTE_CONFLICT` | Passed through from QuoteData with safe messages. |
-| `501 RETRY_NOT_AVAILABLE` | Step retry is switched off on the server (`QUOTEDATA_RETRY_ENABLED`). |
+| `501 RETRY_NOT_AVAILABLE` | Quote retry is switched off on the server (`QUOTEDATA_RETRY_ENABLED`). |
 | `502 UPSTREAM_FAILED` | QuoteData unreachable, timed out or returned invalid JSON. |
 
 Provider error bodies and secrets are never sent to the browser; the UI shows the tracking ID so you can search the server logs.
@@ -129,7 +143,7 @@ Logs go to stdout: one line per QuoteData call with its tracking ID, route and q
 ### Known risks
 
 - **AngularJS 1.x is end-of-life.** `npm audit --omit=dev` reports one high-severity advisory (ReDoS in `angular`) that has no fix. The app does not use `$resource` or `input type=url`, calls `angular.copy` only on small search-query objects, renders text only (no `ng-bind-html`), and runs under the strict CSP above. Plan a migration to a supported framework; until then keep the app behind your corporate sign-in.
-- **Retry and Mark completed endpoints are assumed contracts** (see QuoteData proxy). Confirm them with the QuoteData owner before enabling Retry.
+- **The quote Retry endpoint is an assumed contract** (see QuoteData proxy). Confirm it with the QuoteData owner before enabling Retry. Mark completed follows the PATCH contract QuoteData provided.
 - **Login attempt limiting is per client address**; behind a reverse proxy all users share the proxy's address.
 
 ### Display rule: only what the backend sends
@@ -143,7 +157,7 @@ The look lives in `src/assets/css/app.css`: a blue and white theme with black te
 - **Type scale:** every text size is one of eight rem tokens (`--fs-label` to `--fs-2xl`, 11 to 28 px at a 16px root); the root is 14.4px, so on screen they render 10% smaller (about 9.9 to 25.2px), with weights 500, 600, 700 and 800 only. Manrope is used for headings, Inter for text and JetBrains Mono for IDs. All three are self-hosted and copied to `dist/vendor/fonts` by the build, so the app needs no internet access. Use the tokens for new CSS instead of pixel values.
 - **Navigation:** a blue rail with white text that collapses to icons with the button at the top left (remembered per browser) and slides in on phones.
 - **Home and Search are separate pages.** Home (`/quotes`, menu item *Home*) opens with the default list: a light banner with a Watch tour button (opens the product tour video), a Search button and Refresh, six summary tiles that all count the quotes on screen (Total quotes, Received, In progress, Failed, Completed and Other; a state containing the word SUCCESS counts as Completed, Failure counts as Failed, and Other is every state that is not one of the first five, so the groups add up to the total), the filters (State is the one place a status is chosen), and the results table. **Filters** (State, Design status, Category, Channel, Created from/to) are sent to QuoteData as `state`, `designStatus`, `category`, `channelType`, `createdFrom` and `createdTo`, and every change asks for page 0 again (25 quotes). State, Design status, Category and Channel are text boxes with suggestions: pick a suggestion or type a value, then press Enter. The suggestions are the values QuoteData has sent so far, kept in this browser (`omw-filter-values`), so they do not shrink to the 25 quotes on screen; a value typed in full is always sent, matched to the spelling QuoteData uses (for example `failed` becomes `FAILED`). **Home shows one page only: the 25 newest quotes (`page=0&size=25`), with no page controls and no "of N" count.** The tiles are worked out from those 25. Refresh, and reloading the browser, each ask the backend again (the proxy marks every API answer `no-store`). Paging is kept where several pages are expected, such as the Support tickets list (requirement UI-02, "Ticket result paging"). There is no greeting, auto-refresh, state-mix bar, summary line or state pills: the list reloads only when Refresh is clicked, and each row shows its State once. Search (`/search`, menu item *Search*) is two steps: **1. Look up by** tiles (Quote request ID, External ID, Proposal ID, Support ticket and, when `quoteDataLookupOnly` is `false`, Other fields), then **2. Enter the value** for the chosen type, with a placeholder and help text for that type. There is no type dropdown. Choosing another tile starts a fresh lookup, Clear empties the value but keeps the type, and the last five successful lookups appear as one-click chips with their type (stored in this browser only). Search never lists anything until you search. An old link such as `/quotes?search=ABC` is moved to `/search?search=ABC`, and you then choose the type.
-- **Quote detail:** a light header with the name, state, IDs and key facts; the processing journey, where a failed step appears once as a red panel (click it, or its All steps button, to open the full step list; quotes without a failure get a Show all steps button instead); copyable system IDs; and a sticky tab bar that shows the quote's ID and state once the header scrolls away. The tabs use cards instead of wide tables: a customer profile with address and contact cards, site cards (click to filter), nested product cards with prices and a details drawer, promotion cards, error cards with jump links and Retry, and an event timeline. Every field the API returns is still reachable, behind each card's Show all details link.
+- **Quote detail:** a light header with the name, state, IDs and key facts; the processing journey, where a failed step appears once as a red panel (click it, or its All steps button, to open the full step list; quotes without a failure get a Show all steps button instead); copyable system IDs; and a sticky tab bar that shows the quote's ID and state once the header scrolls away. The tabs use cards instead of wide tables: a customer profile with address and contact cards, site cards (click to filter), nested product cards with prices and a details drawer, promotion cards, error cards with jump links, and an event timeline. Every field the API returns is still reachable, behind each card's Show all details link.
 - **Motion:** page and card entrances; a thin progress bar at the top and a moving line in the search bar while QuoteData requests run; a soft light that follows the pointer over cards (`qm-pointer-glow`); the journey ring draws itself and step icons pop in turn, with a pulse for failed steps, a moving line on running steps and a ripple when all steps are done; cards in the detail tabs glide up as they scroll into view (browsers with scroll-driven animations). Everything, including the pointer light, turns off when the operating system asks for reduced motion.
 - **Text size:** the type scale is in `rem` and the root size is 14.4px (10% below the browser default), so all text, including Bootstrap's, follows `html { font-size }` in `src/assets/css/app.css`.
 - **Accessibility:** text meets WCAG AA contrast in both themes, controls have visible focus rings and keyboard support, and status is never shown by colour alone.
@@ -155,8 +169,8 @@ The look lives in `src/assets/css/app.css`: a blue and white theme with black te
 | UI-01/02 Quote list and ticket search | `quote-list`, `support-tickets`, shared `quote-table` component |
 | UI-03 Header, failure summary, IDs | `quote-detail` header, failure summary, system IDs, processing pipeline |
 | UI-04–UI-10, UI-16/17 Tabs | Customer (CSV export), Sites, Products, Promotions, Processing, Errors, Events, Payload, Contracts |
-| UI-11 Retry | Retry on every failed step and error row; disabled "Coming soon" until `features.retryEnabled` and `QUOTEDATA_RETRY_ENABLED` are on |
-| UI-12 Complete | Mark Completed dialog (note 1–1000 chars, 403/409 handling) |
+| UI-11 Retry | One Retry button for the whole failed quote; disabled until `features.retryEnabled` and `QUOTEDATA_RETRY_ENABLED` are on |
+| UI-12 Complete | Mark completed dialog that lists each step and sends one PATCH setting the quote to SUCCESS and its steps to COMPLETED (403/404/409 handling; no resolution note) |
 | UI-13–15 Case links, access, empty/error states | Route guard with return URL, Access denied / Quote not found / Quote archived pages, tracking IDs |
 
 Role-based menus (UI-14) are not implemented: every signed-in user sees the same workspace and QuoteData enforces access.

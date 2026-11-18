@@ -17,7 +17,12 @@ const scope = 'synthetic.read synthetic.write';
 const tenantId = crypto.randomUUID();
 const ssoClientId = crypto.randomUUID();
 const quoteRoute = '/api/quotedata/v1/quote';
-const completionRoute = quoteRoute + '/synthetic-quote/complete';
+const completionRoute = quoteRoute + '/synthetic-quote';
+// The one update the browser may ask for (synthetic ids): the quote goes to SUCCESS, each listed step to COMPLETED.
+const completion = (extra = {}) => ({
+    quoteRequestId: 'synthetic-quote', state: 'SUCCESS',
+    stepExecutions: [{ id: 3834, stepName: 'CREATE_AMENDMENT_PROPOSAL', stepStatus: 'COMPLETED' }], ...extra
+});
 let signingFixture;
 
 async function keys() {
@@ -141,7 +146,7 @@ async function start(t, backend, options = {}) {
 function request(app, pathname, options = {}) {
     const method = options.method || 'GET';
     const headers = { host: '127.0.0.1:' + app.port };
-    if (method === 'POST' && options.origin !== false) {
+    if (method !== 'GET' && method !== 'HEAD' && options.origin !== false) {
         headers.origin = 'http://127.0.0.1:' + app.port;
     }
     const body = options.body === undefined ? options.raw : JSON.stringify(options.body);
@@ -294,12 +299,13 @@ test('SSO completion preserves the request body across asynchronous identity ver
     const backend = await upstream(t);
     const app = await start(t, backend, { local: false, proxy: { jwks } });
     check(await request(app, completionRoute, {
-        method: 'POST', headers: { authorization: 'Bearer ' + await identity() },
-        body: { resolutionNote: ' Synthetic resolution ' }
+        method: 'PATCH', headers: { authorization: 'Bearer ' + await identity() }, body: completion()
     }), 200);
     assert.equal(backend.backendCalls.length, 1);
-    assert.equal(backend.backendCalls[0].method, 'POST');
-    assert.deepEqual(JSON.parse(backend.backendCalls[0].raw), { resolutionNote: 'Synthetic resolution' });
+    assert.equal(backend.backendCalls[0].method, 'PATCH');
+    assert.equal(backend.backendCalls[0].url, '/quotedata/v1/quote/synthetic-quote');
+    assert.equal(backend.backendCalls[0].headers['content-type'], 'application/json');
+    assert.deepEqual(JSON.parse(backend.backendCalls[0].raw), completion());
 });
 
 test('missing SSO configuration rejects bearer callers explicitly but local sessions still work', async t => {
@@ -362,7 +368,7 @@ test('completion is never replayed on upstream 401 and the rejected token is inv
     const headers = { cookie: await login(app) };
     for (let count = 1; count <= 2; count++) {
         check(await request(app, completionRoute, {
-            method: 'POST', headers, body: { resolutionNote: 'Synthetic completion' }
+            method: 'PATCH', headers, body: completion()
         }), 502, 'UPSTREAM_UNAUTHORIZED');
         assert.equal(backend.tokenCalls.length, count);
         assert.equal(backend.backendCalls.length, count);
@@ -507,12 +513,12 @@ test('unknown routes, methods and malformed or unbounded queries never reach ups
     const app = await start(t, backend);
     const headers = { cookie: await login(app) };
     for (const pathname of [
-        '/api/quotedata/v1/token', quoteRoute + '/id/retry', quoteRoute + '/id',
-        quoteRoute + '/%2e%2e/complete', quoteRoute + '/id%2fother/complete', '/api/http://untrusted.invalid'
+        '/api/quotedata/v1/token', quoteRoute + '/id/complete', quoteRoute + '/id/steps/42/retry', quoteRoute + '/a/b',
+        quoteRoute + '/%2e%2e/complete', quoteRoute + '/id%2fother', '/api/http://untrusted.invalid'
     ]) {
         check(await request(app, pathname, { headers }), 404, 'NOT_FOUND');
     }
-    for (const [pathname, method] of [[quoteRoute, 'POST'], [quoteRoute, 'DELETE'], [completionRoute, 'GET']]) {
+    for (const [pathname, method] of [[quoteRoute, 'POST'], [quoteRoute, 'DELETE'], [quoteRoute, 'PATCH'], [completionRoute, 'GET'], [completionRoute, 'POST'], [completionRoute, 'DELETE']]) {
         check(await request(app, pathname, { method, headers }), 405, 'METHOD_NOT_ALLOWED');
     }
     for (const query of [
@@ -522,9 +528,7 @@ test('unknown routes, methods and malformed or unbounded queries never reach ups
         check(await request(app, quoteRoute + query, { headers }), 400, 'INVALID_REQUEST');
     }
     check(await request(app, quoteRoute, { headers, raw: '{}' }), 400, 'INVALID_REQUEST');
-    check(await request(app, completionRoute + '?page=1', {
-        method: 'POST', headers, body: { resolutionNote: 'Synthetic completion' }
-    }), 400, 'INVALID_REQUEST');
+    check(await request(app, completionRoute + '?page=1', { method: 'PATCH', headers, body: completion() }), 400, 'INVALID_REQUEST');
     assert.equal(backend.tokenCalls.length, 0);
     const query = '?ticketNumber=synthetic%20ticket&page=0&size=25&sort=createdAt%2Cdesc&state=NEW' +
         '&designStatus=PENDING&category=synthetic&channelType=synthetic&createdFrom=2025-01-01&createdTo=2025-02-01&search=a%2Bb';
@@ -542,15 +546,13 @@ test('Host, Origin, fetch metadata and POST origin requirements prevent cross-si
         { origin: 'http://localhost:' + app.port }, { 'sec-fetch-site': 'cross-site' },
         { 'sec-fetch-site': 'same-site' }
     ]) {
-        for (const method of ['GET', 'POST']) {
-            check(await request(app, method === 'POST' ? completionRoute : quoteRoute, {
-                method, headers: { cookie, ...headers }, ...(method === 'POST' ? { body: { resolutionNote: 'Synthetic' } } : {})
+        for (const method of ['GET', 'PATCH']) {
+            check(await request(app, method === 'PATCH' ? completionRoute : quoteRoute, {
+                method, headers: { cookie, ...headers }, ...(method === 'PATCH' ? { body: completion() } : {})
             }), 403, 'REQUEST_FORBIDDEN');
         }
     }
-    check(await request(app, completionRoute, {
-        method: 'POST', origin: false, headers: { cookie }, body: { resolutionNote: 'Synthetic' }
-    }), 403, 'REQUEST_FORBIDDEN');
+    check(await request(app, completionRoute, { method: 'PATCH', origin: false, headers: { cookie }, body: completion() }), 403, 'REQUEST_FORBIDDEN');
     assert.equal(backend.tokenCalls.length, 0);
 });
 
@@ -572,35 +574,81 @@ test('non-loopback clients cannot bypass the proxy using forwarding headers', as
     assert.equal(headers['cache-control'], 'no-store');
 });
 
-test('completion validates JSON, note bounds, body size and encoding before service-token acquisition', async t => {
+test('completion validates JSON, shape, step list, body size and encoding before service-token acquisition', async t => {
     const backend = await upstream(t);
     const app = await start(t, backend);
     const headers = { cookie: await login(app) };
+    const step = (extra = {}) => ({ id: 1, stepName: 'ADD_SITE', stepStatus: 'COMPLETED', ...extra });
+    const many = count => Array.from({ length: count }, (_, index) => step({ id: index + 1 }));
     for (const body of [
-        null, [], {}, { resolutionNote: 1 }, { resolutionNote: '' }, { resolutionNote: '   ' },
-        { resolutionNote: 'x'.repeat(1001) }, { resolutionNote: 'Synthetic', url: 'https://untrusted.invalid' }
+        null, [], {}, 'text', 7,
+        completion({ quoteRequestId: 'another-quote' }), completion({ quoteRequestId: '' }), completion({ state: 'COMPLETED' }),
+        completion({ state: 'FAILED' }), completion({ state: 'success' }), completion({ stepExecutions: 'none' }),
+        completion({ stepExecutions: [step({ stepStatus: 'FAILURE' })] }), completion({ stepExecutions: [step({ stepStatus: 'SUCCESS' })] }),
+        completion({ stepExecutions: [step({ extra: true })] }), completion({ stepExecutions: [{ id: 1, stepName: 'ADD_SITE' }] }),
+        completion({ stepExecutions: [step({ id: 0 })] }), completion({ stepExecutions: [step({ id: -4 })] }),
+        completion({ stepExecutions: [step({ id: 1.5 })] }), completion({ stepExecutions: [step({ id: '' })] }),
+        completion({ stepExecutions: [step({ id: 'a/b' })] }), completion({ stepExecutions: [step({ id: null })] }),
+        completion({ stepExecutions: [step({ stepName: '' }), ] }), completion({ stepExecutions: [step({ stepName: '   ' })] }),
+        completion({ stepExecutions: [step({ stepName: 'x'.repeat(201) })] }), completion({ stepExecutions: [step({ stepName: 5 })] }),
+        completion({ stepExecutions: [step({ id: 1 }), step({ id: 1 })] }), completion({ stepExecutions: [null] }),
+        completion({ stepExecutions: many(501) }),
+        { ...completion(), url: 'https://untrusted.invalid' }, { quoteRequestId: 'synthetic-quote', state: 'SUCCESS' }
     ]) {
-        check(await request(app, completionRoute, { method: 'POST', headers, body }), 400, 'INVALID_REQUEST');
+        check(await request(app, completionRoute, { method: 'PATCH', headers, body }), 400, 'INVALID_REQUEST');
     }
     for (const options of [
         { raw: '{' }, { raw: '{}' }, { raw: '{}', headers: { 'content-type': 'text/plain' } },
         { raw: '{}', headers: { 'content-encoding': 'gzip' } }
     ]) {
         check(await request(app, completionRoute, {
-            method: 'POST', ...options, headers: { ...headers, ...options.headers }
+            method: 'PATCH', ...options, headers: { ...headers, ...options.headers }
         }), 400, 'INVALID_REQUEST');
     }
     for (const chunked of [true, false]) {
         check(await request(app, completionRoute, {
-            method: 'POST', headers, raw: ' '.repeat(8193), chunked
+            method: 'PATCH', headers, raw: ' '.repeat(65537), chunked
         }), 413, 'REQUEST_TOO_LARGE');
     }
     assert.equal(backend.tokenCalls.length, 0);
-    for (const note of ['x', 'x'.repeat(1000), '界'.repeat(1000)]) {
-        check(await request(app, completionRoute, {
-            method: 'POST', headers, body: { resolutionNote: note }, chunked: true
-        }), 200);
+    for (const body of [completion({ stepExecutions: [] }), completion({ stepExecutions: many(500) }),
+        completion({ stepExecutions: [step({ id: 'STEP-7_a', stepName: '界'.repeat(200) })] })]) {
+        check(await request(app, completionRoute, { method: 'PATCH', headers, body, chunked: true }), 200);
     }
+    // What goes upstream is rebuilt from the checked values, so nothing else can ride along.
+    const sent = JSON.parse(backend.backendCalls[0].raw);
+    assert.deepEqual(Object.keys(sent), ['quoteRequestId', 'state', 'stepExecutions']);
+});
+
+test('the completion goes upstream as one PATCH with the primary step ids and an empty or JSON answer is accepted', async t => {
+    for (const [handler, expectedText] of [
+        [(req, res) => json(res, 200, { quoteRequestId: 'synthetic-quote', state: 'SUCCESS' }), '{"quoteRequestId":"synthetic-quote","state":"SUCCESS"}'],
+        [(req, res) => { res.writeHead(200, { 'Content-Length': 0 }); res.end(); }, ''],
+        [(req, res) => { res.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': 0 }); res.end(); }, '']
+    ]) {
+        const backend = await upstream(t, { backend: handler });
+        const app = await start(t, backend);
+        const body = completion({ stepExecutions: [
+            { id: 3834, stepName: 'CREATE_AMENDMENT_PROPOSAL', stepStatus: 'COMPLETED' },
+            { id: 3835, stepName: 'ADD_SITE', stepStatus: 'COMPLETED' }] });
+        const result = await request(app, completionRoute, { method: 'PATCH', headers: { cookie: await login(app), trackingid: 'TRACE-PATCH' }, body });
+        assert.equal(result.status, 200);
+        assert.equal(result.text, expectedText);
+        assert.equal(result.headers.trackingid, 'TRACE-PATCH');
+        const call = backend.backendCalls[0];
+        assert.equal(call.method, 'PATCH');
+        assert.equal(call.url, '/quotedata/v1/quote/synthetic-quote');
+        assert.equal(call.headers.trackingid, 'TRACE-PATCH');
+        assert.equal(call.headers.authorization, 'Bearer ' + backend.issued[0]);
+        assert.equal(call.headers.cookie, undefined);
+        assert.deepEqual(JSON.parse(call.raw).stepExecutions.map(step => step.id), [3834, 3835]);
+    }
+});
+
+test('a non-JSON 200 answer to the completion is still an upstream failure when it has a body', async t => {
+    const backend = await upstream(t, { backend: (req, res) => { res.writeHead(200, { 'Content-Type': 'text/html' }); res.end(clientSecret); } });
+    const app = await start(t, backend);
+    check(await request(app, completionRoute, { method: 'PATCH', headers: { cookie: await login(app) }, body: completion() }), 502, 'UPSTREAM_FAILED');
 });
 
 test('large JSON successes and 204 completion work, but oversized or broken backend bodies fail safely', async t => {
@@ -620,7 +668,7 @@ test('large JSON successes and 204 completion work, but oversized or broken back
         const app = await start(t, backend, { proxy: { upstreamTimeoutMs: 100 } });
         const result = await request(app, status === 204 ? completionRoute : quoteRoute, {
             headers: { cookie: await login(app) }, ...(status === 204 ?
-                { method: 'POST', body: { resolutionNote: 'Synthetic completion' } } : {})
+                { method: 'PATCH', body: completion() } : {})
         });
         check(result, status, status === 502 ? 'UPSTREAM_FAILED' : undefined);
         if (status === 200) {
@@ -638,7 +686,7 @@ test('a stalled completion body times out before token acquisition', async t => 
     const cookie = await login(app);
     const result = await new Promise((resolve, reject) => {
         const req = http.request({
-            hostname: '127.0.0.1', port: app.port, method: 'POST', path: completionRoute, agent: false,
+            hostname: '127.0.0.1', port: app.port, method: 'PATCH', path: completionRoute, agent: false,
             headers: {
                 origin: 'http://127.0.0.1:' + app.port, cookie,
                 'content-type': 'application/json', 'content-length': 100
@@ -672,9 +720,9 @@ test('client disconnect cancels backend reads rather than replaying a completion
     });
     const app = await start(t, backend);
     const cookie = await login(app);
-    const body = JSON.stringify({ resolutionNote: 'Synthetic completion' });
+    const body = JSON.stringify(completion());
     const req = http.request({
-        hostname: '127.0.0.1', port: app.port, path: completionRoute, method: 'POST', agent: false,
+        hostname: '127.0.0.1', port: app.port, path: completionRoute, method: 'PATCH', agent: false,
         headers: {
             origin: 'http://127.0.0.1:' + app.port, cookie,
             'content-type': 'application/json', 'content-length': Buffer.byteLength(body)
@@ -699,9 +747,9 @@ test('plain HTTP QuoteData base URLs require the explicit QUOTEDATA_ALLOW_HTTP o
     assert.equal(backend.tokenCalls.length, 0);
 });
 
-const retryRoute = quoteRoute + '/synthetic-quote/steps/42/retry';
+const retryRoute = quoteRoute + '/synthetic-quote/retry';
 
-test('step retry is unavailable (501) unless QUOTEDATA_RETRY_ENABLED=true, without contacting QuoteData', async t => {
+test('quote retry is unavailable (501) unless QUOTEDATA_RETRY_ENABLED=true, without contacting QuoteData', async t => {
     for (const flag of [undefined, 'false', 'TRUE', '1']) {
         const backend = await upstream(t);
         const app = await start(t, backend, { environment: { QUOTEDATA_RETRY_ENABLED: flag } });
@@ -712,7 +760,7 @@ test('step retry is unavailable (501) unless QUOTEDATA_RETRY_ENABLED=true, witho
     }
 });
 
-test('enabled step retry forwards one bodiless POST with service authorization and tracking ID', async t => {
+test('enabled quote retry forwards one bodiless POST with service authorization and tracking ID', async t => {
     const backend = await upstream(t, { backend: (req, res) => json(res, 202, { status: 'ACCEPTED' }) });
     const app = await start(t, backend, { environment: { QUOTEDATA_RETRY_ENABLED: 'true' } });
     const result = await request(app, retryRoute, {
@@ -724,7 +772,7 @@ test('enabled step retry forwards one bodiless POST with service authorization a
     assert.equal(backend.backendCalls.length, 1);
     const call = backend.backendCalls[0];
     assert.equal(call.method, 'POST');
-    assert.equal(call.url, '/quotedata/v1/quote/synthetic-quote/steps/42/retry');
+    assert.equal(call.url, '/quotedata/v1/quote/synthetic-quote/retry');
     assert.equal(call.raw, '');
     assert.equal(call.headers['content-length'], '0');
     assert.equal(call.headers.trackingid, 'TRACE-RETRY');
@@ -732,15 +780,15 @@ test('enabled step retry forwards one bodiless POST with service authorization a
     assert.equal(call.headers.cookie, undefined);
 });
 
-test('step retry rejects bodies, wrong methods, malformed IDs, queries and cross-origin callers', async t => {
+test('quote retry rejects bodies, wrong methods, malformed IDs, queries and cross-origin callers', async t => {
     const backend = await upstream(t);
     const app = await start(t, backend, { environment: { QUOTEDATA_RETRY_ENABLED: 'true' } });
     const cookie = await login(app);
     check(await request(app, retryRoute, { method: 'POST', headers: { cookie }, body: { force: true } }), 400, 'INVALID_REQUEST');
     check(await request(app, retryRoute, { headers: { cookie } }), 405, 'METHOD_NOT_ALLOWED');
     check(await request(app, retryRoute + '?force=1', { method: 'POST', headers: { cookie } }), 400, 'INVALID_REQUEST');
-    for (const path of [quoteRoute + '/synthetic-quote/steps/4.2/retry', quoteRoute + '/synthetic-quote/steps//retry',
-        quoteRoute + '/synthetic-quote/steps/' + 'x'.repeat(65) + '/retry', quoteRoute + '/synthetic-quote/steps/42/retry/now']) {
+    for (const path of [quoteRoute + '/synthetic.quote/retry', quoteRoute + '//retry', quoteRoute + '/' + 'x'.repeat(201) + '/retry',
+        quoteRoute + '/synthetic-quote/retry/now', quoteRoute + '/synthetic-quote/steps/42/retry']) {
         check(await request(app, path, { method: 'POST', headers: { cookie } }), 404, 'NOT_FOUND');
     }
     check(await request(app, retryRoute, { method: 'POST', origin: false, headers: { cookie } }), 403, 'REQUEST_FORBIDDEN');
@@ -749,7 +797,7 @@ test('step retry rejects bodies, wrong methods, malformed IDs, queries and cross
     assert.equal(backend.backendCalls.length, 0);
 });
 
-test('step retry is never replayed on upstream 401 and maps conflict, not found and forbidden', async t => {
+test('quote retry is never replayed on upstream 401 and maps conflict, not found and forbidden', async t => {
     for (const [upstreamStatus, expectedStatus, code] of [
         [401, 502, 'UPSTREAM_UNAUTHORIZED'], [409, 409, 'QUOTE_CONFLICT'], [404, 404, 'QUOTE_NOT_FOUND'],
         [403, 403, 'UPSTREAM_FORBIDDEN'], [500, 502, 'UPSTREAM_FAILED']

@@ -236,9 +236,8 @@ describe('Unified quote detail workspace', function() {
       expect(element[0].querySelector('[role="tab"][aria-selected="true"]').textContent).toContain(tab.label);
     });
     scope.setTab('processing'); root.$digest();
-    var retries = element[0].querySelectorAll('#detail-panel-processing button[title="Coming soon"]');
-    expect(retries.length).toBe(2);
-    Array.prototype.forEach.call(retries, function(button) { expect(button.disabled).toBe(true); });
+    expect(element[0].querySelectorAll('#detail-panel-processing button').length).toBe(0);
+    expect(element[0].querySelector('#retry-quote').disabled).toBe(true);
     expect(element[0].textContent).toContain('Not available');
     config.features = originalFeatures;
   });
@@ -407,18 +406,16 @@ describe('Unified quote detail workspace', function() {
     expect(scope.canExportCustomer()).toBe(false);
   });
 
-  it('requires a trimmed 1–1000 character note and sends a single completion request', function() {
+  it('sends a single completion request with every step and its primary id, then reloads the quote', function() {
     load();
     render();
     scope.openCompleteDialog();
-    scope.completeForm.note = '  ';
-    expect(scope.canSubmitComplete()).toBe(false);
-    scope.completeForm.note = new Array(1002).join('x');
-    expect(scope.canSubmitComplete()).toBe(false);
-    scope.completeForm.note = '  Synthetic resolution  ';
+    expect(scope.canSubmitComplete()).toBe(true);
     scope.submitComplete(); scope.submitComplete();
     expect(service.completeQuote.calls.count()).toBe(1);
-    expect(service.completeQuote).toHaveBeenCalledWith('Q-SYNTHETIC', 'Synthetic resolution');
+    var steps = service.completeQuote.calls.mostRecent().args[1];
+    expect(service.completeQuote.calls.mostRecent().args[0]).toBe('Q-SYNTHETIC');
+    expect(steps.map(function(step) { return step.id; }).sort()).toEqual([40, 41, 42]);
     scope.closeCompleteDialog();
     expect(scope.completeDialogOpen).toBe(true);
     completion.resolve({ data: {} }); root.$digest();
@@ -431,30 +428,26 @@ describe('Unified quote detail workspace', function() {
     expect(document.activeElement.id).toBe('quote-detail-heading');
   });
 
-  it('keeps the typed dialog note in controller state and traps focus, Escape and return focus', function() {
+  it('traps focus in the completion dialog, closes it with Escape and returns focus', function() {
     load(); render();
     var trigger = element[0].querySelector('#mark-completed');
     trigger.focus();
     angular.element(trigger).triggerHandler('click');
     root.$digest(); flushFocus();
-    var note = document.getElementById('resolution-note');
-    expect(document.activeElement).toBe(note);
-    note.value = 'Synthetic input resolution';
-    angular.element(note).triggerHandler('input');
-    root.$digest();
-    expect(scope.completeForm.note).toBe('Synthetic input resolution');
-    scope.completeDialogKeydown(key('Tab', true));
-    var buttons = document.getElementById('complete-dialog').querySelectorAll('button');
-    expect(document.activeElement).toBe(buttons[1]);
+    var confirm = document.getElementById('complete-confirm');
+    expect(document.activeElement).toBe(confirm);
     scope.completeDialogKeydown(key('Tab'));
-    expect(document.activeElement).toBe(note);
+    var buttons = document.getElementById('complete-dialog').querySelectorAll('button');
+    expect(document.activeElement).toBe(buttons[0]);
+    scope.completeDialogKeydown(key('Tab', true));
+    expect(document.activeElement).toBe(confirm);
     scope.completeDialogKeydown(key('Escape')); root.$digest(); flushFocus();
     expect(scope.completeDialogOpen).toBe(false);
     expect(document.activeElement).toBe(trigger);
   });
 
   it('shows completion 403 with request tracking fallback and does not refresh', function() {
-    load(); scope.openCompleteDialog(); scope.completeForm.note = 'Synthetic resolution'; scope.submitComplete();
+    load(); scope.openCompleteDialog(); scope.submitComplete();
     completion.reject({ status: 403, config: { headers: { trackingId: 'TRACE-COMPLETE' } }, headers: function() { return null; } });
     root.$digest();
     expect(scope.completeError).toContain('You are not allowed to complete this quote');
@@ -463,10 +456,10 @@ describe('Unified quote detail workspace', function() {
   });
 
   it('retains the 409 conflict explanation while refreshing state and hiding the complete action', function() {
-    load(); render(); scope.openCompleteDialog(); scope.completeForm.note = 'Synthetic resolution'; scope.submitComplete();
+    load(); render(); scope.openCompleteDialog(); scope.submitComplete();
     completion.reject({ status: 409, data: { trackingId: 'TRACE-CONFLICT' } }); root.$digest();
-    expect(scope.completeError).toContain('already completed or not in a failed state');
-    expect(element[0].textContent).toContain('already completed or not in a failed state');
+    expect(scope.completeError).toContain('This quote changed while you were working on it');
+    expect(element[0].textContent).toContain('This quote changed while you were working on it');
     expect(scope.completeContext.ticketNumber).toBe('TICKET-1');
     load(angular.extend(fixture(), { state: 'COMPLETED' }), 1);
     expect(scope.canSubmitComplete()).toBe(false);
