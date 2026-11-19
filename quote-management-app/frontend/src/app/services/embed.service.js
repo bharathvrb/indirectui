@@ -1,6 +1,8 @@
 'use strict';
 
-// Dynamics launch, UI side (BXTFOMW-26562, 26564). The page is framed by Dynamics; this service registers the listener
+// Dynamics launch, UI side (BXTFOMW-26562, 26564). The Handoff API (story 26419, "handshake endpoint for dynamics") is
+// called by Dynamics' own backend and is NOT called from this UI; the UI only receives its result through the iframe
+// message below and calls Initialize (story 26420). The page is framed by Dynamics; this service registers the listener
 // first, sends READY to the exact Dynamics origin, accepts one HANDSHAKE, trades its one-time GUID for a one-quote
 // session through the Initialize API, and navigates to /quotes/<id>. The GUID and token are held in memory only: never in
 // a URL, storage or a log line. Off until APP_CONFIG.embed.enabled is true.

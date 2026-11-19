@@ -110,6 +110,15 @@ This is the browser half of stories BXTFOMW-26558, 26559, 26562, 26563 and 26564
 | 26562 Iframe handshake | The page Dynamics frames: registers its listener, sends `READY`, accepts one `HANDSHAKE`, calls Initialize, opens `/quotes/<id>` | `embed.enabled` |
 | 26564 Sign-in fallback | "Continue sign-in in a new window" when framed | `embed.enabled` |
 
+**Who calls which API** (from the epic's own table). The UI never calls the Handoff API:
+
+| API | Built by | Called by |
+| --- | --- | --- |
+| Handoff, `POST <HANDOFF_PATH>` (story 26419, the "handshake endpoint for Dynamics") | OMW backend | **Dynamics' backend**, not the UI |
+| Initialize, `POST <INITIALIZE_PATH>` (story 26420) | OMW backend | **This UI**, with the GUID and token Dynamics sends in the iframe message |
+| `GET /me/permissions` (story 26558) | OMW backend | **This UI** |
+| Quote APIs (story 26561) | OMW backend | **This UI** (not switched over yet, see below) |
+
 **What the UI expects from the backend** (names are configurable where the epic leaves them open):
 
 - `GET <access.permissionsUrl>` (default `/api/quotemgmt/v1/me/permissions`) answers `200 { "userId", "sessionType": "DIRECT" | "CASE", "quoteRequestId": "<id>" or null, "permissions": ["LIST_ALL_QUOTES", ...] }`. `403 ROLE_MISSING` shows the no-role screen; `401` means sign in again (or "reopen the case" in a case session); `503`/anything else shows "service unavailable". A `CASE` answer must carry the bound `quoteRequestId`.
