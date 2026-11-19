@@ -12,7 +12,29 @@ window.APP_CONFIG = Object.assign({
     contractDownloadUrl: '',
     supportUrl: '',
     // Quote retry: true enables the quote-level Retry button. The server also needs QUOTEDATA_RETRY_ENABLED=true.
-    features: { retryEnabled: false }
+    features: { retryEnabled: false },
+    // OMW access epic (BXTFOMW-26558 to 26564), UI side only. Every part is off until its backend API exists, so the app
+    // behaves as before. Each object is merged key by key, so set only what you change.
+    access: {
+        // true: ask the server what the signed-in person may do and show only the permitted screens and buttons.
+        enabled: false,
+        permissionsUrl: '/api/quotemgmt/v1/me/permissions',
+        // Where an employee requests an OMW role (https only). Blank: the "no role" screen shows the text without a link.
+        requestRoleUrl: ''
+    },
+    // Quote opened from a Dynamics case: the page is framed by Dynamics and trades a one-time GUID for a one-quote session.
+    embed: {
+        enabled: false,
+        // Exact origins (scheme and host, no path) allowed to frame this page and send the handshake.
+        dynamicsOrigins: [],
+        // <OMW_SOURCE_SYSTEM>: sent to Dynamics in the READY message.
+        sourceSystem: '',
+        // <INITIALIZE_PATH> of the Initialize API, for example /api/quotemgmt/v1/initialize.
+        initializeUrl: '',
+        handshakeTimeoutMs: 10000
+    },
+    // Address opened in a top-level window when sign-in cannot continue inside a frame. Blank: this site's sign-in page.
+    signIn: { newWindowUrl: '' }
 }, window.APP_CONFIG || {});
 
 window.AUTH_CONFIG = Object.assign({

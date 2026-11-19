@@ -13,15 +13,15 @@
   <link href="vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
   <link href="assets/css/app.css" rel="stylesheet">
 </head>
-<body class="qm-app" ng-class="{'is-login': isLoginRoute, 'sidebar-collapsed': sidebarCollapsed}">
+<body class="qm-app" ng-class="{'is-login': isLoginRoute, 'sidebar-collapsed': sidebarCollapsed, 'is-case': access.isCase()}">
   <div class="qm-progress" ng-class="{'is-busy': pendingRequests > 0}" aria-hidden="true"></div>
   <div class="qm-boot" ng-if="!appReady" role="status"><div class="loading-spinner"></div>Loading…</div>
   <noscript><div class="alert alert-warning">JavaScript is required to use Quote Management.</div></noscript>
   <a class="qm-skip-link" href="#main-content" ng-click="skipToContent($event)">Skip to content</a>
   <header class="app-topbar" ng-cloak>
     <div class="d-flex align-items-center gap-3">
-      <button type="button" class="qm-menu-toggle btn btn-outline-secondary" ng-if="!isLoginRoute" ng-click="toggleNavigation()" aria-controls="workspace-nav" ng-attr-aria-expanded="{{!!mobileMenuOpen}}" aria-label="Toggle navigation"><i class="bi bi-list" aria-hidden="true"></i></button>
-      <button type="button" class="qm-collapse-toggle" ng-if="!isLoginRoute" ng-click="toggleSidebar()" aria-controls="workspace-nav" ng-attr-aria-expanded="{{!sidebarCollapsed}}" ng-attr-aria-label="{{sidebarCollapsed ? 'Expand navigation' : 'Collapse navigation'}}" ng-attr-title="{{sidebarCollapsed ? 'Expand navigation' : 'Collapse navigation'}}"><i class="bi" ng-class="sidebarCollapsed ? 'bi-layout-sidebar-inset' : 'bi-layout-sidebar-inset-reverse'" aria-hidden="true"></i></button>
+      <button type="button" class="qm-menu-toggle btn btn-outline-secondary" ng-if="!isLoginRoute && !access.isCase()" ng-click="toggleNavigation()" aria-controls="workspace-nav" ng-attr-aria-expanded="{{!!mobileMenuOpen}}" aria-label="Toggle navigation"><i class="bi bi-list" aria-hidden="true"></i></button>
+      <button type="button" class="qm-collapse-toggle" ng-if="!isLoginRoute && !access.isCase()" ng-click="toggleSidebar()" aria-controls="workspace-nav" ng-attr-aria-expanded="{{!sidebarCollapsed}}" ng-attr-aria-label="{{sidebarCollapsed ? 'Expand navigation' : 'Collapse navigation'}}" ng-attr-title="{{sidebarCollapsed ? 'Expand navigation' : 'Collapse navigation'}}"><i class="bi" ng-class="sidebarCollapsed ? 'bi-layout-sidebar-inset' : 'bi-layout-sidebar-inset-reverse'" aria-hidden="true"></i></button>
       <a class="app-brand" ng-href="{{isLoginRoute ? '#!/login' : '#!/quotes'}}" aria-label="Quote Management home">
         <span class="app-brand-mark"><i class="bi bi-intersect" aria-hidden="true"></i></span>
         <span><strong>Quote <span class="app-brand-accent">Management</span></strong></span>
@@ -35,25 +35,25 @@
           <option value="light">Light</option><option value="dark">Dark</option><option value="system">System</option>
         </select>
       </div>
-      <div class="qm-user" ng-if="currentUser && !isLoginRoute">
+      <div class="qm-user" ng-if="currentUser && !isLoginRoute && !access.isCase()">
         <span class="qm-avatar" aria-hidden="true">{{currentUser.name.charAt(0)}}</span>
-        <span class="qm-user-name" ng-bind="currentUser.name"></span>
+        <span class="qm-user-name" ng-bind="currentUser.name" ng-attr-title="{{currentUser.email || undefined}}"></span>
 
         <button type="button" class="btn qm-signout" ng-click="logout()" ng-disabled="signingOut" title="Sign out" aria-label="Sign out"><i class="bi bi-box-arrow-right" aria-hidden="true"></i></button>
       </div>
     </div>
   </header>
-  <div class="qm-sidebar-backdrop" ng-if="!isLoginRoute && mobileMenuOpen" ng-click="toggleNavigation()" aria-hidden="true"></div>
-  <nav id="workspace-nav" class="app-sidebar" ng-if="!isLoginRoute" ng-class="{'is-open': mobileMenuOpen}" aria-label="Workspace navigation" ng-cloak>
+  <div class="qm-sidebar-backdrop" ng-if="!isLoginRoute && !access.isCase() && mobileMenuOpen" ng-click="toggleNavigation()" aria-hidden="true"></div>
+  <nav id="workspace-nav" class="app-sidebar" ng-if="!isLoginRoute && !access.isCase()" ng-class="{'is-open': mobileMenuOpen}" aria-label="Workspace navigation" ng-cloak>
     <div class="qm-sidebar-brand">
       <a class="app-brand" href="#!/quotes" aria-label="Quote Management Orion Middleware home">
         <span class="app-brand-mark"><i class="bi bi-intersect" aria-hidden="true"></i></span>
         <span><strong>Quote <span class="app-brand-accent">Management</span></strong> <small>Orion Middleware</small></span>
       </a>
     </div>
-    <a href="#!/quotes" class="qm-nav-link" title="Home" ng-class="{active: isActive('/quotes')}" ng-attr-aria-current="{{isActive('/quotes') ? 'page' : undefined}}"><i class="bi bi-house-door" aria-hidden="true"></i><span>Home</span><i class="bi bi-chevron-right qm-nav-arrow" aria-hidden="true"></i></a>
-    <a href="#!/search" class="qm-nav-link" title="Search" ng-class="{active: isActive('/search')}" ng-attr-aria-current="{{isActive('/search') ? 'page' : undefined}}"><i class="bi bi-search" aria-hidden="true"></i><span>Search</span><i class="bi bi-chevron-right qm-nav-arrow" aria-hidden="true"></i></a>
-    <a href="#!/support-tickets" class="qm-nav-link" title="Sales Support Tickets" ng-class="{active: isActive('/support-tickets')}" ng-attr-aria-current="{{isActive('/support-tickets') ? 'page' : undefined}}"><i class="bi bi-ticket-perforated" aria-hidden="true"></i><span>Sales Support Tickets</span><i class="bi bi-chevron-right qm-nav-arrow" aria-hidden="true"></i></a>
+    <a href="#!/quotes" class="qm-nav-link" title="Home" ng-if="access.allows('listAll')" ng-class="{active: isActive('/quotes')}" ng-attr-aria-current="{{isActive('/quotes') ? 'page' : undefined}}"><i class="bi bi-house-door" aria-hidden="true"></i><span>Home</span><i class="bi bi-chevron-right qm-nav-arrow" aria-hidden="true"></i></a>
+    <a href="#!/search" class="qm-nav-link" title="Search" ng-if="access.allows('search')" ng-class="{active: isActive('/search')}" ng-attr-aria-current="{{isActive('/search') ? 'page' : undefined}}"><i class="bi bi-search" aria-hidden="true"></i><span>Search</span><i class="bi bi-chevron-right qm-nav-arrow" aria-hidden="true"></i></a>
+    <a href="#!/support-tickets" class="qm-nav-link" title="Sales Support Tickets" ng-if="access.allows('listAll')" ng-class="{active: isActive('/support-tickets')}" ng-attr-aria-current="{{isActive('/support-tickets') ? 'page' : undefined}}"><i class="bi bi-ticket-perforated" aria-hidden="true"></i><span>Sales Support Tickets</span><i class="bi bi-chevron-right qm-nav-arrow" aria-hidden="true"></i></a>
     <a ng-if="supportUrl" ng-href="{{supportUrl}}" class="qm-nav-link qm-support-link" target="_blank" rel="noopener noreferrer"><i class="bi bi-question-circle" aria-hidden="true"></i> Get support <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
   </nav>
   <main id="main-content" class="app-content" tabindex="-1" qm-pointer-glow ng-cloak>
@@ -65,6 +65,8 @@
   <script src="vendor/angular-route/angular-route.min.js"></script>
   <script src="app/app.js"></script>
   <script src="app/services/auth.service.js"></script>
+  <script src="app/services/access.service.js"></script>
+  <script src="app/services/embed.service.js"></script>
   <script src="app/services/services.js"></script>
   <script src="app/services/quote-view.service.js"></script>
   <script src="app/services/quote-journey.service.js"></script>
@@ -73,6 +75,8 @@
   <script src="app/components/shared/pointer-glow.directive.js"></script>
   <script src="app/components/shared/contact-card.component.js"></script>
   <script src="app/components/login/login.controller.js"></script>
+  <script src="app/components/access/access.controller.js"></script>
+  <script src="app/components/embed/embed.controller.js"></script>
   <script src="app/components/quote-list/quote-list.controller.js"></script>
   <script src="app/components/support-tickets/support-tickets.controller.js"></script>
   <script src="app/components/quote-detail/quote-detail.controller.js"></script>

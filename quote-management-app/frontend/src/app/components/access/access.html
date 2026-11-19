@@ -1,0 +1,20 @@
+<div class="container-fluid qm-page-shell">
+  <div class="qm-state-panel" id="access-panel" role="alert">
+    <i class="bi" ng-class="view.icon" aria-hidden="true"></i>
+    <h1 id="access-title">{{view.title}}</h1>
+    <p class="mt-3 mb-2" id="access-message">{{view.message}}</p>
+    <p class="small text-muted mb-0" ng-if="trackingId">Tracking ID: <code>{{trackingId}}</code></p>
+    <div class="d-flex flex-wrap justify-content-center gap-2 mt-4">
+      <a id="request-role" class="btn btn-primary" ng-if="requestRoleUrl" ng-href="{{requestRoleUrl}}" target="_blank" rel="noopener noreferrer">
+        Request a role<i class="bi bi-arrow-up-right ms-1" aria-hidden="true"></i>
+      </a>
+      <button type="button" id="check-again" class="btn btn-outline-primary" ng-if="canCheckAgain" ng-click="checkAgain()" ng-disabled="checking">
+        <i class="bi me-1" ng-class="checking ? 'bi-arrow-repeat qm-spin' : 'bi-arrow-clockwise'" aria-hidden="true"></i>{{checking ? 'Checking…' : 'Check again'}}
+      </button>
+      <a id="access-back" class="btn btn-secondary" ng-if="landing" ng-href="#!{{landing}}"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back</a>
+      <button type="button" id="access-signout" class="btn btn-outline-secondary" ng-if="canSignOut" ng-click="signOut()">
+        <i class="bi bi-box-arrow-right me-1" aria-hidden="true"></i>Sign out
+      </button>
+    </div>
+  </div>
+</div>

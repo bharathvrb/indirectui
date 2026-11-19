@@ -7,6 +7,8 @@ angular.module('quoteManagement')
         var localSession = $window.__localAuth || { enabled: false, authenticated: false };
         var mode = localSession.authenticated ? 'local' : 'sso';
         var expired = false;
+        // A person who arrived from a Dynamics case has no sign-in of their own: the server session is bound to one quote.
+        var caseSession = null;
 
         function localActive() {
             return localSession.authenticated && localSession.user && localSession.expiresAt > Date.now();
@@ -14,6 +16,7 @@ angular.module('quoteManagement')
 
         function getUser() {
             if (expired) return null;
+            if (mode === 'case') return caseSession ? caseSession.user : null;
             if (mode === 'local') return localActive() ? localSession.user : null;
             return instance ? instance.getActiveAccount() : null;
         }
@@ -40,6 +43,11 @@ angular.module('quoteManagement')
 
         function requireLogin(reason) {
             expired = true;
+            if (mode === 'case') {
+                // Nothing to sign in to: the case has to be reopened from Dynamics.
+                $location.url('/no-access?reason=session').replace();
+                return;
+            }
             var destination = $location.path() === '/login' ? $location.search().returnTo : $location.url();
             var query = {};
             if (validReturnUrl(destination)) query.returnTo = destination;
@@ -67,8 +75,29 @@ angular.module('quoteManagement')
             });
         }
 
+        // Where "Continue sign-in in a new window" goes. It is the configured address, or this site's own sign-in page;
+        // nothing from the page (and never a GUID) is added to it.
+        function newWindowSignInUrl() {
+            var configured = $window.APP_CONFIG && $window.APP_CONFIG.signIn && $window.APP_CONFIG.signIn.newWindowUrl;
+            var fallback = $window.location.origin + '/#!/login';
+            if (typeof configured !== 'string' || !configured.trim()) return fallback;
+            try {
+                var url = new URL(configured.trim(), $window.location.origin);
+                return url.protocol === 'https:' || url.origin === $window.location.origin ? url.href : fallback;
+            } catch (error) {
+                return fallback;
+            }
+        }
+
         return {
             getUser: getUser,
+            isCaseSession: function() { return mode === 'case' && !expired && !!caseSession; },
+            setCaseSession: function(info) {
+                caseSession = { quoteRequestId: info && info.quoteRequestId, user: { name: 'Dynamics case', username: '', authType: 'case' } };
+                mode = 'case';
+                expired = false;
+            },
+            newWindowSignInUrl: newWindowSignInUrl,
             isAuthenticated: function() { return !!getUser(); },
             isSsoConfigured: configured,
             getInitializationError: function() { return $window.__authError; },
@@ -116,10 +145,14 @@ angular.module('quoteManagement')
                     return $q.reject({ status: 401, authRequired: true, message: 'Please sign in to continue.' });
                 }
                 // Local callers use the server-validated HTTP-only cookie; SSO callers prove their identity.
-                if (mode === 'local') return $q.when(null);
+                if (mode === 'local' || mode === 'case') return $q.when(null);
                 return acquireIdToken();
             },
             logout: function() {
+                if (mode === 'case') {
+                    requireLogin();
+                    return $q.when();
+                }
                 if (mode === 'local') {
                     return $http.post('/auth/local/logout', {}).then(function() {
                         localSession = { enabled: localSession.enabled, authenticated: false, user: null, expiresAt: null };

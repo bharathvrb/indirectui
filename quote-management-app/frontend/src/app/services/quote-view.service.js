@@ -1,7 +1,7 @@
 'use strict';
 
 angular.module('quoteManagement')
-  .factory('QuoteViewService', ['QuoteService', function(QuoteService) {
+  .factory('QuoteViewService', ['QuoteService', 'AccessErrors', function(QuoteService, AccessErrors) {
     function text(value) {
       return typeof value === 'string' || typeof value === 'number' ? String(value).trim() : '';
     }
@@ -162,11 +162,14 @@ angular.module('quoteManagement')
             if (destroyed || request !== generation) return;
             scope.loading = false;
             scope.trackingId = trackingId(response);
+            // The epic's wording for access errors (no role, outside scope, not allowed, expired case, outage).
+            var access = AccessErrors.describe(response);
             // The server proxy always returns a safe { code, message, trackingId } body for its own errors.
             var serverMessage = response && response.data && typeof response.data.code === 'string' &&
               typeof response.data.message === 'string' ? response.data.message : null;
             scope.error = malformed
               ? 'QuoteData returned an unrecognized response. Please retry or contact support.'
+              : access.message ? access.message
               : response && response.status === 401
                 ? 'Your session has expired. Sign in again to continue.'
               : response && response.status === 404 && (params.quoteRequestId || params.externalId || params.proposalId)

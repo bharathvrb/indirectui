@@ -18,13 +18,25 @@
     <div class="qm-login-body">
       <div class="alert alert-info" ng-if="sessionExpired" role="status">Your session has expired. Sign in to continue where you left off.</div>
       <div class="qm-return-note" ng-if="returningToQuote"><i class="bi bi-link-45deg" aria-hidden="true"></i> The quote you opened will load after you sign in.</div>
-      <button type="button" class="btn qm-login-btn qm-sso-btn w-100" ng-click="signIn()" ng-disabled="!ssoConfigured || signingIn || localSigningIn">
+      <!-- Inside a Dynamics frame, sign-in cannot continue (Microsoft refuses to be framed, third-party cookies may be blocked): offer a top-level window. -->
+      <div class="qm-setup-notice" ng-if="framed" role="status">
+        <i class="bi bi-window-stack" aria-hidden="true"></i>
+        <div><strong>Sign-in cannot continue inside this frame</strong><p>Continue in a new window. When you have signed in there, come back here and choose "I have signed in".</p></div>
+      </div>
+      <button type="button" id="signin-new-window" class="btn qm-login-btn qm-sso-btn w-100 mt-3" ng-if="framed" ng-click="openSignInWindow()">
+        <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i><span>Continue sign-in in a new window</span>
+      </button>
+      <div class="alert alert-warning mt-3" ng-if="popupBlocked" role="alert">Your browser blocked the new window. Allow pop-ups for this site and try again.</div>
+      <button type="button" id="signin-check" class="btn btn-outline-primary w-100 mt-2" ng-if="framed && signInWindowOpened" ng-click="checkSignedIn()" ng-disabled="checkingSignIn">
+        <i class="bi me-1" ng-class="checkingSignIn ? 'bi-arrow-repeat qm-spin' : 'bi-check2'" aria-hidden="true"></i>{{checkingSignIn ? 'Checking…' : 'I have signed in'}}
+      </button>
+      <button type="button" class="btn qm-login-btn qm-sso-btn w-100" ng-if="!framed" ng-click="signIn()" ng-disabled="!ssoConfigured || signingIn || localSigningIn">
         <i class="bi" ng-class="signingIn ? 'bi-arrow-repeat qm-spin' : 'bi-microsoft'" aria-hidden="true"></i>
         <span>{{signingIn ? 'Redirecting…' : 'Continue with Comcast SSO'}}</span>
         <i class="bi bi-arrow-up-right" aria-hidden="true" ng-if="!signingIn"></i>
       </button>
       <div class="alert alert-danger mt-3" ng-if="authError" role="alert">{{authError}}</div>
-      <div class="qm-setup-notice" ng-if="!ssoConfigured" role="status">
+      <div class="qm-setup-notice" ng-if="!ssoConfigured && !framed" role="status">
         <i class="bi bi-info-circle" aria-hidden="true"></i>
         <div><strong>SSO setup is pending</strong><p>Configure the SSO client, tenant and login scopes in <code>config.js</code>.</p></div>
       </div>

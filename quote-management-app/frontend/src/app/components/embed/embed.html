@@ -1,0 +1,11 @@
+<div class="container-fluid qm-page-shell">
+  <div class="qm-state-panel is-info" id="embed-panel" ng-attr-role="{{phase === 'failed' ? 'alert' : 'status'}}">
+    <i class="bi" ng-class="phase === 'failed' ? 'bi-exclamation-triangle' : phase === 'open-from-dynamics' ? 'bi-box-arrow-in-right' : 'bi-arrow-repeat qm-spin'" aria-hidden="true"></i>
+    <h1 id="embed-title">{{title}}</h1>
+    <p class="mt-3 mb-2" id="embed-message">{{message}}</p>
+    <p class="small text-muted mb-0" ng-if="trackingId">Tracking ID: <code>{{trackingId}}</code></p>
+    <div class="d-flex justify-content-center gap-2 mt-4" ng-if="phase === 'failed' && framed">
+      <button type="button" id="embed-retry" class="btn btn-outline-primary" ng-click="begin()"><i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>Try again</button>
+    </div>
+  </div>
+</div>

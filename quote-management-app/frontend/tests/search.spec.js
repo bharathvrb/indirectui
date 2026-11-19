@@ -1485,6 +1485,23 @@ describe('Unified quote search workspace', function() {
     expect(scope.currentPage).toBe(10);
   });
 
+  it('words access refusals as the epic does, for Home, Search and Sales Support Tickets alike', function() {
+    start();
+    [
+      [403, { code: 'QUOTE_SCOPE_DENIED', trackingId: 'T-1' }, 'You do not have access to this quote. Contact your Sales Support lead if you believe this is an error.'],
+      [403, { code: 'ROLE_MISSING', trackingId: 'T-2' }, 'You do not have an OMW role. Request access in myComcastAccess.'],
+      [403, { code: 'ACTION_NOT_ALLOWED', trackingId: 'T-3' }, 'You are not allowed to perform this action.'],
+      [401, { code: 'GUID_EXPIRED', trackingId: 'T-4' }, 'Session expired. Reopen the case from Dynamics.']
+    ].forEach(function(entry, index) {
+      scope.refresh();
+      requests[requests.length - 1].deferred.reject({ status: entry[0], data: entry[1], headers: function() { return null; } });
+      root.$digest();
+      expect(scope.error).toBe(entry[2]);
+      expect(scope.trackingId).toBe(entry[1].trackingId);
+      expect(scope.dataReady).toBe(false);
+    });
+  });
+
   it('does not display fake KPI zeros or old rows during an API error', function() {
     start();
     resolve(0, [{ quoteRequestId: 'Q-1', state: 'FAILED' }]);
@@ -1492,7 +1509,7 @@ describe('Unified quote search workspace', function() {
     expect(scope.totalElements).toBeNull();
     requests[1].deferred.reject({ status: 503, headers: function(name) { return name === 'x-tracking-id' ? 'TRACK-503' : null; } });
     root.$digest();
-    expect(scope.error).toContain('retry');
+    expect(scope.error).toBe('The service is temporarily unavailable. Try again shortly.');
     expect(scope.trackingId).toBe('TRACK-503');
     expect(scope.dataReady).toBe(false);
     expect(scope.quotes).toEqual([]);

@@ -44,6 +44,9 @@ Restart the server after changing settings.
 | `APP_CONFIG.contractDownloadUrl` | Optional contract download endpoint (`documentType`, `dmaasId` query). Blank shows IDs with copy buttons only. |
 | `APP_CONFIG.supportUrl` | Optional HTTPS support link shown in the menu and on error pages. |
 | `APP_CONFIG.features.retryEnabled` | `false` (default): the quote Retry button is visible but disabled (its hover text says "Coming soon"). `true`: a failed quote can be retried (see Quote retry and Mark completed). |
+| `APP_CONFIG.access.enabled`, `permissionsUrl`, `requestRoleUrl` | `false` (default): every signed-in user sees every screen and button, as before. `true`: the UI reads the permissions and shows only what is allowed (see Access, permissions and Dynamics launch). `requestRoleUrl` is an optional https link on the "no role" screen. |
+| `APP_CONFIG.embed.enabled`, `dynamicsOrigins`, `sourceSystem`, `initializeUrl`, `handshakeTimeoutMs` | `false` (default): no Dynamics launch. `true`: a page framed by Dynamics runs the `postMessage` handshake and opens one quote. Needs exact Dynamics origins and the Initialize address. |
+| `APP_CONFIG.signIn.newWindowUrl` | Address opened by "Continue sign-in in a new window" when framed. Blank: this site's sign-in page. https or same-origin only. |
 | `AUTH_CONFIG.clientId`, `tenantId`, `loginScopes`, `loginPrompt`, `redirectUri` | Entra ID (MSAL) sign-in. Currently the ONP UI LOWER - INT registration; its SPA redirect URIs must include `http://127.0.0.1:8081/`. |
 
 `config.js` is public: never put secrets in it.
@@ -94,6 +97,42 @@ The server forwards it as `PATCH {QUOTEDATA_BASE_URL}/quote/{quoteRequestId}`. Q
 - **SSO:** MSAL authorization code + PKCE. The browser sends its SSO **ID token** to the local server, which verifies signature, issuer, tenant, audience and expiry. That token is never forwarded to QuoteData.
 - **Username and password:** from `server.properties`, giving a one-hour HttpOnly, SameSite=Strict session cookie. Works in development and production, on this machine and (with `QM_PUBLIC_ORIGIN`) from other machines. Five failed attempts per client address in five minutes are blocked for a while; behind a reverse proxy every user shares the proxy's address for this limit.
 - Opening a case link such as `/quotes/<quoteRequestId>` without a session goes to sign-in and returns to the same quote afterwards.
+
+## Access, permissions and Dynamics launch (UI side of the OMW access epic)
+
+This is the browser half of stories BXTFOMW-26558, 26559, 26562, 26563 and 26564. The backend APIs (Handoff, Initialize, `/me/permissions`, quote APIs, token validation, audit, sessions, `frame-ancestors`) are built separately, so every part below is **off by default** and the app behaves exactly as before until its flag is turned on in `src/config.js`.
+
+| Story | What the UI does | Flag |
+| --- | --- | --- |
+| 26558 / 26563 Permissions | Reads `GET <access.permissionsUrl>` once after sign-in and shows only the permitted screens and buttons | `access.enabled` |
+| 26563 Messages | Maps the API's error codes to the epic's wording, always with the tracking ID | on with the codes (no flag) |
+| 26559 Direct login | The "no OMW role" screen, redirect to sign-in when the session expired, name and email in the header | `access.enabled` |
+| 26562 Iframe handshake | The page Dynamics frames: registers its listener, sends `READY`, accepts one `HANDSHAKE`, calls Initialize, opens `/quotes/<id>` | `embed.enabled` |
+| 26564 Sign-in fallback | "Continue sign-in in a new window" when framed | `embed.enabled` |
+
+**What the UI expects from the backend** (names are configurable where the epic leaves them open):
+
+- `GET <access.permissionsUrl>` (default `/api/quotemgmt/v1/me/permissions`) answers `200 { "userId", "sessionType": "DIRECT" | "CASE", "quoteRequestId": "<id>" or null, "permissions": ["LIST_ALL_QUOTES", ...] }`. `403 ROLE_MISSING` shows the no-role screen; `401` means sign in again (or "reopen the case" in a case session); `503`/anything else shows "service unavailable". A `CASE` answer must carry the bound `quoteRequestId`.
+- Permission names, matched without regard to case: `LIST_ALL_QUOTES`, `VIEW_ANY_QUOTE`, `VIEW_ASSIGNED_QUOTE`, `DOWNLOAD` or `DOWNLOAD_QUOTE`, `EDIT` or `EDIT_QUOTE`, `COMPLETE` or `COMPLETE_QUOTE`. The epic names only `LIST_ALL_QUOTES` and `COMPLETE`; the rest follow its permission table. To use other names, change `CAPABILITIES` in `src/app/services/access.service.js`.
+- `POST <embed.initializeUrl>` with `Authorization: Bearer <handshake token>` and body `{ "guid": "<guid>" }` answers `200 { "quoteRequestId": "<id>", ... }` and sets the session cookie. `401` (`GUID_INVALID`, `GUID_USED`, `GUID_EXPIRED`, `TOKEN_INVALID`) shows "Session expired. Reopen the case from Dynamics."
+- Errors use the epic's body `{ "code", "message", "trackingId" }` with these codes: `QUOTE_SCOPE_DENIED`, `ROLE_MISSING`, `ACTION_NOT_ALLOWED` (403), `GUID_*` (401), and a 503 with no code or `SERVICE_UNAVAILABLE`. The proxy's own 503 explanations (for example `SERVICE_AUTH_NOT_CONFIGURED`) keep their specific text.
+
+**Which control needs which permission** (shown only when `access.enabled` is true; today every signed-in user sees everything):
+
+| Control | Needs |
+| --- | --- |
+| Home, Sales Support Tickets (and their menu items) | `LIST_ALL_QUOTES` |
+| Search (and its menu item) | `VIEW_ANY_QUOTE` or `VIEW_ASSIGNED_QUOTE` |
+| Quote page | `VIEW_ANY_QUOTE`, or `VIEW_ASSIGNED_QUOTE` (in a Dynamics case, only the bound quote) |
+| Mark completed | `COMPLETE` |
+| Retry | `COMPLETE` or `EDIT` |
+| Contract download, customer CSV | `DOWNLOAD` |
+
+A person who may not list quotes but may view assigned quotes is sent from Home to Search. A Dynamics case session never lists or searches, has no menu or sign-out, and any other page or quote shows "You do not have access to this quote." The server still checks every action; the UI only hides what would be refused.
+
+**Dynamics launch.** Set `embed.enabled`, `embed.dynamicsOrigins` (exact origins, no path or wildcard), `embed.sourceSystem` and `embed.initializeUrl`. A page that Dynamics frames at the base address runs the handshake; the same page opened on its own (`/#!/embed`) says "Open this quote from Dynamics". `READY` goes only to the exact origin the browser names as the parent when it is on the list, otherwise to each listed origin, never to `*`, and is repeated every two seconds until the answer comes or `embed.handshakeTimeoutMs` (10 s) runs out. A message is accepted only from a listed origin, from the parent window, with `code: HANDSHAKE`, `sourceSystem: cbsales_crm` and a well-formed GUID and token; anything else is ignored and logged with its origin only. The GUID and token are held in memory, sent once in the Initialize request, and never put in a URL, storage or log.
+
+**Not done here (backend or server work).** The Node server still sends `X-Frame-Options: DENY`, so a browser will refuse to frame the page until the server sends `Content-Security-Policy: frame-ancestors <Dynamics origin>` instead (story 26562). The quote data still comes from the QuoteData proxy; when the epic's quote APIs (story 26561) exist, change `QUOTEDATA_BASE` in `src/app/services/services.js` and map the responses. Sign-in is still MSAL or the local login; the server-side authorization-code sign-in of story 26559 replaces `AuthService.login`/`logout` later. Roles are not shown in the UI because `/me/permissions` does not return them.
 
 ## QuoteData proxy
 

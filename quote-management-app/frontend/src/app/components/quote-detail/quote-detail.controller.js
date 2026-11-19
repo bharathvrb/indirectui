@@ -1,8 +1,8 @@
 'use strict';
 
 angular.module('quoteManagement')
-  .controller('QuoteDetailCtrl', ['$scope', '$routeParams', '$location', '$timeout', '$window', '$document', '$q', 'QuoteService', 'QuoteJourney',
-    function($scope, $routeParams, $location, $timeout, $window, $document, $q, QuoteService, QuoteJourney) {
+  .controller('QuoteDetailCtrl', ['$scope', '$routeParams', '$location', '$timeout', '$window', '$document', '$q', 'QuoteService', 'QuoteJourney', 'AccessService', 'AccessErrors',
+    function($scope, $routeParams, $location, $timeout, $window, $document, $q, QuoteService, QuoteJourney, AccessService, AccessErrors) {
       var document = $document[0];
       var requestGeneration = 0;
       var returnFocus = null;
@@ -15,7 +15,12 @@ angular.module('quoteManagement')
       var copiedTimer = null;
       $scope.loading = true;
       $scope.error = null;
+      $scope.errorDetail = null;
       $scope.trackingId = null;
+      // What this person may do here (stories 26558, 26563). All true while access.enabled is off.
+      $scope.mayComplete = function() { return !!$scope.canUpdateQuotes && AccessService.allows('complete'); };
+      $scope.mayRetry = function() { return !!$scope.canUpdateQuotes && AccessService.allows('update'); };
+      $scope.mayDownload = function() { return AccessService.allows('download'); };
       $scope.quote = null;
       $scope.activeTab = 'customer';
       $scope.failureSummary = null;
@@ -1240,7 +1245,7 @@ angular.module('quoteManagement')
       }
 
       $scope.openCompleteDialog = function() {
-        if (!$scope.isFailed() || !$scope.canUpdateQuotes || $scope.completeSubmitting) return;
+        if (!$scope.isFailed() || !$scope.mayComplete() || $scope.completeSubmitting) return;
         returnFocus = document.activeElement;
         $scope.completeContext = {
           quoteRequestId: $scope.quote.quoteRequestId, ticketNumber: $scope.quote.supportTicketNumber, plan: buildCompletionPlan()
@@ -1290,7 +1295,7 @@ angular.module('quoteManagement')
       }
 
       $scope.canRetry = function() {
-        return !!($scope.retryEnabled && $scope.canUpdateQuotes && $scope.isFailed() && !$scope.retry.submitting && !$scope.retryRequested);
+        return !!($scope.retryEnabled && $scope.mayRetry() && $scope.isFailed() && !$scope.retry.submitting && !$scope.retryRequested);
       };
       $scope.retryTitle = function() {
         if (!$scope.retryEnabled) return 'Coming soon';
@@ -1353,7 +1358,9 @@ angular.module('quoteManagement')
           $scope.retry.submitting = false;
           $scope.retry.trackingId = extractTrackingId(err);
           var status = err && err.status;
-          $scope.retry.error = status === 403 ? 'You are not allowed to retry this quote.'
+          var refusal = AccessErrors.describe(err);
+          $scope.retry.error = refusal.message && refusal.kind !== 'case-session' ? refusal.message
+            : status === 403 ? 'You are not allowed to retry this quote.'
             : status === 404 ? 'This quote was not found. Reload the quote and try again.'
             : status === 409 ? 'This quote is no longer failed or is already being retried.'
             : status === 501 ? 'Retry is not available yet.'
@@ -1366,7 +1373,7 @@ angular.module('quoteManagement')
 
       $scope.canSubmitComplete = function() {
         var plan = $scope.completeContext && $scope.completeContext.plan;
-        return !!plan && $scope.completeDialogOpen && $scope.isFailed() && $scope.canUpdateQuotes &&
+        return !!plan && $scope.completeDialogOpen && $scope.isFailed() && $scope.mayComplete() &&
           !plan.blocked.length && !plan.tooMany && ($scope.completeForm.comment || '').trim().length <= 1000 && !$scope.completeSubmitting;
       };
 
@@ -1386,7 +1393,9 @@ angular.module('quoteManagement')
           $scope.completeSubmitting = false;
           $scope.completeTrackingId = extractTrackingId(err);
           var status = err && err.status;
-          $scope.completeError = status === 403 ? 'You are not allowed to complete this quote.'
+          var refusal = AccessErrors.describe(err);
+          $scope.completeError = refusal.message && refusal.kind !== 'case-session' ? refusal.message
+            : status === 403 ? 'You are not allowed to complete this quote.'
             : status === 404 ? 'This quote was not found. Reload the quote and try again.'
             : status === 409 ? 'This quote changed while you were working on it. Reload it and try again.'
             : status === 0 ? 'Cannot reach the Quote Management server. Check your connection and try again.'
@@ -1468,12 +1477,13 @@ angular.module('quoteManagement')
       };
 
       $scope.canExportCustomer = function() {
+        if (!$scope.mayDownload()) return false;
         if ($scope.customerContacts.length > 0) return true;
         return $scope.customerFields.some(function(field) { return $scope.canCopy($scope.customer[field[0]]); }) ||
           $scope.addressFields.some(function(field) { return $scope.canCopy($scope.customerAddress[field[0]]); });
       };
 
-      $scope.canDownloadContract = function() { return QuoteService.canDownloadContract(); };
+      $scope.canDownloadContract = function() { return QuoteService.canDownloadContract() && $scope.mayDownload(); };
       $scope.downloadContract = function(type) {
         $scope.contractDownloadError = null;
         $scope.contractTrackingId = null;
@@ -1499,6 +1509,7 @@ angular.module('quoteManagement')
         var generation = ++requestGeneration;
         $scope.loading = true;
         $scope.error = null;
+        $scope.errorDetail = null;
         $scope.trackingId = null;
         $scope.contractDownloadError = null;
         $scope.quote = null;
@@ -1540,7 +1551,16 @@ angular.module('quoteManagement')
           if (generation !== requestGeneration) return;
           $scope.loading = false;
           $scope.trackingId = extractTrackingId(err);
-          if (err.status === 403) {
+          // The epic's wording for a quote outside the person's scope, a missing role, an expired case and a service outage.
+          var mapped = AccessErrors.describe(err);
+          if (mapped.kind === 'scope' || mapped.kind === 'role') {
+            $scope.error = 'Access denied';
+            $scope.errorDetail = mapped.message;
+          } else if (mapped.kind === 'case-session') {
+            $scope.error = mapped.message;
+          } else if (mapped.kind === 'unavailable') {
+            $scope.error = 'Unable to load quote details. ' + mapped.message;
+          } else if (err.status === 403) {
             $scope.error = 'Access denied';
           } else if (err.status === 404) {
             $scope.error = 'Quote not found';

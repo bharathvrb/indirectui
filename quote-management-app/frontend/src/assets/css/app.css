@@ -1118,3 +1118,8 @@ body.is-login .app-topbar .qm-topbar-actions { margin-left: auto; }
 @media (max-width: 575.98px) {
     .form-control, .form-select { font-size: 16px; }
 }
+
+/* Access and Dynamics-launch screens: the info variant of the state panel (not an error colour). */
+.qm-state-panel.is-info > i { background: var(--qm-primary-soft); color: var(--qm-primary); box-shadow: 0 0 0 10px color-mix(in srgb, var(--qm-primary-soft) 45%, transparent); }
+/* Opened from a Dynamics case: one quote only, so no menu; the content uses the full width. */
+body.is-case .app-topbar, body.is-case .app-content { margin-left: 0 !important; }

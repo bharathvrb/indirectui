@@ -1,7 +1,8 @@
 'use strict';
 
 angular.module('quoteManagement')
-    .controller('LoginCtrl', ['$scope', '$location', 'AuthService', function($scope, $location, AuthService) {
+    .controller('LoginCtrl', ['$scope', '$location', '$window', 'AuthService', 'AccessService', 'EmbedService', 'FrameBridge',
+        function($scope, $location, $window, AuthService, AccessService, EmbedService, FrameBridge) {
         $scope.signingIn = false;
         $scope.authError = AuthService.getInitializationError();
         $scope.ssoConfigured = AuthService.isSsoConfigured();
@@ -13,6 +14,29 @@ angular.module('quoteManagement')
         $scope.passwordVisible = false;
         $scope.sessionExpired = $location.search().reason === 'session-expired';
         $scope.returningToQuote = AuthService.getReturnUrl().indexOf('/quotes/') === 0;
+        // Framed by Dynamics (story 26564): sign-in cannot continue in the frame, so it opens in a top-level window from a click.
+        $scope.framed = EmbedService.isEnabled() && FrameBridge.isFramed();
+        $scope.signInWindowOpened = false;
+        $scope.popupBlocked = false;
+        $scope.checkingSignIn = false;
+        $scope.openSignInWindow = function() {
+            $scope.popupBlocked = false;
+            if (FrameBridge.open(AuthService.newWindowSignInUrl())) $scope.signInWindowOpened = true;
+            else $scope.popupBlocked = true;
+        };
+        $scope.checkSignedIn = function() {
+            if ($scope.checkingSignIn) return;
+            if (!AccessService.isEnabled()) {
+                $window.location.reload();
+                return;
+            }
+            $scope.checkingSignIn = true;
+            AccessService.load(true).then(function() {
+                $scope.checkingSignIn = false;
+                if (AccessService.status() === 'ready') $location.url(AuthService.getReturnUrl()).replace();
+                else $scope.authError = 'We could not find your sign-in yet. Finish signing in in the other window, then try again.';
+            });
+        };
         $scope.signIn = function() {
             if ($scope.signingIn || $scope.localSigningIn) return;
             $scope.authError = null;

@@ -10,7 +10,7 @@
         <button type="button" id="tour-open" class="btn btn-outline-primary" ng-click="openTour()" ng-if="pageMode === 'home'" aria-haspopup="dialog">
           <i class="bi bi-play-circle me-1" aria-hidden="true"></i>Watch tour
         </button>
-        <a class="btn btn-outline-primary qm-search-link" href="#!/search" ng-if="pageMode === 'home'"><i class="bi bi-search me-1" aria-hidden="true"></i>Search</a>
+        <a class="btn btn-outline-primary qm-search-link" href="#!/search" ng-if="pageMode === 'home' && access.allows('search')"><i class="bi bi-search me-1" aria-hidden="true"></i>Search</a>
         <button type="button" class="btn btn-primary qm-action-btn" ng-click="refresh()" ng-disabled="(lookupOnly || requireTerm) && !searchTerm" ng-if="listEnabled">
           <i class="bi bi-arrow-clockwise me-1" aria-hidden="true" ng-class="{'qm-spin': loading}"></i>Refresh
         </button>

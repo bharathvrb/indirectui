@@ -7,11 +7,26 @@ angular.module('quoteManagement', ['ngRoute'])
             .when('/login', {
                 templateUrl: 'app/components/login/login.html', controller: 'LoginCtrl', title: 'Welcome'
             })
-            .when('/', { redirectTo: '/login' })
+            // A page framed by Dynamics starts the handshake; every other visitor signs in.
+            .when('/', {
+                redirectTo: function() {
+                    var embed = window.APP_CONFIG && window.APP_CONFIG.embed;
+                    var framed = false;
+                    try { framed = window.self !== window.top; } catch (error) { framed = true; }
+                    return embed && embed.enabled === true && framed ? '/embed' : '/login';
+                }
+            })
+            .when('/embed', {
+                templateUrl: 'app/components/embed/embed.html', controller: 'EmbedCtrl', title: 'Open from Dynamics'
+            })
+            .when('/no-access', {
+                templateUrl: 'app/components/access/access.html', controller: 'AccessCtrl', title: 'Access'
+            })
             // Home: the default list of quotes. Search: the search features (smart search and the ID types).
             .when('/quotes', {
                 templateUrl: 'app/components/quote-list/quote-list.html',
                 controller: 'QuoteListCtrl', reloadOnSearch: false, title: 'Home', mode: 'home',
+                resolve: { access: ['AccessGuard', function(guard) { return guard.check('list'); }] },
                 // Old shared links such as /quotes?search=ABC now belong on the Search page.
                 redirectTo: function(params, path, search) {
                     if (!search || !search.search) return undefined;
@@ -22,15 +37,18 @@ angular.module('quoteManagement', ['ngRoute'])
             })
             .when('/search', {
                 templateUrl: 'app/components/quote-list/quote-list.html',
-                controller: 'QuoteListCtrl', reloadOnSearch: false, title: 'Search', mode: 'search'
+                controller: 'QuoteListCtrl', reloadOnSearch: false, title: 'Search', mode: 'search',
+                resolve: { access: ['AccessGuard', function(guard) { return guard.check('search'); }] }
             })
             .when('/quotes/:id', {
                 templateUrl: 'app/components/quote-detail/quote-detail.html',
-                controller: 'QuoteDetailCtrl', reloadOnSearch: false, title: 'Quote details'
+                controller: 'QuoteDetailCtrl', reloadOnSearch: false, title: 'Quote details',
+                resolve: { access: ['AccessGuard', function(guard) { return guard.check('quote'); }] }
             })
             .when('/support-tickets', {
                 templateUrl: 'app/components/support-tickets/support-tickets.html',
-                controller: 'SupportTicketsCtrl', reloadOnSearch: false, title: 'Sales Support Tickets'
+                controller: 'SupportTicketsCtrl', reloadOnSearch: false, title: 'Sales Support Tickets',
+                resolve: { access: ['AccessGuard', function(guard) { return guard.check('list'); }] }
             })
             .otherwise({ redirectTo: '/login' });
         $httpProvider.interceptors.push('AuthInterceptor');
@@ -90,8 +108,12 @@ angular.module('quoteManagement', ['ngRoute'])
             }
         };
     }])
-    .run(['$rootScope', '$location', '$timeout', 'AuthService', function($rootScope, $location, $timeout, AuthService) {
+    .run(['$rootScope', '$location', '$timeout', 'AuthService', 'AccessService', function($rootScope, $location, $timeout, AuthService, AccessService) {
+        // Pages that work without a sign-in of their own. Everything else asks the person to sign in first.
+        var PUBLIC_ROUTES = ['/login', '/embed', '/no-access'];
         $rootScope.appReady = true;
+        // Templates ask $root.access.allows('complete') and the like; true for everything while access.enabled is off.
+        $rootScope.access = AccessService;
         $rootScope.pendingRequests = 0;
         $rootScope.themePreference = window.QuoteTheme ? window.QuoteTheme.getPreference() : 'light';
         $rootScope.setTheme = function() {
@@ -126,7 +148,7 @@ angular.module('quoteManagement', ['ngRoute'])
                 authType: user.authType || 'sso'
             } : null;
             $rootScope.canUpdateQuotes = !!user;
-            $rootScope.isLoginRoute = !user || $location.path() === '/login' || $location.path() === '/';
+            $rootScope.isLoginRoute = !user || PUBLIC_ROUTES.indexOf($location.path()) !== -1 || $location.path() === '/';
         }
 
         $rootScope.isActive = function(path) {
@@ -135,8 +157,8 @@ angular.module('quoteManagement', ['ngRoute'])
         $rootScope.$on('$routeChangeStart', function(event, next) {
             var route = next && next.$$route;
             // Plain redirects (like / to /login) are followed as they are; a redirect function still needs the sign-in check.
-            if (!route || typeof route.redirectTo === 'string') return;
-            if (route.originalPath !== '/login' && !AuthService.isAuthenticated()) {
+            if (!route || typeof route.redirectTo === 'string' || route.originalPath === '/') return;
+            if (PUBLIC_ROUTES.indexOf(route.originalPath) === -1 && !AuthService.isAuthenticated()) {
                 event.preventDefault();
                 AuthService.requireLogin();
                 updateSession();
@@ -146,6 +168,8 @@ angular.module('quoteManagement', ['ngRoute'])
             }
         });
         $rootScope.$on('$routeChangeSuccess', function(event, current) {
+            // A new sign-in starts from a clean slate: permissions belong to the person who signed in.
+            if (current && current.originalPath === '/login') AccessService.reset();
             updateSession();
             $rootScope.mobileMenuOpen = false;
             $rootScope.pageTitle = current && current.title || 'Workspace';
@@ -155,7 +179,17 @@ angular.module('quoteManagement', ['ngRoute'])
                 if (main) main.focus({ preventScroll: true });
             }, 0, false);
         });
-        $rootScope.$on('$routeChangeError', function() {
+        $rootScope.$on('$routeChangeError', function(event, current, previous, rejection) {
+            // The access guard refuses a page by rejecting with where to go instead.
+            if (rejection && rejection.redirectTo) {
+                $location.url(rejection.redirectTo).replace();
+                return;
+            }
+            if (rejection && rejection.expired) {
+                if (rejection.caseSession) $location.url('/no-access?reason=session').replace();
+                else AuthService.requireLogin('session-expired');
+                return;
+            }
             $rootScope.shellError = 'This page could not load. Reload the browser to try again.';
         });
         $rootScope.logout = function() {

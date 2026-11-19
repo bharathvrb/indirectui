@@ -1,5 +1,5 @@
 <div class="container-fluid quote-detail-screen qm-page-shell" ng-if="!loading && quote">
-  <nav aria-label="Breadcrumb" class="qm-breadcrumb mb-3"><a href="#!/quotes"><i class="bi bi-house-door me-1" aria-hidden="true"></i>Home</a><span aria-hidden="true" class="mx-2">/</span><span aria-current="page">{{displayValue(quote.externalId || quote.quoteRequestId)}}</span></nav>
+  <nav aria-label="Breadcrumb" class="qm-breadcrumb mb-3"><a href="#!/quotes" ng-if="access.allows('listAll')"><i class="bi bi-house-door me-1" aria-hidden="true"></i>Home</a><span aria-hidden="true" class="mx-2" ng-if="access.allows('listAll')">/</span><span aria-current="page">{{displayValue(quote.externalId || quote.quoteRequestId)}}</span></nav>
   <div class="alert alert-success d-flex align-items-center gap-2" role="status" ng-if="completionNotice"><i class="bi bi-check-circle-fill" aria-hidden="true"></i>{{completionNotice}}</div>
 
   <section class="qm-quote-head" aria-labelledby="quote-detail-heading" qm-hero-watch="ui.compact">
@@ -21,12 +21,12 @@
         <button type="button" class="btn btn-outline-secondary" ng-click="loadQuote()" aria-label="Reload quote details">
           <i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>Reload
         </button>
-        <span class="qm-retry-wrap" ng-if="isFailed() && canUpdateQuotes" title="{{retryTitle()}}">
+        <span class="qm-retry-wrap" ng-if="isFailed() && mayRetry()" title="{{retryTitle()}}">
           <button type="button" id="retry-quote" class="btn btn-outline-primary" ng-disabled="!canRetry()" ng-click="openRetryDialog()" aria-haspopup="dialog">
             <i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>{{retryRequested ? 'Retry requested' : 'Retry'}}
           </button>
         </span>
-        <button id="mark-completed" class="btn btn-primary" ng-if="isFailed() && canUpdateQuotes" ng-click="openCompleteDialog()">
+        <button id="mark-completed" class="btn btn-primary" ng-if="isFailed() && mayComplete()" ng-click="openCompleteDialog()">
           <i class="bi bi-check2-circle me-1"></i>Mark completed
         </button>
       </div>
@@ -158,7 +158,7 @@
         <h3 class="qm-profile-name">{{displayValue(customer.customerName)}}</h3>
         <p class="qm-profile-trading" ng-if="canCopy(customer.tradingName)"><span class="qm-lbl">Trading name</span> {{customer.tradingName}}</p>
       </div>
-      <button class="btn btn-sm btn-outline-primary qm-profile-export" ng-click="exportCustomerCsv()" ng-disabled="!canExportCustomer()">
+      <button class="btn btn-sm btn-outline-primary qm-profile-export" ng-if="mayDownload()" ng-click="exportCustomerCsv()" ng-disabled="!canExportCustomer()">
         <i class="bi bi-filetype-csv me-1" aria-hidden="true"></i>Export CSV
       </button>
       <dl class="qm-kv-grid">
@@ -504,7 +504,8 @@
       <div class="card-body">
         <div ng-if="!contract.soa && !contract.msa" class="qm-empty-inline">No Contract is found.</div>
         <div ng-if="contract.soa || contract.msa">
-          <div class="alert alert-info" ng-if="!canDownloadContract()">Contract download is unavailable: no download endpoint is configured. You can still copy the document IDs.</div>
+          <div class="alert alert-info" ng-if="!canDownloadContract() && mayDownload()">Contract download is unavailable: no download endpoint is configured. You can still copy the document IDs.</div>
+          <div class="alert alert-info" id="download-not-allowed" ng-if="!mayDownload()">You are not allowed to download documents. You can still copy the document IDs.</div>
           <div class="row g-3">
             <div class="col-md-6">
               <div class="qm-contract-card">
@@ -680,7 +681,7 @@
     <div id="quote-load-error" class="alert alert-danger mt-3" role="alert" tabindex="-1">
       <span ng-switch="error">
         <span ng-switch-when="Quote not found">Check the ID or link, then search again.</span>
-        <span ng-switch-when="Access denied">Ask an administrator for access to this quote.</span>
+        <span ng-switch-when="Access denied">{{errorDetail || 'Ask an administrator for access to this quote.'}}</span>
         <span ng-switch-when="Quote archived">This quote is no longer available to open.</span>
         <span ng-switch-default>{{error}}</span>
       </span>
@@ -688,7 +689,7 @@
       <a ng-if="supportUrl" ng-href="{{supportUrl}}" target="_blank" rel="noopener noreferrer" class="d-inline-block mt-2">Contact support</a>
     </div>
     <div class="d-flex flex-wrap justify-content-center gap-2">
-      <button class="btn btn-secondary" ng-click="goBack()"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back to Home</button>
+      <button class="btn btn-secondary" ng-if="access.allows('listAll')" ng-click="goBack()"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back to Home</button>
       <button class="btn btn-outline-primary" ng-click="loadQuote()" ng-if="error.indexOf('Unable to load') === 0"><i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>Try loading again</button>
     </div>
   </div>
