@@ -1268,7 +1268,7 @@ describe('Unified quote search workspace', function() {
       var sources = Array.prototype.map.call(video.querySelectorAll('source'), function(source) { return source.getAttribute('src') + ' ' + source.getAttribute('type'); });
       expect(sources).toEqual(['assets/media/quote-management-tour.mp4 video/mp4', 'assets/media/quote-management-tour.webm video/webm']);
       var chapters = Array.prototype.map.call(dialog.querySelectorAll('.qm-tour-chapters button'), function(button) { return button.textContent.trim(); });
-      expect(chapters).toEqual(['Sign in', 'Home', 'Filters', 'Open a quote', 'Journey and errors', 'Tabs', 'Search']);
+      expect(chapters).toEqual(['Sign in', 'Home', 'Filters', 'Open a quote', 'Journey and errors', 'Mark completed', 'Tabs', 'Search', 'Support tickets']);
       timeout.flush(0);
       expect(document.activeElement).toBe(dialog.querySelector('#tour-close'));
     });
@@ -1278,7 +1278,7 @@ describe('Unified quote search workspace', function() {
       var times = scope.tourChapters.map(function(chapter) { return chapter.time; });
       expect(times[0]).toBe(0);
       times.forEach(function(time, index) { if (index) expect(time).toBeGreaterThan(times[index - 1]); });
-      expect(times[times.length - 1]).toBeLessThan(89);
+      expect(times[times.length - 1]).toBeLessThan(150);
     });
 
     it('jumps to a chapter and plays from there', function() {

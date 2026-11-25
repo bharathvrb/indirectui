@@ -436,11 +436,13 @@ describe('Unified quote detail workspace', function() {
     root.$digest(); flushFocus();
     var comment = document.getElementById('complete-comment');
     var confirm = document.getElementById('complete-confirm');
+    var list = document.querySelector('#complete-dialog .qm-complete-steps'); // the step list scrolls, so it is the first tab stop
     expect(document.activeElement).toBe(comment);
+    list.focus();
     scope.completeDialogKeydown(key('Tab', true)); // first: wraps to the last button
     expect(document.activeElement).toBe(confirm);
-    scope.completeDialogKeydown(key('Tab')); // last: wraps to the comment box
-    expect(document.activeElement).toBe(comment);
+    scope.completeDialogKeydown(key('Tab')); // last: wraps to the step list
+    expect(document.activeElement).toBe(list);
     scope.completeDialogKeydown(key('Escape')); root.$digest(); flushFocus();
     expect(scope.completeDialogOpen).toBe(false);
     expect(document.activeElement).toBe(trigger);

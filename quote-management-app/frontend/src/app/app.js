@@ -127,7 +127,20 @@ angular.module('quoteManagement', ['ngRoute'])
         };
         $rootScope.toggleNavigation = function() {
             $rootScope.mobileMenuOpen = !$rootScope.mobileMenuOpen;
+            // Opening the drawer moves the keyboard into it; closing it returns to the button that opened it.
+            $timeout(function() {
+                var target = $rootScope.mobileMenuOpen ? document.querySelector('#workspace-nav .qm-nav-link') : document.querySelector('.qm-menu-toggle');
+                if (target) target.focus();
+            }, 0, false);
         };
+        // Escape closes the drawer, which otherwise covers its own button. A dialog that already used the key keeps it.
+        function closeDrawerOnEscape(event) {
+            if (event.key !== 'Escape' || event.defaultPrevented || !$rootScope.mobileMenuOpen) return;
+            event.preventDefault();
+            $rootScope.$apply($rootScope.toggleNavigation);
+        }
+        document.addEventListener('keydown', closeDrawerOnEscape);
+        $rootScope.$on('$destroy', function() { document.removeEventListener('keydown', closeDrawerOnEscape); });
         // Desktop sidebar: expanded or icon-only. The choice is remembered per browser.
         function readSidebar() {
             try { return window.localStorage.getItem('omw-sidebar') === 'collapsed'; } catch (error) { return false; }
