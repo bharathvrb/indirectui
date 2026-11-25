@@ -142,8 +142,9 @@ angular.module('quoteManagement')
       $scope.tourFiles = { poster: 'assets/media/quote-management-tour.jpg', mp4: 'assets/media/quote-management-tour.mp4', webm: 'assets/media/quote-management-tour.webm' };
       // Chapter start times in seconds, matching the recorded tour (src/assets/media/quote-management-tour.mp4 and .webm).
       $scope.tourChapters = [
-        { label: 'Sign in', time: 0 }, { label: 'Home', time: 9.5 }, { label: 'Filters', time: 19 }, { label: 'Open a quote', time: 26 },
-        { label: 'Journey and errors', time: 34 }, { label: 'Tabs', time: 50.5 }, { label: 'Search', time: 68.5 }
+        { label: 'Sign in', time: 0 }, { label: 'Home', time: 10.2 }, { label: 'Filters', time: 22 }, { label: 'Open a quote', time: 34.7 },
+        { label: 'Journey and errors', time: 48.2 }, { label: 'Mark completed', time: 66.5 }, { label: 'Tabs', time: 80.5 },
+        { label: 'Search', time: 120.2 }, { label: 'Support tickets', time: 133.8 }
       ];
       var tourReturnFocus = null;
       $scope.openTour = function() {
