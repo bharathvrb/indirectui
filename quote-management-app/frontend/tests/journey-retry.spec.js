@@ -409,10 +409,11 @@ describe('Quote journey, quote retry and Mark completed', function() {
       expect(dialog.textContent).toContain('Retry this quote?');
       expect(dialog.textContent).toContain('PARTNER-QUOTE-1-SYNTHETIC');
       expect(dialog.querySelectorAll('.qm-complete-steps li').length).toBe(1);
+      expect(dialog.querySelector('.qm-complete-steps').getAttribute('tabindex')).toBe('0');
       expect(dialog.querySelector('.qm-complete-steps').textContent).toContain('CREATE_PROPOSAL');
       expect(document.activeElement.id).toBe('retry-confirm');
-      scope.retryDialogKeydown(key('Tab')); // confirm is last: wraps to first
-      expect(document.activeElement.textContent.trim()).toBe('Cancel');
+      scope.retryDialogKeydown(key('Tab')); // confirm is last: wraps to the first stop, the failed-step list (it scrolls)
+      expect(document.activeElement).toBe(dialog.querySelector('.qm-complete-steps'));
       scope.retryDialogKeydown(key('Tab', true)); // first: wraps to last
       expect(document.activeElement.id).toBe('retry-confirm');
       var escape = key('Escape');
@@ -500,6 +501,7 @@ describe('Quote journey, quote retry and Mark completed', function() {
       expect(dialog.querySelector('label[for="complete-comment"]').textContent.trim()).toBe('Comment');
       expect(dialog.textContent).toContain('5 steps and the quote itself will be set to Completed.');
       expect(dialog.querySelectorAll('.qm-complete-steps li').length).toBe(5);
+      expect(dialog.querySelector('.qm-complete-steps').getAttribute('tabindex')).toBe('0'); // a long list scrolls, so the keyboard must reach it
       expect(dialog.textContent).toContain('1 Not required step is left as they are');
       expect(document.activeElement.id).toBe('complete-comment');
       expect(scope.canSubmitComplete()).toBe(true);

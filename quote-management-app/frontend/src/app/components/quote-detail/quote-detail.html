@@ -141,7 +141,9 @@
   </div>
   <div class="qm-toast" role="status" aria-live="polite" ng-if="copyFeedback"><i class="bi bi-clipboard-check" aria-hidden="true"></i>{{copyFeedback}}</div>
   <div class="alert alert-info" role="status" ng-if="navigationNotice">{{navigationNotice}}</div>
-  <div class="nav nav-tabs qm-tabset" role="tablist" aria-label="Quote detail sections">
+  <div class="nav nav-tabs qm-tabset" role="tablist" aria-label="Quote detail sections" qm-tab-scroll>
+    <!-- Pointer helpers only: the tabs themselves are reachable with the arrow keys, so these are hidden from assistive technology. -->
+    <button type="button" class="qm-tab-arrow is-left" tabindex="-1" aria-hidden="true"><i class="bi bi-chevron-left"></i></button>
     <span class="qm-tab-context" ng-if="ui.compact" aria-hidden="true"><b>{{displayValue(quote.externalId || quote.quoteRequestId)}}</b><span class="badge qm-status {{getStateBadgeClass(quote.state)}}">{{getStateLabel(quote.state)}}</span></span>
     <button ng-repeat="tab in tabs" type="button" class="nav-link" role="tab"
             id="detail-tab-{{tab.id}}" aria-controls="detail-panel-{{tab.id}}" aria-selected="{{activeTab === tab.id}}"
@@ -149,6 +151,7 @@
             ng-click="setTab(tab.id)" ng-keydown="tabKeydown($event, $index)">
       <i class="bi {{tab.icon}}" aria-hidden="true"></i>{{tab.label}} <span class="badge rounded-pill bg-secondary" ng-if="tabCount(tab.id) !== undefined">{{tabCount(tab.id)}}</span>
     </button>
+    <button type="button" class="qm-tab-arrow is-right" tabindex="-1" aria-hidden="true"><i class="bi bi-chevron-right"></i></button>
   </div>
 
   <div ng-if="activeTab === 'customer'" role="tabpanel" id="detail-panel-customer" aria-labelledby="detail-tab-customer">
@@ -564,7 +567,7 @@
         <p class="mb-2" id="complete-summary">
           <b>{{completeContext.plan.steps.length}}</b> step<span ng-if="completeContext.plan.steps.length !== 1">s</span> and the quote itself will be set to <b>Completed</b>.
         </p>
-        <ul class="qm-complete-steps" aria-label="Steps that will be marked Completed" ng-if="completeContext.plan.steps.length">
+        <ul tabindex="0" class="qm-complete-steps" aria-label="Steps that will be marked Completed" ng-if="completeContext.plan.steps.length">
           <li ng-repeat="step in completeContext.plan.steps track by step.id">
             <span class="qm-complete-step-name">{{step.label}}</span>
             <span class="badge qm-status {{getStepStatusClass(step.stepStatus)}}">{{getStepStatusLabel(step.stepStatus)}}</span>
@@ -649,7 +652,7 @@
         <div><span>Quote request ID</span><code>{{displayValue(quote.quoteRequestId)}}</code></div>
         <div><span>Failed steps</span><code>{{retry.failedSteps.length}}</code></div>
       </div>
-      <ul class="qm-complete-steps" aria-label="Failed steps" ng-if="retry.failedSteps.length">
+      <ul tabindex="0" class="qm-complete-steps" aria-label="Failed steps" ng-if="retry.failedSteps.length">
         <li ng-repeat="step in retry.failedSteps track by step.key"><span class="qm-complete-step-name">{{step.label}}</span><span class="badge qm-status bg-danger">Failed</span></li>
       </ul>
       <div class="alert alert-danger py-2 mt-3 mb-0" role="alert" ng-if="retry.error">{{retry.error}}

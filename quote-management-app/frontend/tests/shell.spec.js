@@ -38,6 +38,47 @@ describe('Application shell', function() {
     timeout.flush();
   });
 
+  describe('navigation drawer on small screens', function() {
+    var nav, toggle, link;
+    beforeEach(function() {
+      nav = document.createElement('nav'); nav.id = 'workspace-nav';
+      link = document.createElement('a'); link.className = 'qm-nav-link'; link.href = '#!/quotes'; link.textContent = 'Home';
+      nav.appendChild(link);
+      toggle = document.createElement('button'); toggle.className = 'qm-menu-toggle';
+      document.body.appendChild(nav); document.body.appendChild(toggle);
+    });
+    afterEach(function() { nav.remove(); toggle.remove(); });
+    function press(key, prevented) {
+      var event = new KeyboardEvent('keydown', { key: key, bubbles: true, cancelable: true });
+      if (prevented) event.preventDefault();
+      document.dispatchEvent(event);
+      return event;
+    }
+
+    it('moves the keyboard into the drawer when it opens', function() {
+      root.toggleNavigation(); timeout.flush(0);
+      expect(root.mobileMenuOpen).toBe(true);
+      expect(document.activeElement).toBe(link);
+    });
+
+    it('closes with Escape and returns to the button that opened it', function() {
+      root.toggleNavigation(); timeout.flush(0);
+      var event = press('Escape');
+      timeout.flush(0);
+      expect(event.defaultPrevented).toBe(true);
+      expect(root.mobileMenuOpen).toBe(false);
+      expect(document.activeElement).toBe(toggle);
+    });
+
+    it('leaves Escape alone while the drawer is closed, for other keys, and when a dialog already took it', function() {
+      expect(press('Escape').defaultPrevented).toBe(false);
+      root.toggleNavigation(); timeout.flush(0);
+      press('Enter');
+      press('Escape', true);
+      expect(root.mobileMenuOpen).toBe(true);
+    });
+  });
+
   it('skip link moves focus to the main content without changing the route', function() {
     var main = document.createElement('main');
     main.id = 'main-content';
